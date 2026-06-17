@@ -32,6 +32,10 @@
       "dest": "/public/dashboard.html"
     },
     {
+      "src": "/reset-password",
+      "dest": "/public/reset-password.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/public/index.html"
     }
