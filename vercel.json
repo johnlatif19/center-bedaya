@@ -17,7 +17,7 @@
     },
     {
       "src": "/signup",
-      "dest": "/public/signup.html"
+      "dest": "/public/login.html"
     },
     {
       "src": "/login",
@@ -29,15 +29,11 @@
     },
     {
       "src": "/dashboard",
-      "dest": "/public/dashboard.html"
-    },
-    {
-      "src": "/",
-      "dest": "/public/index.html"
+      "dest": "/public/signup.html"
     },
     {
       "src": "/(.*)",
-      "dest": "/server.js"
+      "dest": "/public/index.html"
     }
   ]
 }
