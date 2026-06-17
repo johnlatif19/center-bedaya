@@ -126,13 +126,15 @@ const sendTelegramNotification = async (message, type) => {
 };
 
 // Helper Functions
-const generateToken = (user, isAdmin = false) => {
+const generateToken = (user, isAdmin = false, adminData = null) => {
   return jwt.sign(
     { 
       id: user.id, 
       email: user.email, 
       username: user.fullName || user.username,
-      isAdmin 
+      isAdmin,
+      adminName: adminData?.adminName || null,
+      adminUsername: adminData?.adminUsername || null
     },
     process.env.JWT_SECRET,
     { expiresIn: '7d' }
@@ -159,7 +161,7 @@ app.post('/api/auth/signup', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { fullName, email, password } = req.body;
+    const { fullName, email, password, phone } = req.body;
 
     // Check if user exists
     const userSnapshot = await db.collection('users')
@@ -177,6 +179,7 @@ app.post('/api/auth/signup', [
     const userData = {
       fullName,
       email,
+      phone: phone || '',
       password: hashedPassword,
       createdAt: new Date().toISOString()
     };
@@ -195,7 +198,87 @@ app.post('/api/auth/signup', [
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    // No Telegram notification for signup
+    // Send welcome email
+    try {
+      const welcomeMailOptions = {
+        from: process.env.SMTP_USER,
+        to: email,
+        subject: 'مرحباً بك في مركز بداية للتدخل المبكر والتأهيل',
+        html: `
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>مرحباً بك في مركز بداية</title>
+        </head>
+        <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
+          <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
+            <!-- Header -->
+            <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
+              <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
+                <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+                <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
+              </div>
+              <div style="margin-top: 8px;">
+                <span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span>
+              </div>
+            </div>
+            
+            <!-- Content -->
+            <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
+              <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
+                <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">🎉 مرحباً ${fullName}!</h2>
+              </div>
+              
+              <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
+                <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                  نشكرك على التسجيل في <strong style="color: #818cf8;">مركز بداية للتدخل المبكر والتأهيل</strong>.
+                </p>
+                <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                  نحن سعداء بانضمامك إلينا! يمكنك الآن:
+                </p>
+                <ul style="color: #94a3b8; font-size: 15px; line-height: 2; padding-right: 20px;">
+                  <li>📅 حجز موعد في المركز</li>
+                  <li>📊 الاستعلام عن نتائجك</li>
+                  <li>📧 التواصل مع الفريق</li>
+                </ul>
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(79,70,229,0.1);">
+                  <div style="display: flex; padding: 8px 0;">
+                    <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">👤 الاسم:</span>
+                    <span style="color: #e2e8f0;">${fullName}</span>
+                  </div>
+                  <div style="display: flex; padding: 8px 0;">
+                    <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">📧 البريد الإلكتروني:</span>
+                    <span style="color: #e2e8f0;">${email}</span>
+                  </div>
+                  ${phone ? `<div style="display: flex; padding: 8px 0;">
+                    <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">📱 رقم الهاتف:</span>
+                    <span style="color: #e2e8f0;">${phone}</span>
+                  </div>` : ''}
+                </div>
+              </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
+              <p style="color: #64748b; font-size: 12px; margin: 0;">
+                © 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة
+              </p>
+              <p style="color: #475569; font-size: 10px; margin: 5px 0 0;">
+                هذه رسالة آلية، يرجى عدم الرد على هذا البريد.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+        `
+      };
+      await transporter.sendMail(welcomeMailOptions);
+    } catch (emailError) {
+      console.error('Welcome email error:', emailError);
+      // Don't fail the signup if email fails
+    }
 
     res.status(201).json({
       success: true,
@@ -245,15 +328,13 @@ app.post('/api/auth/login', [
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSide: 'strict',
+      sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    // No Telegram notification for login
-
     res.json({
       success: true,
-      user: { id: user.id, fullName: user.fullName, email: user.email }
+      user: { id: user.id, fullName: user.fullName, email: user.email, phone: user.phone || '' }
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -261,7 +342,7 @@ app.post('/api/auth/login', [
   }
 });
 
-// Admin Login
+// Admin Login - Supports multiple admins from .env
 app.post('/api/auth/admin-login', [
   body('username').notEmpty().withMessage('اسم المستخدم مطلوب'),
   body('password').notEmpty().withMessage('كلمة المرور مطلوبة')
@@ -269,13 +350,29 @@ app.post('/api/auth/admin-login', [
   try {
     const { username, password } = req.body;
 
-    // Check admin credentials
-    if (username !== process.env.ADMIN_USERNAME || 
-        password !== process.env.ADMIN_PASSWORD) {
+    // Check against multiple admin accounts from .env
+    let matchedAdmin = null;
+    let adminName = null;
+    let adminUsername = null;
+
+    // Check Admin 1
+    if (username === process.env.ADMIN_USERNAME1 && password === process.env.ADMIN_PASSWORD1) {
+      matchedAdmin = true;
+      adminName = process.env.ADMIN_NAME1 || 'Admin 1';
+      adminUsername = process.env.ADMIN_USERNAME1;
+    }
+    // Check Admin 2
+    else if (username === process.env.ADMIN_USERNAME2 && password === process.env.ADMIN_PASSWORD2) {
+      matchedAdmin = true;
+      adminName = process.env.ADMIN_NAME2 || 'Admin 2';
+      adminUsername = process.env.ADMIN_USERNAME2;
+    }
+
+    if (!matchedAdmin) {
       return res.status(401).json({ error: 'بيانات الدخول غير صحيحة' });
     }
 
-    // Check if admin exists in database
+    // Check if admin exists in database or create
     let adminSnapshot = await db.collection('users')
       .where('email', '==', process.env.ADMIN_EMAIL)
       .get();
@@ -283,23 +380,37 @@ app.post('/api/auth/admin-login', [
     let adminUser;
     if (adminSnapshot.empty) {
       // Create admin user
-      const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+      const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD1, 10);
       const adminData = {
-        fullName: 'Admin',
+        fullName: adminName,
         email: process.env.ADMIN_EMAIL,
         password: hashedPassword,
         isAdmin: true,
+        adminName: adminName,
+        adminUsername: adminUsername,
         createdAt: new Date().toISOString()
       };
       const docRef = await db.collection('users').add(adminData);
       adminUser = { id: docRef.id, ...adminData };
     } else {
       const doc = adminSnapshot.docs[0];
-      adminUser = { id: doc.id, ...doc.data() };
+      const docData = doc.data();
+      // Update adminName and adminUsername in database if needed
+      if (docData.adminName !== adminName || docData.adminUsername !== adminUsername) {
+        await db.collection('users').doc(doc.id).update({
+          adminName: adminName,
+          adminUsername: adminUsername,
+          fullName: adminName
+        });
+        docData.adminName = adminName;
+        docData.adminUsername = adminUsername;
+        docData.fullName = adminName;
+      }
+      adminUser = { id: doc.id, ...docData };
     }
 
-    // Generate token
-    const token = generateToken(adminUser, true);
+    // Generate token with admin info
+    const token = generateToken(adminUser, true, { adminName, adminUsername });
 
     // Set cookie
     res.cookie('token', token, {
@@ -309,14 +420,13 @@ app.post('/api/auth/admin-login', [
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    // No Telegram notification for admin login
-
     res.json({
       success: true,
-      admin: { 
-        id: adminUser.id, 
-        email: adminUser.email, 
-        username: process.env.ADMIN_USERNAME 
+      admin: {
+        id: adminUser.id,
+        email: adminUser.email,
+        username: adminUsername,
+        name: adminName
       }
     });
   } catch (error) {
@@ -345,11 +455,352 @@ app.get('/api/auth/verify', authenticateToken, async (req, res) => {
         id: doc.id,
         fullName: userData.fullName,
         email: userData.email,
+        phone: userData.phone || '',
         isAdmin: userData.isAdmin || false
       }
     });
   } catch (error) {
     res.status(500).json({ error: 'Error verifying token' });
+  }
+});
+
+// ==================== USER PROFILE MANAGEMENT (NEW) ====================
+
+// Get all users (admin only)
+app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
+  try {
+    const usersSnapshot = await db.collection('users')
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    const users = [];
+    usersSnapshot.forEach(doc => {
+      const data = doc.data();
+      // Don't send password
+      delete data.password;
+      users.push({ id: doc.id, ...data });
+    });
+
+    res.json(users);
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({ error: 'Error fetching users' });
+  }
+});
+
+// Update user (admin only)
+app.put('/api/admin/users/:id', authenticateAdmin, [
+  body('fullName').optional().notEmpty().withMessage('الاسم مطلوب'),
+  body('email').optional().isEmail().withMessage('بريد إلكتروني غير صحيح'),
+  body('phone').optional(),
+  body('password').optional().isLength({ min: 6 }).withMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { fullName, email, phone, password } = req.body;
+    const userId = req.params.id;
+
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const updateData = {};
+    if (fullName) updateData.fullName = fullName;
+    if (email) {
+      // Check if email is taken by another user
+      const existingSnapshot = await db.collection('users')
+        .where('email', '==', email)
+        .get();
+      if (!existingSnapshot.empty) {
+        const existingDoc = existingSnapshot.docs[0];
+        if (existingDoc.id !== userId) {
+          return res.status(400).json({ error: 'البريد الإلكتروني مستخدم بالفعل' });
+        }
+      }
+      updateData.email = email;
+    }
+    if (phone !== undefined) updateData.phone = phone;
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+    updateData.updatedAt = new Date().toISOString();
+
+    await userRef.update(updateData);
+
+    res.json({
+      success: true,
+      message: 'تم تحديث بيانات المستخدم بنجاح'
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء تحديث المستخدم' });
+  }
+});
+
+// Delete user (admin only)
+app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    // Prevent deleting admin account
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    if (userDoc.data().isAdmin) {
+      return res.status(403).json({ error: 'لا يمكن حذف حساب المدير' });
+    }
+
+    await db.collection('users').doc(userId).delete();
+
+    res.json({
+      success: true,
+      message: 'تم حذف المستخدم بنجاح'
+    });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء حذف المستخدم' });
+  }
+});
+
+// ==================== USER PROFILE UPDATE (User Side) ====================
+
+// Update own profile
+app.put('/api/profile', authenticateToken, [
+  body('fullName').optional().notEmpty().withMessage('الاسم مطلوب'),
+  body('email').optional().isEmail().withMessage('بريد إلكتروني غير صحيح'),
+  body('phone').optional(),
+  body('password').optional().isLength({ min: 6 }).withMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { fullName, email, phone, password } = req.body;
+    const userId = req.user.id;
+
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const updateData = {};
+    if (fullName) updateData.fullName = fullName;
+    if (email) {
+      // Check if email is taken by another user
+      const existingSnapshot = await db.collection('users')
+        .where('email', '==', email)
+        .get();
+      if (!existingSnapshot.empty) {
+        const existingDoc = existingSnapshot.docs[0];
+        if (existingDoc.id !== userId) {
+          return res.status(400).json({ error: 'البريد الإلكتروني مستخدم بالفعل' });
+        }
+      }
+      updateData.email = email;
+    }
+    if (phone !== undefined) updateData.phone = phone;
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+    updateData.updatedAt = new Date().toISOString();
+
+    await userRef.update(updateData);
+
+    res.json({
+      success: true,
+      message: 'تم تحديث الملف الشخصي بنجاح'
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء تحديث الملف الشخصي' });
+  }
+});
+
+// ==================== FORGOT PASSWORD ====================
+
+// Store OTPs temporarily
+const otpStore = {};
+
+// Generate OTP
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// Send OTP for password reset
+app.post('/api/auth/forgot-password', [
+  body('email').isEmail().withMessage('بريد إلكتروني غير صحيح')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email } = req.body;
+
+    // Check if user exists
+    const userSnapshot = await db.collection('users')
+      .where('email', '==', email)
+      .get();
+
+    if (userSnapshot.empty) {
+      return res.status(404).json({ error: 'لا يوجد حساب بهذا البريد الإلكتروني' });
+    }
+
+    const doc = userSnapshot.docs[0];
+    const user = { id: doc.id, ...doc.data() };
+
+    // Generate OTP
+    const otp = generateOTP();
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+    // Store OTP
+    otpStore[email] = {
+      otp,
+      expiresAt,
+      userId: user.id
+    };
+
+    // Send OTP email
+    const resetLink = `${req.protocol}://${req.get('host')}/reset-password`;
+
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: email,
+      subject: 'إعادة تعيين كلمة المرور - مركز بداية',
+      html: `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>إعادة تعيين كلمة المرور</title>
+      </head>
+      <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
+          <!-- Header -->
+          <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
+            <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
+            </div>
+            <div style="margin-top: 8px;">
+              <span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span>
+            </div>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
+            <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
+              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">🔐 إعادة تعيين كلمة المرور</h2>
+            </div>
+            
+            <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
+              <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8;">
+                لقد تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في <strong style="color: #818cf8;">مركز بداية</strong>.
+              </p>
+              
+              <div style="background: rgba(79,70,229,0.15); border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
+                <p style="color: #94a3b8; font-size: 14px; margin-bottom: 8px;">رمز التحقق (OTP):</p>
+                <div style="font-size: 36px; font-weight: 800; color: #818cf8; letter-spacing: 8px; background: rgba(15,23,42,0.5); padding: 10px 20px; border-radius: 8px; display: inline-block;">
+                  ${otp}
+                </div>
+                <p style="color: #64748b; font-size: 12px; margin-top: 8px;">هذا الرمز صالح لمدة 15 دقيقة</p>
+              </div>
+              
+              <div style="text-align: center; margin-top: 20px;">
+                <a href="${resetLink}" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px;">
+                  الذهاب إلى صفحة إعادة التعيين
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
+            <p style="color: #64748b; font-size: 12px; margin: 0;">
+              © 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة
+            </p>
+            <p style="color: #475569; font-size: 10px; margin: 5px 0 0;">
+              هذه رسالة آلية، يرجى عدم الرد على هذا البريد.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.json({
+      success: true,
+      message: 'تم إرسال رمز التحقق إلى بريدك الإلكتروني'
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء إرسال رمز التحقق' });
+  }
+});
+
+// Verify OTP and reset password
+app.post('/api/auth/reset-password', [
+  body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
+  body('otp').notEmpty().withMessage('رمز التحقق مطلوب'),
+  body('password').isLength({ min: 6 }).withMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, otp, password } = req.body;
+
+    // Check OTP
+    const storedOTP = otpStore[email];
+    if (!storedOTP) {
+      return res.status(400).json({ error: 'رمز التحقق غير صحيح أو منتهي الصلاحية' });
+    }
+
+    if (storedOTP.otp !== otp) {
+      return res.status(400).json({ error: 'رمز التحقق غير صحيح' });
+    }
+
+    if (Date.now() > storedOTP.expiresAt) {
+      delete otpStore[email];
+      return res.status(400).json({ error: 'انتهت صلاحية رمز التحقق' });
+    }
+
+    // Update password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await db.collection('users').doc(storedOTP.userId).update({
+      password: hashedPassword,
+      updatedAt: new Date().toISOString()
+    });
+
+    // Delete OTP from store
+    delete otpStore[email];
+
+    res.json({
+      success: true,
+      message: 'تم إعادة تعيين كلمة المرور بنجاح'
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء إعادة تعيين كلمة المرور' });
   }
 });
 
@@ -555,9 +1006,14 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
     
-    // Get today's sales
+    // Get today's sales - filtered by current admin
+    const adminName = req.user.adminName || 'Admin';
+    const adminUsername = req.user.adminUsername || 'admin';
+    
     const salesSnapshot = await db.collection('sales')
       .where('date', '==', today)
+      .where('adminName', '==', adminName)
+      .where('adminUsername', '==', adminUsername)
       .get();
     
     let todaySales = 0;
@@ -565,15 +1021,15 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
       todaySales += doc.data().amount;
     });
 
-    // Get total bookings
+    // Get total bookings (not filtered by admin)
     const bookingsSnapshot = await db.collection('bookings').get();
     const totalBookings = bookingsSnapshot.size;
 
-    // Get total messages
+    // Get total messages (not filtered by admin)
     const messagesSnapshot = await db.collection('messages').get();
     const totalMessages = messagesSnapshot.size;
     
-    // Get total contacts
+    // Get total contacts (not filtered by admin)
     const contactsSnapshot = await db.collection('contacts').get();
     const totalContacts = contactsSnapshot.size;
 
@@ -581,7 +1037,9 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
       todaySales,
       totalBookings,
       totalMessages,
-      totalContacts
+      totalContacts,
+      adminName,
+      adminUsername
     });
   } catch (error) {
     console.error('Stats error:', error);
@@ -589,10 +1047,15 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Get Sales Chart Data
+// Get Sales Chart Data - filtered by current admin
 app.get('/api/admin/sales-chart', authenticateAdmin, async (req, res) => {
   try {
+    const adminName = req.user.adminName || 'Admin';
+    const adminUsername = req.user.adminUsername || 'admin';
+    
     const salesSnapshot = await db.collection('sales')
+      .where('adminName', '==', adminName)
+      .where('adminUsername', '==', adminUsername)
       .orderBy('date', 'desc')
       .limit(30)
       .get();
@@ -614,7 +1077,7 @@ app.get('/api/admin/sales-chart', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Add Sale
+// Add Sale - with admin info
 app.post('/api/admin/sales', authenticateAdmin, [
   body('customer').notEmpty().withMessage('اسم العميل مطلوب'),
   body('amount').isNumeric().withMessage('المبلغ يجب أن يكون رقماً')
@@ -627,17 +1090,20 @@ app.post('/api/admin/sales', authenticateAdmin, [
 
     const { customer, amount } = req.body;
     const today = new Date().toISOString().split('T')[0];
+    
+    const adminName = req.user.adminName || 'Admin';
+    const adminUsername = req.user.adminUsername || 'admin';
 
     const sale = {
       customer,
       amount: parseFloat(amount),
       date: today,
+      adminName: adminName,
+      adminUsername: adminUsername,
       createdAt: new Date().toISOString()
     };
 
     const docRef = await db.collection('sales').add(sale);
-
-    // No Telegram notification for sales
 
     res.status(201).json({
       success: true,
@@ -649,7 +1115,7 @@ app.post('/api/admin/sales', authenticateAdmin, [
   }
 });
 
-// Update Sale
+// Update Sale - ensure admin owns it
 app.put('/api/admin/sales/:id', authenticateAdmin, [
   body('customer').notEmpty().withMessage('اسم العميل مطلوب'),
   body('amount').isNumeric().withMessage('المبلغ يجب أن يكون رقماً')
@@ -668,6 +1134,15 @@ app.put('/api/admin/sales/:id', authenticateAdmin, [
       return res.status(404).json({ error: 'Sale not found' });
     }
 
+    const saleData = saleDoc.data();
+    const adminName = req.user.adminName || 'Admin';
+    const adminUsername = req.user.adminUsername || 'admin';
+
+    // Verify ownership
+    if (saleData.adminName !== adminName || saleData.adminUsername !== adminUsername) {
+      return res.status(403).json({ error: 'غير مصرح بتعديل هذه العملية' });
+    }
+
     await saleRef.update({
       customer,
       amount: parseFloat(amount),
@@ -684,10 +1159,15 @@ app.put('/api/admin/sales/:id', authenticateAdmin, [
   }
 });
 
-// Get Sales
+// Get Sales - filtered by current admin
 app.get('/api/admin/sales', authenticateAdmin, async (req, res) => {
   try {
+    const adminName = req.user.adminName || 'Admin';
+    const adminUsername = req.user.adminUsername || 'admin';
+    
     const salesSnapshot = await db.collection('sales')
+      .where('adminName', '==', adminName)
+      .where('adminUsername', '==', adminUsername)
       .orderBy('createdAt', 'desc')
       .get();
 
@@ -703,10 +1183,26 @@ app.get('/api/admin/sales', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Delete Sale
+// Delete Sale - ensure admin owns it
 app.delete('/api/admin/sales/:id', authenticateAdmin, async (req, res) => {
   try {
-    await db.collection('sales').doc(req.params.id).delete();
+    const saleRef = db.collection('sales').doc(req.params.id);
+    const saleDoc = await saleRef.get();
+
+    if (!saleDoc.exists) {
+      return res.status(404).json({ error: 'Sale not found' });
+    }
+
+    const saleData = saleDoc.data();
+    const adminName = req.user.adminName || 'Admin';
+    const adminUsername = req.user.adminUsername || 'admin';
+
+    // Verify ownership
+    if (saleData.adminName !== adminName || saleData.adminUsername !== adminUsername) {
+      return res.status(403).json({ error: 'غير مصرح بحذف هذه العملية' });
+    }
+
+    await saleRef.delete();
     res.json({ success: true });
   } catch (error) {
     console.error('Delete sale error:', error);
@@ -714,7 +1210,7 @@ app.delete('/api/admin/sales/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Get Bookings
+// Get Bookings - no admin filter
 app.get('/api/admin/bookings', authenticateAdmin, async (req, res) => {
   try {
     const bookingsSnapshot = await db.collection('bookings')
@@ -733,7 +1229,7 @@ app.get('/api/admin/bookings', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Delete Booking
+// Delete Booking - no admin filter
 app.delete('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
   try {
     await db.collection('bookings').doc(req.params.id).delete();
@@ -777,8 +1273,6 @@ app.post('/api/admin/results', authenticateAdmin, [
         createdAt: new Date().toISOString()
       });
     }
-
-    // No Telegram notification for results
 
     res.json({
       success: true,
@@ -839,8 +1333,6 @@ app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), 
       });
       resultId = newDoc.id;
     }
-
-    // No Telegram notification for results
 
     res.json({ 
       success: true, 
@@ -904,7 +1396,7 @@ app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), asyn
   }
 });
 
-// Get all results (for admin)
+// Get all results (for admin) - no admin filter
 app.get('/api/admin/results', authenticateAdmin, async (req, res) => {
   try {
     const resultsSnapshot = await db.collection('results')
@@ -923,7 +1415,7 @@ app.get('/api/admin/results', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Delete Result
+// Delete Result - no admin filter
 app.delete('/api/admin/results/:id', authenticateAdmin, async (req, res) => {
   try {
     await db.collection('results').doc(req.params.id).delete();
@@ -934,7 +1426,7 @@ app.delete('/api/admin/results/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Get Messages
+// Get Messages - no admin filter
 app.get('/api/admin/messages', authenticateAdmin, async (req, res) => {
   try {
     const messagesSnapshot = await db.collection('messages')
@@ -953,7 +1445,7 @@ app.get('/api/admin/messages', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Get Contacts
+// Get Contacts - no admin filter
 app.get('/api/admin/contacts', authenticateAdmin, async (req, res) => {
   try {
     const contactsSnapshot = await db.collection('contacts')
@@ -972,7 +1464,7 @@ app.get('/api/admin/contacts', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Delete Contact
+// Delete Contact - no admin filter
 app.delete('/api/admin/contacts/:id', authenticateAdmin, async (req, res) => {
   try {
     await db.collection('contacts').doc(req.params.id).delete();
@@ -1058,8 +1550,6 @@ app.post('/api/admin/send-email', authenticateAdmin, [
       sentAt: new Date().toISOString()
     });
 
-    // No Telegram notification for email
-
     res.json({
       success: true,
       message: 'تم إرسال الرسالة بنجاح'
@@ -1070,7 +1560,7 @@ app.post('/api/admin/send-email', authenticateAdmin, [
   }
 });
 
-// Delete Message
+// Delete Message - no admin filter
 app.delete('/api/admin/messages/:id', authenticateAdmin, async (req, res) => {
   try {
     await db.collection('messages').doc(req.params.id).delete();
@@ -1102,6 +1592,10 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+});
+
 // Verify Admin - مخصص للداشبورد
 app.get('/api/auth/verify-admin', authenticateToken, async (req, res) => {
   try {
@@ -1125,7 +1619,8 @@ app.get('/api/auth/verify-admin', authenticateToken, async (req, res) => {
       admin: {
         id: doc.id,
         email: userData.email,
-        username: userData.fullName || 'Admin'
+        username: userData.adminUsername || userData.fullName || 'Admin',
+        name: userData.adminName || userData.fullName || 'Admin'
       }
     });
   } catch (error) {
