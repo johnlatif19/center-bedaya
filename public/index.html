@@ -129,6 +129,16 @@
             background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(124, 58, 237, 0.2));
             border: 1px solid rgba(79, 70, 229, 0.2);
         }
+        .auth-required-badge {
+            display: inline-block;
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            font-size: 0.7rem;
+            padding: 2px 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body class="font-cairo bg-gray-900 transition-colors duration-300">
@@ -323,10 +333,32 @@
                 <span class="text-indigo-400 font-bold text-sm tracking-wider uppercase">احجز الآن</span>
                 <h2 class="text-4xl md:text-5xl font-bold mt-2 text-white">احجز موعدك</h2>
                 <div class="h-1 w-20 bg-gradient-to-r from-indigo-500 to-purple-600 mx-auto mt-4 rounded-full"></div>
+                <p class="text-gray-400 mt-3">
+                    <i class="fas fa-lock text-indigo-400 ml-1"></i>
+                    يتطلب تسجيل الدخول
+                    <span class="auth-required-badge">مطلوب تسجيل دخول</span>
+                </p>
             </div>
             <div class="max-w-2xl mx-auto">
                 <div class="glass-card p-8 rounded-2xl shadow-2xl border border-indigo-500/20">
-                    <form id="bookingForm" class="space-y-4">
+                    <div id="bookingAuthRequired" class="text-center py-8">
+                        <div class="text-6xl text-indigo-400 mb-4">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">يجب تسجيل الدخول</h3>
+                        <p class="text-gray-400 mb-6">لإتمام عملية الحجز، يرجى تسجيل الدخول إلى حسابك</p>
+                        <div class="flex flex-wrap gap-4 justify-center">
+                            <a href="/login" class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition">
+                                <i class="fas fa-sign-in-alt ml-2"></i>
+                                تسجيل الدخول
+                            </a>
+                            <a href="/signup" class="px-6 py-3 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition">
+                                <i class="fas fa-user-plus ml-2"></i>
+                                إنشاء حساب
+                            </a>
+                        </div>
+                    </div>
+                    <form id="bookingForm" class="space-y-4 hidden">
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">الاسم بالكامل</label>
                             <input type="text" id="bookingName" required placeholder="الاسم بالكامل"
@@ -368,10 +400,32 @@
                 <span class="text-indigo-400 font-bold text-sm tracking-wider uppercase">استعلم عن نتيجتك</span>
                 <h2 class="text-4xl md:text-5xl font-bold mt-2 text-white">النتائج</h2>
                 <div class="h-1 w-20 bg-gradient-to-r from-indigo-500 to-purple-600 mx-auto mt-4 rounded-full"></div>
+                <p class="text-gray-400 mt-3">
+                    <i class="fas fa-lock text-indigo-400 ml-1"></i>
+                    يتطلب تسجيل الدخول
+                    <span class="auth-required-badge">مطلوب تسجيل دخول</span>
+                </p>
             </div>
             <div class="max-w-md mx-auto">
                 <div class="glass-card p-8 rounded-2xl shadow-2xl border border-indigo-500/20">
-                    <form id="resultsForm" class="space-y-4">
+                    <div id="resultsAuthRequired" class="text-center py-8">
+                        <div class="text-6xl text-indigo-400 mb-4">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">يجب تسجيل الدخول</h3>
+                        <p class="text-gray-400 mb-6">للاطلاع على النتائج، يرجى تسجيل الدخول إلى حسابك</p>
+                        <div class="flex flex-wrap gap-4 justify-center">
+                            <a href="/login" class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition">
+                                <i class="fas fa-sign-in-alt ml-2"></i>
+                                تسجيل الدخول
+                            </a>
+                            <a href="/signup" class="px-6 py-3 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition">
+                                <i class="fas fa-user-plus ml-2"></i>
+                                إنشاء حساب
+                            </a>
+                        </div>
+                    </div>
+                    <form id="resultsForm" class="space-y-4 hidden">
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">أدخل رقم التليفون</label>
                             <input type="tel" id="resultPhone" required placeholder="ادخل رقم التليفون"
@@ -407,6 +461,11 @@
                 <span class="text-indigo-400 font-bold text-sm tracking-wider uppercase">لديك سؤال؟</span>
                 <h2 class="text-4xl md:text-5xl font-bold mt-2 text-white">تواصل معنا</h2>
                 <div class="h-1 w-20 bg-gradient-to-r from-indigo-500 to-purple-600 mx-auto mt-4 rounded-full"></div>
+                <p class="text-gray-400 mt-3">
+                    <i class="fas fa-lock text-indigo-400 ml-1"></i>
+                    يتطلب تسجيل الدخول
+                    <span class="auth-required-badge">مطلوب تسجيل دخول</span>
+                </p>
             </div>
             <div class="grid md:grid-cols-2 gap-12">
                 <div class="fade-up">
@@ -447,7 +506,24 @@
                 <div class="fade-up">
                     <div class="glass-card p-8 rounded-2xl shadow-2xl border border-indigo-500/20">
                         <h3 class="text-2xl font-bold text-white mb-6">تواصل معنا</h3>
-                        <form id="contactForm" class="space-y-4">
+                        <div id="contactAuthRequired" class="text-center py-8">
+                            <div class="text-6xl text-indigo-400 mb-4">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white mb-2">يجب تسجيل الدخول</h3>
+                            <p class="text-gray-400 mb-6">لإرسال رسالة، يرجى تسجيل الدخول إلى حسابك</p>
+                            <div class="flex flex-wrap gap-4 justify-center">
+                                <a href="/login" class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition">
+                                    <i class="fas fa-sign-in-alt ml-2"></i>
+                                    تسجيل الدخول
+                                </a>
+                                <a href="/signup" class="px-6 py-3 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition">
+                                    <i class="fas fa-user-plus ml-2"></i>
+                                    إنشاء حساب
+                                </a>
+                            </div>
+                        </div>
+                        <form id="contactForm" class="space-y-4 hidden">
                             <div>
                                 <label class="block text-gray-300 text-sm font-bold mb-2">الاسم</label>
                                 <input type="text" id="contactName" required placeholder="الاسم"
@@ -455,20 +531,17 @@
                             </div>
                             <div>
                                 <label class="block text-gray-300 text-sm font-bold mb-2">البريد الإلكتروني</label>
-                                <input type="text" id="contactName" required placeholder="البريد الالكتروني"
-                                <input type="email" id="contactEmail" required 
+                                <input type="email" id="contactEmail" required placeholder="البريد الإلكتروني"
                                     class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                             </div>
                             <div>
                                 <label class="block text-gray-300 text-sm font-bold mb-2">رقم التليفون</label>
-                                <input type="text" id="contactName" required placeholder="رقم التليفون"
-                                <input type="tel" id="contactPhone" required 
+                                <input type="tel" id="contactPhone" required placeholder="رقم التليفون"
                                     class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                             </div>
                             <div>
                                 <label class="block text-gray-300 text-sm font-bold mb-2">رسالتك</label>
-                                <input type="text" id="contactName" required placeholder="رسالتك"
-                                <textarea id="contactMessage" rows="4" required 
+                                <textarea id="contactMessage" rows="4" required placeholder="رسالتك"
                                     class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition"></textarea>
                             </div>
                             <div id="contactError" class="hidden bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded relative" role="alert">
@@ -545,28 +618,57 @@
             }
 
             // Auth Check
+            let isAuthenticated = false;
+            let userData = null;
+
             function updateAuthUI() {
                 const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
                 const authButtons = document.getElementById('authButtons');
                 const userProfile = document.getElementById('userProfile');
                 const userName = document.getElementById('userName');
 
+                // Update booking, results, contact sections based on auth
+                const bookingAuthRequired = document.getElementById('bookingAuthRequired');
+                const bookingForm = document.getElementById('bookingForm');
+                const resultsAuthRequired = document.getElementById('resultsAuthRequired');
+                const resultsForm = document.getElementById('resultsForm');
+                const contactAuthRequired = document.getElementById('contactAuthRequired');
+                const contactForm = document.getElementById('contactForm');
+
                 if (token) {
                     try {
                         const payload = JSON.parse(atob(token.split('.')[1]));
                         if (payload.exp * 1000 > Date.now()) {
+                            isAuthenticated = true;
+                            userData = payload;
                             if (authButtons) authButtons.classList.add('hidden');
                             if (userProfile) {
                                 userProfile.classList.remove('hidden');
                                 if (userName) userName.textContent = payload.username || 'مستخدم';
                             }
+                            // Show forms, hide auth required
+                            if (bookingAuthRequired) bookingAuthRequired.classList.add('hidden');
+                            if (bookingForm) bookingForm.classList.remove('hidden');
+                            if (resultsAuthRequired) resultsAuthRequired.classList.add('hidden');
+                            if (resultsForm) resultsForm.classList.remove('hidden');
+                            if (contactAuthRequired) contactAuthRequired.classList.add('hidden');
+                            if (contactForm) contactForm.classList.remove('hidden');
                             return;
                         }
                     } catch {}
                 }
 
+                isAuthenticated = false;
+                userData = null;
                 if (authButtons) authButtons.classList.remove('hidden');
                 if (userProfile) userProfile.classList.add('hidden');
+                // Show auth required, hide forms
+                if (bookingAuthRequired) bookingAuthRequired.classList.remove('hidden');
+                if (bookingForm) bookingForm.classList.add('hidden');
+                if (resultsAuthRequired) resultsAuthRequired.classList.remove('hidden');
+                if (resultsForm) resultsForm.classList.add('hidden');
+                if (contactAuthRequired) contactAuthRequired.classList.remove('hidden');
+                if (contactForm) contactForm.classList.add('hidden');
             }
 
             // Logout
@@ -626,7 +728,11 @@
                             showToast('تم الحجز بنجاح! سيتم التواصل معك قريباً', 'success');
                             bookingForm.reset();
                         } else {
-                            errorMessage.textContent = data.error || 'حدث خطأ أثناء الحجز';
+                            if (response.status === 401) {
+                                errorMessage.textContent = 'يرجى تسجيل الدخول أولاً';
+                            } else {
+                                errorMessage.textContent = data.error || 'حدث خطأ أثناء الحجز';
+                            }
                             errorDiv.classList.remove('hidden');
                         }
                     } catch (error) {
@@ -717,7 +823,11 @@
                             showToast('تم إرسال الرسالة بنجاح', 'success');
                             contactForm.reset();
                         } else {
-                            errorMessage.textContent = data.error || 'حدث خطأ أثناء الإرسال';
+                            if (response.status === 401) {
+                                errorMessage.textContent = 'يرجى تسجيل الدخول أولاً';
+                            } else {
+                                errorMessage.textContent = data.error || 'حدث خطأ أثناء الإرسال';
+                            }
                             errorDiv.classList.remove('hidden');
                         }
                     } catch (error) {
