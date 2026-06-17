@@ -129,6 +129,50 @@
             background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(124, 58, 237, 0.2));
             border: 1px solid rgba(79, 70, 229, 0.2);
         }
+
+        /* Auth required overlay for protected sections */
+        .auth-required {
+            position: relative;
+        }
+        .auth-required .auth-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(4px);
+            border-radius: inherit;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            padding: 2rem;
+            text-align: center;
+        }
+        .auth-required .auth-overlay.show {
+            display: flex;
+        }
+        .auth-required .auth-overlay .auth-icon {
+            font-size: 3rem;
+            color: #4f46e5;
+            margin-bottom: 1rem;
+        }
+        .auth-required .auth-overlay .auth-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 0.5rem;
+        }
+        .auth-required .auth-overlay .auth-desc {
+            color: #94a3b8;
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+        }
+        .auth-required .auth-overlay .auth-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
     </style>
 </head>
 <body class="font-cairo bg-gray-900 transition-colors duration-300">
@@ -316,7 +360,7 @@
         </div>
     </section>
 
-    <!-- Booking Section -->
+    <!-- Booking Section - Protected -->
     <section id="booking" class="py-20 bg-gray-900">
         <div class="container mx-auto px-4">
             <div class="text-center mb-12 fade-up">
@@ -325,7 +369,17 @@
                 <div class="h-1 w-20 bg-gradient-to-r from-indigo-500 to-purple-600 mx-auto mt-4 rounded-full"></div>
             </div>
             <div class="max-w-2xl mx-auto">
-                <div class="glass-card p-8 rounded-2xl shadow-2xl border border-indigo-500/20">
+                <div class="glass-card p-8 rounded-2xl shadow-2xl border border-indigo-500/20 auth-required" id="bookingContainer">
+                    <!-- Auth overlay -->
+                    <div class="auth-overlay" id="bookingAuthOverlay">
+                        <div class="auth-icon"><i class="fas fa-lock"></i></div>
+                        <div class="auth-title">تسجيل الدخول مطلوب</div>
+                        <div class="auth-desc">يرجى تسجيل الدخول لحجز موعد</div>
+                        <div class="auth-buttons">
+                            <a href="/login" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition">تسجيل الدخول</a>
+                            <a href="/signup" class="px-6 py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition">إنشاء حساب</a>
+                        </div>
+                    </div>
                     <form id="bookingForm" class="space-y-4">
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">الاسم بالكامل</label>
@@ -361,7 +415,7 @@
         </div>
     </section>
 
-    <!-- Results Section -->
+    <!-- Results Section - Protected -->
     <section id="results" class="py-20 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
         <div class="container mx-auto px-4">
             <div class="text-center mb-12 fade-up">
@@ -370,7 +424,17 @@
                 <div class="h-1 w-20 bg-gradient-to-r from-indigo-500 to-purple-600 mx-auto mt-4 rounded-full"></div>
             </div>
             <div class="max-w-md mx-auto">
-                <div class="glass-card p-8 rounded-2xl shadow-2xl border border-indigo-500/20">
+                <div class="glass-card p-8 rounded-2xl shadow-2xl border border-indigo-500/20 auth-required" id="resultsContainer">
+                    <!-- Auth overlay -->
+                    <div class="auth-overlay" id="resultsAuthOverlay">
+                        <div class="auth-icon"><i class="fas fa-lock"></i></div>
+                        <div class="auth-title">تسجيل الدخول مطلوب</div>
+                        <div class="auth-desc">يرجى تسجيل الدخول للاستعلام عن النتائج</div>
+                        <div class="auth-buttons">
+                            <a href="/login" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition">تسجيل الدخول</a>
+                            <a href="/signup" class="px-6 py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition">إنشاء حساب</a>
+                        </div>
+                    </div>
                     <form id="resultsForm" class="space-y-4">
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">أدخل رقم التليفون</label>
@@ -400,7 +464,7 @@
         </div>
     </section>
 
-    <!-- Contact Section -->
+    <!-- Contact Section - Protected -->
     <section id="contact" class="py-20 bg-gray-900">
         <div class="container mx-auto px-4">
             <div class="text-center mb-12 fade-up">
@@ -445,7 +509,17 @@
                     </div>
                 </div>
                 <div class="fade-up">
-                    <div class="glass-card p-8 rounded-2xl shadow-2xl border border-indigo-500/20">
+                    <div class="glass-card p-8 rounded-2xl shadow-2xl border border-indigo-500/20 auth-required" id="contactContainer">
+                        <!-- Auth overlay -->
+                        <div class="auth-overlay" id="contactAuthOverlay">
+                            <div class="auth-icon"><i class="fas fa-lock"></i></div>
+                            <div class="auth-title">تسجيل الدخول مطلوب</div>
+                            <div class="auth-desc">يرجى تسجيل الدخول لإرسال رسالة</div>
+                            <div class="auth-buttons">
+                                <a href="/login" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition">تسجيل الدخول</a>
+                                <a href="/signup" class="px-6 py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition">إنشاء حساب</a>
+                            </div>
+                        </div>
                         <h3 class="text-2xl font-bold text-white mb-6">تواصل معنا</h3>
                         <form id="contactForm" class="space-y-4">
                             <div>
@@ -455,20 +529,17 @@
                             </div>
                             <div>
                                 <label class="block text-gray-300 text-sm font-bold mb-2">البريد الإلكتروني</label>
-                                <input type="text" id="contactName" required placeholder="البريد الالكتروني"
-                                <input type="email" id="contactEmail" required 
+                                <input type="email" id="contactEmail" required placeholder="البريد الإلكتروني"
                                     class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                             </div>
                             <div>
                                 <label class="block text-gray-300 text-sm font-bold mb-2">رقم التليفون</label>
-                                <input type="text" id="contactName" required placeholder="رقم التليفون"
-                                <input type="tel" id="contactPhone" required 
+                                <input type="tel" id="contactPhone" required placeholder="رقم التليفون"
                                     class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                             </div>
                             <div>
                                 <label class="block text-gray-300 text-sm font-bold mb-2">رسالتك</label>
-                                <input type="text" id="contactName" required placeholder="رسالتك"
-                                <textarea id="contactMessage" rows="4" required 
+                                <textarea id="contactMessage" rows="4" required placeholder="رسالتك"
                                     class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition"></textarea>
                             </div>
                             <div id="contactError" class="hidden bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded relative" role="alert">
@@ -544,29 +615,55 @@
                 });
             }
 
+            // Auth State
+            let isAuthenticated = false;
+            let currentUser = null;
+
             // Auth Check
-            function updateAuthUI() {
-                const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+            function checkAuth() {
+                fetch('/api/auth/verify', { credentials: 'include' })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.authenticated) {
+                            isAuthenticated = true;
+                            currentUser = data.user;
+                            updateUI(true, data.user);
+                        } else {
+                            isAuthenticated = false;
+                            currentUser = null;
+                            updateUI(false, null);
+                        }
+                    })
+                    .catch(() => {
+                        isAuthenticated = false;
+                        currentUser = null;
+                        updateUI(false, null);
+                    });
+            }
+
+            function updateUI(authenticated, user) {
                 const authButtons = document.getElementById('authButtons');
                 const userProfile = document.getElementById('userProfile');
                 const userName = document.getElementById('userName');
 
-                if (token) {
-                    try {
-                        const payload = JSON.parse(atob(token.split('.')[1]));
-                        if (payload.exp * 1000 > Date.now()) {
-                            if (authButtons) authButtons.classList.add('hidden');
-                            if (userProfile) {
-                                userProfile.classList.remove('hidden');
-                                if (userName) userName.textContent = payload.username || 'مستخدم';
-                            }
-                            return;
-                        }
-                    } catch {}
+                if (authenticated && user) {
+                    authButtons.classList.add('hidden');
+                    userProfile.classList.remove('hidden');
+                    userName.textContent = user.fullName || 'مستخدم';
+                    
+                    // Show protected content, hide auth overlays
+                    document.querySelectorAll('.auth-required .auth-overlay').forEach(overlay => {
+                        overlay.classList.remove('show');
+                    });
+                } else {
+                    authButtons.classList.remove('hidden');
+                    userProfile.classList.add('hidden');
+                    
+                    // Show auth overlays for protected sections
+                    document.querySelectorAll('.auth-required .auth-overlay').forEach(overlay => {
+                        overlay.classList.add('show');
+                    });
                 }
-
-                if (authButtons) authButtons.classList.remove('hidden');
-                if (userProfile) userProfile.classList.add('hidden');
             }
 
             // Logout
@@ -574,7 +671,11 @@
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', async () => {
                     await fetch('/api/auth/logout', { method: 'POST' });
-                    window.location.href = '/';
+                    isAuthenticated = false;
+                    currentUser = null;
+                    updateUI(false, null);
+                    showToast('تم تسجيل الخروج بنجاح', 'success');
+                    // Keep user on same page as guest
                 });
             }
 
@@ -598,6 +699,13 @@
             if (bookingForm) {
                 bookingForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
+                    
+                    // Check authentication
+                    if (!isAuthenticated) {
+                        showToast('يرجى تسجيل الدخول لحجز موعد', 'error');
+                        return;
+                    }
+
                     const name = document.getElementById('bookingName').value.trim();
                     const phone = document.getElementById('bookingPhone').value.trim();
                     const date = document.getElementById('bookingDate').value;
@@ -641,6 +749,13 @@
             if (resultsForm) {
                 resultsForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
+
+                    // Check authentication
+                    if (!isAuthenticated) {
+                        showToast('يرجى تسجيل الدخول للاستعلام عن النتائج', 'error');
+                        return;
+                    }
+
                     const phone = document.getElementById('resultPhone').value.trim();
                     const errorDiv = document.getElementById('resultError');
                     const errorMessage = document.getElementById('resultErrorMessage');
@@ -689,6 +804,13 @@
             if (contactForm) {
                 contactForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
+
+                    // Check authentication
+                    if (!isAuthenticated) {
+                        showToast('يرجى تسجيل الدخول لإرسال رسالة', 'error');
+                        return;
+                    }
+
                     const name = document.getElementById('contactName').value.trim();
                     const email = document.getElementById('contactEmail').value.trim();
                     const phone = document.getElementById('contactPhone').value.trim();
@@ -744,7 +866,8 @@
                 });
             }
 
-            updateAuthUI();
+            // Check auth on load
+            checkAuth();
         });
     </script>
 </body>
