@@ -347,6 +347,38 @@ app.get('/api/auth/verify', authenticateToken, async (req, res) => {
   }
 });
 
+// Verify Admin Token - For dashboard
+app.get('/api/auth/verify-admin', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    const doc = await db.collection('users').doc(req.user.id).get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const userData = doc.data();
+    if (!userData.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    res.json({
+      authenticated: true,
+      admin: {
+        id: doc.id,
+        email: userData.email,
+        username: userData.fullName || 'Admin'
+      }
+    });
+  } catch (error) {
+    console.error('Verify admin error:', error);
+    res.status(500).json({ error: 'Error verifying admin' });
+  }
+});
+
 // ==================== BOOKING ROUTES ====================
 
 app.post('/api/bookings', [
@@ -600,7 +632,7 @@ app.post('/api/contact', [
 
 app.post('/api/results/check', [
   body('phone').notEmpty().withMessage('رقم التليفون مطلوب')
-], async (req, res) => {
+], authenticateToken, async (req, res) => {
   try {
     const { phone } = req.body;
 
@@ -756,12 +788,10 @@ app.put('/api/admin/sales/:id', authenticateAdmin, [
     }
 
     const { customer, amount } = req.body;
-    const today = new Date().toISOString().split('T')[0];
 
     await db.collection('sales').doc(req.params.id).update({
       customer,
       amount: parseFloat(amount),
-      date: today,
       updatedAt: new Date().toISOString()
     });
 
@@ -813,7 +843,7 @@ app.delete('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// ==================== CONTACTS ROUTES ====================
+// ==================== CONTACTS ADMIN ROUTES ====================
 
 // Get Contacts
 app.get('/api/admin/contacts', authenticateAdmin, async (req, res) => {
