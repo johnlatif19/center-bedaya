@@ -57,9 +57,7 @@ app.use(express.static('public'));
 // Configure Multer for file uploads
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 // Rate Limiting
@@ -69,14 +67,14 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+// ============================================
 // JWT Middleware
+// ============================================
 const authenticateToken = (req, res, next) => {
   const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
-  
   if (!token) {
     return res.status(401).json({ error: 'Access denied. No token provided.' });
   }
-
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
@@ -88,11 +86,9 @@ const authenticateToken = (req, res, next) => {
 
 const authenticateAdmin = (req, res, next) => {
   const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
-  
   if (!token) {
     return res.status(401).json({ error: 'Access denied. No token provided.' });
   }
-
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (!decoded.isAdmin) {
@@ -105,26 +101,9 @@ const authenticateAdmin = (req, res, next) => {
   }
 };
 
-// Telegram Notification Function - Only for Bookings and Contact
-const sendTelegramNotification = async (message, type) => {
-  if (type !== 'booking' && type !== 'contact') {
-    console.log('Telegram notification skipped for type:', type);
-    return;
-  }
-  
-  try {
-    const url = `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`;
-    await axios.post(url, {
-      chat_id: process.env.TELEGRAM_CHAT_ID,
-      text: message,
-      parse_mode: 'HTML'
-    });
-  } catch (error) {
-    console.error('Telegram notification error:', error);
-  }
-};
-
+// ============================================
 // Helper Functions
+// ============================================
 const generateToken = (user, isAdmin = false, adminData = null) => {
   return jwt.sign(
     { 
@@ -140,7 +119,51 @@ const generateToken = (user, isAdmin = false, adminData = null) => {
   );
 };
 
-// ==================== AUTH ROUTES ====================
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// OTP Store - OTP expires in 5 minutes
+const otpStore = {};
+
+// ============================================
+// Telegram Notification (Only for Bookings & Contact)
+// ============================================
+const sendTelegramNotification = async (message, type) => {
+  if (type !== 'booking' && type !== 'contact') return;
+  try {
+    const url = `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`;
+    await axios.post(url, {
+      chat_id: process.env.TELEGRAM_CHAT_ID,
+      text: message,
+      parse_mode: 'HTML'
+    });
+  } catch (error) {
+    console.error('Telegram notification error:', error);
+  }
+};
+
+// ============================================
+// Send Email Helper
+// ============================================
+const sendEmail = async (to, subject, html) => {
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_USER,
+      to,
+      subject,
+      html
+    });
+    return true;
+  } catch (error) {
+    console.error('Email error:', error);
+    return false;
+  }
+};
+
+// ============================================
+// Auth Routes
+// ============================================
 
 // Signup
 app.post('/api/auth/signup', [
@@ -171,7 +194,6 @@ app.post('/api/auth/signup', [
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const userData = {
       fullName,
       email,
@@ -182,7 +204,6 @@ app.post('/api/auth/signup', [
 
     const docRef = await db.collection('users').add(userData);
     const user = { id: docRef.id, ...userData };
-
     const token = generateToken(user);
 
     res.cookie('token', token, {
@@ -192,79 +213,60 @@ app.post('/api/auth/signup', [
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    try {
-      const welcomeMailOptions = {
-        from: process.env.SMTP_USER,
-        to: email,
-        subject: 'مرحباً بك في مركز بداية للتدخل المبكر والتأهيل',
-        html: `
-        <!DOCTYPE html>
-        <html dir="rtl" lang="ar">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>مرحباً بك في مركز بداية</title>
-        </head>
-        <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
-          <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
-            <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
-              <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-                <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
-                <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
-              </div>
-              <div style="margin-top: 8px;">
-                <span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span>
-              </div>
+    // Send welcome email
+    const welcomeHtml = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head><meta charset="UTF-8"><title>مرحباً بك في مركز بداية</title></head>
+      <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
+          <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
+            <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
-            <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
-              <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
-                <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">🎉 مرحباً ${fullName}!</h2>
-              </div>
-              <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
-                <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
-                  نشكرك على التسجيل في <strong style="color: #818cf8;">مركز بداية للتدخل المبكر والتأهيل</strong>.
-                </p>
-                <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
-                  نحن سعداء بانضمامك إلينا! يمكنك الآن:
-                </p>
-                <ul style="color: #94a3b8; font-size: 15px; line-height: 2; padding-right: 20px;">
-                  <li>📅 حجز موعد في المركز</li>
-                  <li>📊 الاستعلام عن نتائجك</li>
-                  <li>📧 التواصل مع الفريق</li>
-                </ul>
-                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(79,70,229,0.1);">
-                  <div style="display: flex; padding: 8px 0;">
-                    <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">👤 الاسم:</span>
-                    <span style="color: #e2e8f0;">${fullName}</span>
-                  </div>
-                  <div style="display: flex; padding: 8px 0;">
-                    <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">📧 البريد الإلكتروني:</span>
-                    <span style="color: #e2e8f0;">${email}</span>
-                  </div>
-                  ${phone ? `<div style="display: flex; padding: 8px 0;">
-                    <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">📱 رقم الهاتف:</span>
-                    <span style="color: #e2e8f0;">${phone}</span>
-                  </div>` : ''}
+            <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
+          </div>
+          <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
+            <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
+              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">🎉 مرحباً ${fullName}!</h2>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
+              <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                نشكرك على التسجيل في <strong style="color: #818cf8;">مركز بداية للتدخل المبكر والتأهيل</strong>.
+              </p>
+              <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                نحن سعداء بانضمامك إلينا! يمكنك الآن:
+              </p>
+              <ul style="color: #94a3b8; font-size: 15px; line-height: 2; padding-right: 20px;">
+                <li>📅 حجز موعد في المركز</li>
+                <li>📊 الاستعلام عن نتائجك</li>
+                <li>📧 التواصل مع الفريق</li>
+              </ul>
+              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(79,70,229,0.1);">
+                <div style="display: flex; padding: 8px 0;">
+                  <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">👤 الاسم:</span>
+                  <span style="color: #e2e8f0;">${fullName}</span>
                 </div>
+                <div style="display: flex; padding: 8px 0;">
+                  <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">📧 البريد الإلكتروني:</span>
+                  <span style="color: #e2e8f0;">${email}</span>
+                </div>
+                ${phone ? `<div style="display: flex; padding: 8px 0;">
+                  <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">📱 رقم الهاتف:</span>
+                  <span style="color: #e2e8f0;">${phone}</span>
+                </div>` : ''}
               </div>
-            </div>
-            <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
-              <p style="color: #64748b; font-size: 12px; margin: 0;">
-                © 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة
-              </p>
-              <p style="color: #475569; font-size: 10px; margin: 5px 0 0;">
-                هذه رسالة آلية، يرجى عدم الرد على هذا البريد.
-              </p>
             </div>
           </div>
-        </body>
-        </html>
-        `
-      };
-      await transporter.sendMail(welcomeMailOptions);
-    } catch (emailError) {
-      console.error('Welcome email error:', emailError);
-    }
+          <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
+            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    await sendEmail(email, 'مرحباً بك في مركز بداية للتدخل المبكر والتأهيل', welcomeHtml);
 
     res.status(201).json({
       success: true,
@@ -340,8 +342,7 @@ app.post('/api/auth/admin-login', [
       matchedAdmin = true;
       adminName = process.env.ADMIN_NAME1 || 'Admin 1';
       adminUsername = process.env.ADMIN_USERNAME1;
-    }
-    else if (username === process.env.ADMIN_USERNAME2 && password === process.env.ADMIN_PASSWORD2) {
+    } else if (username === process.env.ADMIN_USERNAME2 && password === process.env.ADMIN_PASSWORD2) {
       matchedAdmin = true;
       adminName = process.env.ADMIN_NAME2 || 'Admin 2';
       adminUsername = process.env.ADMIN_USERNAME2;
@@ -444,17 +445,14 @@ app.get('/api/auth/verify-admin', authenticateToken, async (req, res) => {
     if (!req.user.isAdmin) {
       return res.status(403).json({ error: 'Admin access required' });
     }
-    
     const doc = await db.collection('users').doc(req.user.id).get();
     if (!doc.exists) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
     const userData = doc.data();
     if (!userData.isAdmin) {
       return res.status(403).json({ error: 'Admin access required' });
     }
-    
     res.json({
       authenticated: true,
       admin: {
@@ -470,8 +468,231 @@ app.get('/api/auth/verify-admin', authenticateToken, async (req, res) => {
   }
 });
 
-// ==================== USER PROFILE MANAGEMENT ====================
+// ============================================
+// Forgot Password - OTP expires in 5 minutes
+// ============================================
+app.post('/api/auth/forgot-password', [
+  body('email').isEmail().withMessage('بريد إلكتروني غير صحيح')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
+    const { email } = req.body;
+
+    const userSnapshot = await db.collection('users')
+      .where('email', '==', email)
+      .get();
+
+    if (userSnapshot.empty) {
+      return res.status(404).json({ error: 'لا يوجد حساب بهذا البريد الإلكتروني' });
+    }
+
+    const doc = userSnapshot.docs[0];
+    const user = { id: doc.id, ...doc.data() };
+
+    const otp = generateOTP();
+    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+
+    otpStore[email] = {
+      otp,
+      expiresAt,
+      userId: user.id
+    };
+
+    const resetLink = `${req.protocol}://${req.get('host')}/reset-password`;
+
+    const mailHtml = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head><meta charset="UTF-8"><title>إعادة تعيين كلمة المرور</title></head>
+      <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
+          <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
+            <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
+            </div>
+            <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
+          </div>
+          <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
+            <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
+              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">🔐 إعادة تعيين كلمة المرور</h2>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
+              <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8;">
+                لقد تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في <strong style="color: #818cf8;">مركز بداية</strong>.
+              </p>
+              <div style="background: rgba(79,70,229,0.15); border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
+                <p style="color: #94a3b8; font-size: 14px; margin-bottom: 8px;">رمز التحقق (OTP):</p>
+                <div style="font-size: 36px; font-weight: 800; color: #818cf8; letter-spacing: 8px; background: rgba(15,23,42,0.5); padding: 10px 20px; border-radius: 8px; display: inline-block;">
+                  ${otp}
+                </div>
+                <p style="color: #ef4444; font-size: 12px; margin-top: 8px;">⚠️ هذا الرمز صالح لمدة 5 دقائق فقط</p>
+              </div>
+              <div style="text-align: center; margin-top: 20px;">
+                <a href="${resetLink}" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px;">
+                  الذهاب إلى صفحة إعادة التعيين
+                </a>
+              </div>
+            </div>
+          </div>
+          <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
+            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await sendEmail(email, 'إعادة تعيين كلمة المرور - مركز بداية', mailHtml);
+
+    res.json({
+      success: true,
+      message: 'تم إرسال رمز التحقق إلى بريدك الإلكتروني'
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء إرسال رمز التحقق' });
+  }
+});
+
+// ============================================
+// Verify OTP - التحقق من صحة الكود
+// ============================================
+app.post('/api/auth/verify-otp', [
+  body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
+  body('otp').notEmpty().withMessage('رمز التحقق مطلوب')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, otp } = req.body;
+
+    const storedOTP = otpStore[email];
+    if (!storedOTP) {
+      return res.status(400).json({ error: 'رمز التحقق غير صحيح أو منتهي الصلاحية' });
+    }
+
+    if (storedOTP.otp !== otp) {
+      return res.status(400).json({ error: 'رمز التحقق غير صحيح' });
+    }
+
+    if (Date.now() > storedOTP.expiresAt) {
+      delete otpStore[email];
+      return res.status(400).json({ error: 'انتهت صلاحية رمز التحقق (5 دقائق)' });
+    }
+
+    res.json({
+      success: true,
+      message: 'تم التحقق من الرمز بنجاح'
+    });
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء التحقق' });
+  }
+});
+
+// ============================================
+// Reset Password - مع إرسال إيميل تأكيد
+// ============================================
+app.post('/api/auth/reset-password', [
+  body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
+  body('otp').notEmpty().withMessage('رمز التحقق مطلوب'),
+  body('password').isLength({ min: 6 }).withMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, otp, password } = req.body;
+
+    const storedOTP = otpStore[email];
+    if (!storedOTP) {
+      return res.status(400).json({ error: 'رمز التحقق غير صحيح أو منتهي الصلاحية' });
+    }
+
+    if (storedOTP.otp !== otp) {
+      return res.status(400).json({ error: 'رمز التحقق غير صحيح' });
+    }
+
+    if (Date.now() > storedOTP.expiresAt) {
+      delete otpStore[email];
+      return res.status(400).json({ error: 'انتهت صلاحية رمز التحقق (5 دقائق)' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await db.collection('users').doc(storedOTP.userId).update({
+      password: hashedPassword,
+      updatedAt: new Date().toISOString()
+    });
+
+    delete otpStore[email];
+
+    // ============================================
+    // إرسال إيميل تأكيد تغيير كلمة المرور
+    // ============================================
+    const confirmHtml = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head><meta charset="UTF-8"><title>تم تغيير كلمة المرور</title></head>
+      <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
+          <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
+            <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
+            </div>
+            <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
+          </div>
+          <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
+            <div style="background: rgba(16, 185, 129, 0.15); border-right: 4px solid #10b981; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
+              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">✅ تم تغيير كلمة المرور بنجاح</h2>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
+              <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8;">
+                تم تغيير كلمة المرور الخاصة بحسابك في <strong style="color: #818cf8;">مركز بداية للتدخل المبكر والتأهيل</strong> بنجاح.
+              </p>
+              <p style="color: #94a3b8; font-size: 14px; line-height: 1.8; margin-top: 10px;">
+                إذا لم تكن أنت من قام بهذا التغيير، يرجى التواصل معنا فوراً عبر البريد الإلكتروني أو الهاتف.
+              </p>
+              <div style="text-align: center; margin-top: 20px;">
+                <a href="${req.protocol}://${req.get('host')}/login" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px;">
+                  الذهاب إلى صفحة تسجيل الدخول
+                </a>
+              </div>
+            </div>
+          </div>
+          <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
+            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await sendEmail(email, 'تم تغيير كلمة المرور - مركز بداية', confirmHtml);
+
+    res.json({
+      success: true,
+      message: 'تم إعادة تعيين كلمة المرور بنجاح'
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء إعادة تعيين كلمة المرور' });
+  }
+});
+
+// ============================================
+// User Profile Management
+// ============================================
 app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
   try {
     const usersSnapshot = await db.collection('users')
@@ -549,7 +770,6 @@ app.put('/api/admin/users/:id', authenticateAdmin, [
 app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
   try {
     const userId = req.params.id;
-    
     const userDoc = await db.collection('users').doc(userId).get();
     if (!userDoc.exists) {
       return res.status(404).json({ error: 'User not found' });
@@ -557,13 +777,8 @@ app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
     if (userDoc.data().isAdmin) {
       return res.status(403).json({ error: 'لا يمكن حذف حساب المدير' });
     }
-
     await db.collection('users').doc(userId).delete();
-
-    res.json({
-      success: true,
-      message: 'تم حذف المستخدم بنجاح'
-    });
+    res.json({ success: true, message: 'تم حذف المستخدم بنجاح' });
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({ error: 'حدث خطأ أثناء حذف المستخدم' });
@@ -624,165 +839,9 @@ app.put('/api/profile', authenticateToken, [
   }
 });
 
-// ==================== FORGOT PASSWORD ====================
-
-const otpStore = {};
-
-const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
-app.post('/api/auth/forgot-password', [
-  body('email').isEmail().withMessage('بريد إلكتروني غير صحيح')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { email } = req.body;
-
-    const userSnapshot = await db.collection('users')
-      .where('email', '==', email)
-      .get();
-
-    if (userSnapshot.empty) {
-      return res.status(404).json({ error: 'لا يوجد حساب بهذا البريد الإلكتروني' });
-    }
-
-    const doc = userSnapshot.docs[0];
-    const user = { id: doc.id, ...doc.data() };
-
-    const otp = generateOTP();
-    const expiresAt = Date.now() + 15 * 60 * 1000;
-
-    otpStore[email] = {
-      otp,
-      expiresAt,
-      userId: user.id
-    };
-
-    const resetLink = `${req.protocol}://${req.get('host')}/reset-password`;
-
-    const mailOptions = {
-      from: process.env.SMTP_USER,
-      to: email,
-      subject: 'إعادة تعيين كلمة المرور - مركز بداية',
-      html: `
-      <!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>إعادة تعيين كلمة المرور</title>
-      </head>
-      <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
-        <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
-          <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
-            <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
-              <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
-            </div>
-            <div style="margin-top: 8px;">
-              <span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span>
-            </div>
-          </div>
-          <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
-            <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
-              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">🔐 إعادة تعيين كلمة المرور</h2>
-            </div>
-            <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
-              <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8;">
-                لقد تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في <strong style="color: #818cf8;">مركز بداية</strong>.
-              </p>
-              <div style="background: rgba(79,70,229,0.15); border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
-                <p style="color: #94a3b8; font-size: 14px; margin-bottom: 8px;">رمز التحقق (OTP):</p>
-                <div style="font-size: 36px; font-weight: 800; color: #818cf8; letter-spacing: 8px; background: rgba(15,23,42,0.5); padding: 10px 20px; border-radius: 8px; display: inline-block;">
-                  ${otp}
-                </div>
-                <p style="color: #64748b; font-size: 12px; margin-top: 8px;">هذا الرمز صالح لمدة 15 دقيقة</p>
-              </div>
-              <div style="text-align: center; margin-top: 20px;">
-                <a href="${resetLink}" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px;">
-                  الذهاب إلى صفحة إعادة التعيين
-                </a>
-              </div>
-            </div>
-          </div>
-          <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
-            <p style="color: #64748b; font-size: 12px; margin: 0;">
-              © 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة
-            </p>
-            <p style="color: #475569; font-size: 10px; margin: 5px 0 0;">
-              هذه رسالة آلية، يرجى عدم الرد على هذا البريد.
-            </p>
-          </div>
-        </div>
-      </body>
-      </html>
-      `
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    res.json({
-      success: true,
-      message: 'تم إرسال رمز التحقق إلى بريدك الإلكتروني'
-    });
-  } catch (error) {
-    console.error('Forgot password error:', error);
-    res.status(500).json({ error: 'حدث خطأ أثناء إرسال رمز التحقق' });
-  }
-});
-
-app.post('/api/auth/reset-password', [
-  body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
-  body('otp').notEmpty().withMessage('رمز التحقق مطلوب'),
-  body('password').isLength({ min: 6 }).withMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { email, otp, password } = req.body;
-
-    const storedOTP = otpStore[email];
-    if (!storedOTP) {
-      return res.status(400).json({ error: 'رمز التحقق غير صحيح أو منتهي الصلاحية' });
-    }
-
-    if (storedOTP.otp !== otp) {
-      return res.status(400).json({ error: 'رمز التحقق غير صحيح' });
-    }
-
-    if (Date.now() > storedOTP.expiresAt) {
-      delete otpStore[email];
-      return res.status(400).json({ error: 'انتهت صلاحية رمز التحقق' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    await db.collection('users').doc(storedOTP.userId).update({
-      password: hashedPassword,
-      updatedAt: new Date().toISOString()
-    });
-
-    delete otpStore[email];
-
-    res.json({
-      success: true,
-      message: 'تم إعادة تعيين كلمة المرور بنجاح'
-    });
-  } catch (error) {
-    console.error('Reset password error:', error);
-    res.status(500).json({ error: 'حدث خطأ أثناء إعادة تعيين كلمة المرور' });
-  }
-});
-
-// ==================== BOOKING ROUTES ====================
-
+// ============================================
+// Booking Routes
+// ============================================
 app.post('/api/bookings', [
   body('fullName').notEmpty().withMessage('الاسم الكامل مطلوب'),
   body('phone').notEmpty().withMessage('رقم التليفون مطلوب'),
@@ -826,8 +885,9 @@ app.post('/api/bookings', [
   }
 });
 
-// ==================== CONTACT ROUTES ====================
-
+// ============================================
+// Contact Routes
+// ============================================
 app.post('/api/contact', [
   body('name').notEmpty().withMessage('الاسم مطلوب'),
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
@@ -851,67 +911,50 @@ app.post('/api/contact', [
     };
     await db.collection('contacts').add(contactData);
 
-    const mailOptions = {
-      from: process.env.SMTP_USER,
-      to: process.env.ADMIN_EMAIL,
-      subject: 'رسالة جديدة من مركز بداية',
-      html: `
-        <!DOCTYPE html>
-        <html dir="rtl" lang="ar">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>رسالة جديدة</title>
-        </head>
-        <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
-          <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
-            <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
-              <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-                <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
-                <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
-              </div>
-              <div style="margin-top: 8px;">
-                <span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span>
-              </div>
+    const adminHtml = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head><meta charset="UTF-8"><title>رسالة جديدة</title></head>
+      <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
+          <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
+            <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
-            <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
-              <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
-                <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">📩 رسالة جديدة من موقع مركز بداية</h2>
-              </div>
-              <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
-                <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
-                  <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">👤 الاسم:</span>
-                  <span style="color: #e2e8f0;">${name}</span>
-                </div>
-                <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
-                  <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">📧 البريد الإلكتروني:</span>
-                  <span style="color: #e2e8f0;">${email}</span>
-                </div>
-                <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
-                  <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">📱 رقم التليفون:</span>
-                  <span style="color: #e2e8f0;">${phone}</span>
-                </div>
-                <div style="display: flex; padding: 12px 0 0;">
-                  <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">💬 الرسالة:</span>
-                  <span style="color: #e2e8f0; flex: 1; line-height: 1.8; background: rgba(15,23,42,0.5); padding: 12px; border-radius: 8px; margin-top: 4px;">${message}</span>
-                </div>
-              </div>
+            <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
+          </div>
+          <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
+            <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
+              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">📩 رسالة جديدة من موقع مركز بداية</h2>
             </div>
-            <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
-              <p style="color: #64748b; font-size: 12px; margin: 0;">
-                © 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة
-              </p>
-              <p style="color: #475569; font-size: 10px; margin: 5px 0 0;">
-                هذه رسالة آلية، يرجى عدم الرد على هذا البريد.
-              </p>
+            <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
+              <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+                <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">👤 الاسم:</span>
+                <span style="color: #e2e8f0;">${name}</span>
+              </div>
+              <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+                <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">📧 البريد الإلكتروني:</span>
+                <span style="color: #e2e8f0;">${email}</span>
+              </div>
+              <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+                <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">📱 رقم التليفون:</span>
+                <span style="color: #e2e8f0;">${phone}</span>
+              </div>
+              <div style="display: flex; padding: 12px 0 0;">
+                <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">💬 الرسالة:</span>
+                <span style="color: #e2e8f0; flex: 1; line-height: 1.8; background: rgba(15,23,42,0.5); padding: 12px; border-radius: 8px; margin-top: 4px;">${message}</span>
+              </div>
             </div>
           </div>
-        </body>
-        </html>
-      `
-    };
-
-    await transporter.sendMail(mailOptions);
+          <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
+            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    await sendEmail(process.env.ADMIN_EMAIL, 'رسالة جديدة من مركز بداية', adminHtml);
 
     await sendTelegramNotification(
       `📧 <b>رسالة جديدة</b>\n\n` +
@@ -932,14 +975,14 @@ app.post('/api/contact', [
   }
 });
 
-// ==================== RESULTS ROUTES ====================
-
+// ============================================
+// Results Routes
+// ============================================
 app.post('/api/results/check', [
   body('phone').notEmpty().withMessage('رقم التليفون مطلوب')
 ], authenticateToken, async (req, res) => {
   try {
     const { phone } = req.body;
-
     const resultsSnapshot = await db.collection('results')
       .where('phone', '==', phone)
       .get();
@@ -966,110 +1009,64 @@ app.post('/api/results/check', [
   }
 });
 
-// ==================== ADMIN DASHBOARD ROUTES ====================
-
-// Get Dashboard Stats - مع معالجة الأخطاء
+// ============================================
+// Admin Dashboard Routes
+// ============================================
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    
     const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
     
-    let salesSnapshot;
-    try {
-      salesSnapshot = await db.collection('sales')
-        .where('date', '==', today)
-        .where('adminName', '==', adminName)
-        .where('adminUsername', '==', adminUsername)
-        .get();
-    } catch (error) {
-      console.log('Sales collection may not exist yet');
-      salesSnapshot = { size: 0, forEach: () => {} };
-    }
+    let salesSnapshot = await db.collection('sales')
+      .where('date', '==', today)
+      .where('adminName', '==', adminName)
+      .where('adminUsername', '==', adminUsername)
+      .get();
     
     let todaySales = 0;
-    if (salesSnapshot && salesSnapshot.forEach) {
-      salesSnapshot.forEach(doc => {
-        todaySales += doc.data().amount || 0;
-      });
-    }
+    salesSnapshot.forEach(doc => {
+      todaySales += doc.data().amount || 0;
+    });
 
-    let bookingsSnapshot;
-    try {
-      bookingsSnapshot = await db.collection('bookings').get();
-    } catch (error) {
-      bookingsSnapshot = { size: 0 };
-    }
-    const totalBookings = bookingsSnapshot.size || 0;
-
-    let messagesSnapshot;
-    try {
-      messagesSnapshot = await db.collection('messages').get();
-    } catch (error) {
-      messagesSnapshot = { size: 0 };
-    }
-    const totalMessages = messagesSnapshot.size || 0;
-    
-    let contactsSnapshot;
-    try {
-      contactsSnapshot = await db.collection('contacts').get();
-    } catch (error) {
-      contactsSnapshot = { size: 0 };
-    }
-    const totalContacts = contactsSnapshot.size || 0;
+    let bookingsSnapshot = await db.collection('bookings').get();
+    let messagesSnapshot = await db.collection('messages').get();
+    let contactsSnapshot = await db.collection('contacts').get();
 
     res.json({
       todaySales,
-      totalBookings,
-      totalMessages,
-      totalContacts,
+      totalBookings: bookingsSnapshot.size || 0,
+      totalMessages: messagesSnapshot.size || 0,
+      totalContacts: contactsSnapshot.size || 0,
       adminName,
       adminUsername
     });
   } catch (error) {
     console.error('Stats error:', error);
-    res.json({
-      todaySales: 0,
-      totalBookings: 0,
-      totalMessages: 0,
-      totalContacts: 0,
-      adminName: req.user?.adminName || 'Admin',
-      adminUsername: req.user?.adminUsername || 'admin'
-    });
+    res.json({ todaySales: 0, totalBookings: 0, totalMessages: 0, totalContacts: 0 });
   }
 });
 
-// Get Sales Chart Data - مع معالجة الأخطاء
 app.get('/api/admin/sales-chart', authenticateAdmin, async (req, res) => {
   try {
     const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
     
-    let salesSnapshot;
-    try {
-      salesSnapshot = await db.collection('sales')
-        .where('adminName', '==', adminName)
-        .where('adminUsername', '==', adminUsername)
-        .orderBy('date', 'desc')
-        .limit(30)
-        .get();
-    } catch (error) {
-      console.log('Sales collection may not exist yet');
-      return res.json([]);
-    }
+    let salesSnapshot = await db.collection('sales')
+      .where('adminName', '==', adminName)
+      .where('adminUsername', '==', adminUsername)
+      .orderBy('date', 'desc')
+      .limit(30)
+      .get();
 
     const salesData = [];
-    if (salesSnapshot && salesSnapshot.forEach) {
-      salesSnapshot.forEach(doc => {
-        const data = doc.data();
-        salesData.push({
-          date: data.date || new Date().toISOString().split('T')[0],
-          amount: data.amount || 0,
-          customer: data.customer || 'Unknown'
-        });
+    salesSnapshot.forEach(doc => {
+      const data = doc.data();
+      salesData.push({
+        date: data.date || new Date().toISOString().split('T')[0],
+        amount: data.amount || 0
       });
-    }
+    });
 
     res.json(salesData.reverse());
   } catch (error) {
@@ -1078,7 +1075,6 @@ app.get('/api/admin/sales-chart', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Add Sale
 app.post('/api/admin/sales', authenticateAdmin, [
   body('customer').notEmpty().withMessage('اسم العميل مطلوب'),
   body('amount').isNumeric().withMessage('المبلغ يجب أن يكون رقماً')
@@ -1091,7 +1087,6 @@ app.post('/api/admin/sales', authenticateAdmin, [
 
     const { customer, amount } = req.body;
     const today = new Date().toISOString().split('T')[0];
-    
     const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
 
@@ -1099,24 +1094,19 @@ app.post('/api/admin/sales', authenticateAdmin, [
       customer,
       amount: parseFloat(amount),
       date: today,
-      adminName: adminName,
-      adminUsername: adminUsername,
+      adminName,
+      adminUsername,
       createdAt: new Date().toISOString()
     };
 
     const docRef = await db.collection('sales').add(sale);
-
-    res.status(201).json({
-      success: true,
-      sale: { id: docRef.id, ...sale }
-    });
+    res.status(201).json({ success: true, sale: { id: docRef.id, ...sale } });
   } catch (error) {
     console.error('Add sale error:', error);
     res.status(500).json({ error: 'حدث خطأ أثناء تسجيل البيع' });
   }
 });
 
-// Update Sale
 app.put('/api/admin/sales/:id', authenticateAdmin, [
   body('customer').notEmpty().withMessage('اسم العميل مطلوب'),
   body('amount').isNumeric().withMessage('المبلغ يجب أن يكون رقماً')
@@ -1135,54 +1125,34 @@ app.put('/api/admin/sales/:id', authenticateAdmin, [
       return res.status(404).json({ error: 'Sale not found' });
     }
 
-    const saleData = saleDoc.data();
-    const adminName = req.user.adminName || 'Admin';
-    const adminUsername = req.user.adminUsername || 'admin';
-
-    if (saleData.adminName !== adminName || saleData.adminUsername !== adminUsername) {
-      return res.status(403).json({ error: 'غير مصرح بتعديل هذه العملية' });
-    }
-
     await saleRef.update({
       customer,
       amount: parseFloat(amount),
       updatedAt: new Date().toISOString()
     });
 
-    res.json({
-      success: true,
-      message: 'تم تحديث البيع بنجاح'
-    });
+    res.json({ success: true, message: 'تم تحديث البيع بنجاح' });
   } catch (error) {
     console.error('Update sale error:', error);
     res.status(500).json({ error: 'حدث خطأ أثناء تحديث البيع' });
   }
 });
 
-// Get Sales - مع معالجة الأخطاء
 app.get('/api/admin/sales', authenticateAdmin, async (req, res) => {
   try {
     const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
     
-    let salesSnapshot;
-    try {
-      salesSnapshot = await db.collection('sales')
-        .where('adminName', '==', adminName)
-        .where('adminUsername', '==', adminUsername)
-        .orderBy('createdAt', 'desc')
-        .get();
-    } catch (error) {
-      console.log('Sales collection may not exist yet');
-      return res.json([]);
-    }
+    let salesSnapshot = await db.collection('sales')
+      .where('adminName', '==', adminName)
+      .where('adminUsername', '==', adminUsername)
+      .orderBy('createdAt', 'desc')
+      .get();
 
     const sales = [];
-    if (salesSnapshot && salesSnapshot.forEach) {
-      salesSnapshot.forEach(doc => {
-        sales.push({ id: doc.id, ...doc.data() });
-      });
-    }
+    salesSnapshot.forEach(doc => {
+      sales.push({ id: doc.id, ...doc.data() });
+    });
 
     res.json(sales);
   } catch (error) {
@@ -1191,25 +1161,9 @@ app.get('/api/admin/sales', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Delete Sale
 app.delete('/api/admin/sales/:id', authenticateAdmin, async (req, res) => {
   try {
-    const saleRef = db.collection('sales').doc(req.params.id);
-    const saleDoc = await saleRef.get();
-
-    if (!saleDoc.exists) {
-      return res.status(404).json({ error: 'Sale not found' });
-    }
-
-    const saleData = saleDoc.data();
-    const adminName = req.user.adminName || 'Admin';
-    const adminUsername = req.user.adminUsername || 'admin';
-
-    if (saleData.adminName !== adminName || saleData.adminUsername !== adminUsername) {
-      return res.status(403).json({ error: 'غير مصرح بحذف هذه العملية' });
-    }
-
-    await saleRef.delete();
+    await db.collection('sales').doc(req.params.id).delete();
     res.json({ success: true });
   } catch (error) {
     console.error('Delete sale error:', error);
@@ -1217,7 +1171,6 @@ app.delete('/api/admin/sales/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Get Bookings
 app.get('/api/admin/bookings', authenticateAdmin, async (req, res) => {
   try {
     const bookingsSnapshot = await db.collection('bookings')
@@ -1236,7 +1189,6 @@ app.get('/api/admin/bookings', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Delete Booking
 app.delete('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
   try {
     await db.collection('bookings').doc(req.params.id).delete();
@@ -1247,60 +1199,13 @@ app.delete('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Upload Result (by URL)
-app.post('/api/admin/results', authenticateAdmin, [
-  body('phone').notEmpty().withMessage('رقم التليفون مطلوب'),
-  body('url').notEmpty().withMessage('رابط الملف مطلوب')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { phone, url } = req.body;
-
-    const existingSnapshot = await db.collection('results')
-      .where('phone', '==', phone)
-      .get();
-
-    if (!existingSnapshot.empty) {
-      const doc = existingSnapshot.docs[0];
-      await db.collection('results').doc(doc.id).update({
-        url,
-        updatedAt: new Date().toISOString()
-      });
-    } else {
-      await db.collection('results').add({
-        phone,
-        url,
-        createdAt: new Date().toISOString()
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'تم حفظ النتيجة بنجاح'
-    });
-  } catch (error) {
-    console.error('Upload result error:', error);
-    res.status(500).json({ error: 'حدث خطأ أثناء حفظ النتيجة' });
-  }
-});
-
-// Upload Result (by File)
 app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), async (req, res) => {
   try {
     const { phone } = req.body;
     const file = req.file;
 
-    if (!file) {
-      return res.status(400).json({ error: 'الملف مطلوب' });
-    }
-
-    if (!phone) {
-      return res.status(400).json({ error: 'رقم الهاتف مطلوب' });
-    }
+    if (!file) return res.status(400).json({ error: 'الملف مطلوب' });
+    if (!phone) return res.status(400).json({ error: 'رقم الهاتف مطلوب' });
 
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream({
@@ -1336,28 +1241,20 @@ app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), 
       resultId = newDoc.id;
     }
 
-    res.json({ 
-      success: true, 
-      url,
-      id: resultId,
-      message: 'تم رفع النتيجة بنجاح'
-    });
+    res.json({ success: true, url, id: resultId, message: 'تم رفع النتيجة بنجاح' });
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ error: 'حدث خطأ أثناء رفع الملف' });
   }
 });
 
-// Update Result
 app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), async (req, res) => {
   try {
     const { phone } = req.body;
     const file = req.file;
     const resultId = req.params.id;
 
-    if (!phone) {
-      return res.status(400).json({ error: 'رقم الهاتف مطلوب' });
-    }
+    if (!phone) return res.status(400).json({ error: 'رقم الهاتف مطلوب' });
 
     const resultRef = db.collection('results').doc(resultId);
     const resultDoc = await resultRef.get();
@@ -1366,10 +1263,7 @@ app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), asyn
       return res.status(404).json({ error: 'Result not found' });
     }
 
-    let updateData = {
-      phone,
-      updatedAt: new Date().toISOString()
-    };
+    let updateData = { phone, updatedAt: new Date().toISOString() };
 
     if (file) {
       const result = await new Promise((resolve, reject) => {
@@ -1387,17 +1281,13 @@ app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), asyn
 
     await resultRef.update(updateData);
 
-    res.json({
-      success: true,
-      message: 'تم تحديث النتيجة بنجاح'
-    });
+    res.json({ success: true, message: 'تم تحديث النتيجة بنجاح' });
   } catch (error) {
     console.error('Update result error:', error);
     res.status(500).json({ error: 'حدث خطأ أثناء تحديث النتيجة' });
   }
 });
 
-// Get Results
 app.get('/api/admin/results', authenticateAdmin, async (req, res) => {
   try {
     const resultsSnapshot = await db.collection('results')
@@ -1416,7 +1306,6 @@ app.get('/api/admin/results', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Delete Result
 app.delete('/api/admin/results/:id', authenticateAdmin, async (req, res) => {
   try {
     await db.collection('results').doc(req.params.id).delete();
@@ -1427,7 +1316,6 @@ app.delete('/api/admin/results/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Get Messages
 app.get('/api/admin/messages', authenticateAdmin, async (req, res) => {
   try {
     const messagesSnapshot = await db.collection('messages')
@@ -1446,7 +1334,6 @@ app.get('/api/admin/messages', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Get Contacts
 app.get('/api/admin/contacts', authenticateAdmin, async (req, res) => {
   try {
     const contactsSnapshot = await db.collection('contacts')
@@ -1465,7 +1352,6 @@ app.get('/api/admin/contacts', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Delete Contact
 app.delete('/api/admin/contacts/:id', authenticateAdmin, async (req, res) => {
   try {
     await db.collection('contacts').doc(req.params.id).delete();
@@ -1476,7 +1362,6 @@ app.delete('/api/admin/contacts/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Send Email
 app.post('/api/admin/send-email', authenticateAdmin, [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
   body('message').notEmpty().withMessage('الرسالة مطلوبة')
@@ -1489,54 +1374,36 @@ app.post('/api/admin/send-email', authenticateAdmin, [
 
     const { email, message } = req.body;
 
-    const mailOptions = {
-      from: process.env.SMTP_USER,
-      to: email,
-      subject: 'رسالة من مركز بداية للتدخل المبكر والتأهيل',
-      html: `
-        <!DOCTYPE html>
-        <html dir="rtl" lang="ar">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>رسالة من مركز بداية</title>
-        </head>
-        <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
-          <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
-            <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
-              <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-                <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
-                <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
-              </div>
-              <div style="margin-top: 8px;">
-                <span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span>
-              </div>
+    const mailHtml = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head><meta charset="UTF-8"><title>رسالة من مركز بداية</title></head>
+      <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
+          <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
+            <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
-            <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
-              <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
-                <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">📧 رسالة من مركز بداية</h2>
-              </div>
-              <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
-                <div style="color: #e2e8f0; line-height: 2; font-size: 16px; white-space: pre-wrap;">
-                  ${message}
-                </div>
-              </div>
+            <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
+          </div>
+          <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
+            <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
+              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">📧 رسالة من مركز بداية</h2>
             </div>
-            <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
-              <p style="color: #64748b; font-size: 12px; margin: 0;">
-                © 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة
-              </p>
-              <p style="color: #475569; font-size: 10px; margin: 5px 0 0;">
-                هذه رسالة آلية، يرجى عدم الرد على هذا البريد.
-              </p>
+            <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
+              <div style="color: #e2e8f0; line-height: 2; font-size: 16px; white-space: pre-wrap;">${message}</div>
             </div>
           </div>
-        </body>
-        </html>
-      `
-    };
+          <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
+            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
 
-    await transporter.sendMail(mailOptions);
+    await sendEmail(email, 'رسالة من مركز بداية للتدخل المبكر والتأهيل', mailHtml);
 
     await db.collection('messages').add({
       email,
@@ -1544,17 +1411,13 @@ app.post('/api/admin/send-email', authenticateAdmin, [
       sentAt: new Date().toISOString()
     });
 
-    res.json({
-      success: true,
-      message: 'تم إرسال الرسالة بنجاح'
-    });
+    res.json({ success: true, message: 'تم إرسال الرسالة بنجاح' });
   } catch (error) {
     console.error('Send email error:', error);
     res.status(500).json({ error: 'حدث خطأ أثناء إرسال الرسالة' });
   }
 });
 
-// Delete Message
 app.delete('/api/admin/messages/:id', authenticateAdmin, async (req, res) => {
   try {
     await db.collection('messages').doc(req.params.id).delete();
@@ -1565,7 +1428,9 @@ app.delete('/api/admin/messages/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Serve HTML pages
+// ============================================
+// Serve HTML Pages
+// ============================================
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -1590,7 +1455,9 @@ app.get('/reset-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
 });
 
-// Start server
+// ============================================
+// Start Server
+// ============================================
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`🌐 http://localhost:${PORT}`);
