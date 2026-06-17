@@ -679,20 +679,29 @@
                 });
             }
 
-            // Toast
-            function showToast(message, type = 'success') {
-                const toast = document.getElementById('toast');
-                toast.textContent = message;
-                toast.className = 'fixed top-4 right-4 p-4 rounded-lg shadow-lg transform translate-x-0 opacity-100 transition-all duration-300 z-50';
-                if (type === 'success') {
-                    toast.classList.add('bg-green-600', 'text-white');
-                } else {
-                    toast.classList.add('bg-red-600', 'text-white');
-                }
-                setTimeout(() => {
-                    toast.classList.add('translate-x-full', 'opacity-0');
-                }, 3000);
-            }
+// Toast
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    // Clear any existing timeout
+    if (window.toastTimeout) {
+        clearTimeout(window.toastTimeout);
+        window.toastTimeout = null;
+    }
+    
+    toast.textContent = message;
+    toast.className = 'fixed top-4 right-4 p-4 rounded-lg shadow-lg transform translate-x-0 opacity-100 transition-all duration-300 z-50';
+    if (type === 'success') {
+        toast.classList.add('bg-green-600', 'text-white');
+    } else {
+        toast.classList.add('bg-red-600', 'text-white');
+    }
+    
+    // Auto hide after 3 seconds
+    window.toastTimeout = setTimeout(() => {
+        toast.classList.add('translate-x-full', 'opacity-0');
+        window.toastTimeout = null;
+    }, 3000);
+}
 
             // Booking Form
             const bookingForm = document.getElementById('bookingForm');
