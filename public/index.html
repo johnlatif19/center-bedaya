@@ -129,8 +129,6 @@
             background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(124, 58, 237, 0.2));
             border: 1px solid rgba(79, 70, 229, 0.2);
         }
-
-        /* Auth required overlay for protected sections */
         .auth-required {
             position: relative;
         }
@@ -173,8 +171,6 @@
             flex-wrap: wrap;
             justify-content: center;
         }
-
-        /* Toast Styles */
         #toast {
             position: fixed;
             top: 20px;
@@ -207,8 +203,6 @@
         #toast .toast-icon {
             margin-left: 10px;
         }
-
-        /* Result buttons */
         .result-buttons {
             display: flex;
             gap: 0.5rem;
@@ -242,8 +236,6 @@
         .result-btn.download:hover {
             background: rgba(16, 185, 129, 0.3);
         }
-
-        /* Password toggle styles for profile modal */
         .password-wrapper {
             position: relative;
         }
@@ -265,8 +257,6 @@
         .password-toggle:hover {
             color: #e2e8f0;
         }
-
-        /* Profile modal */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -355,10 +345,6 @@
                 </div>
                 <div id="userProfile" class="hidden items-center space-x-3 space-x-reverse">
                     <span id="userName" class="text-gray-300 font-bold"></span>
-                    <button id="editProfileBtn" class="px-3 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm">
-                        <i class="fas fa-user-edit ml-1"></i>
-                        تعديل الملف
-                    </button>
                     <button id="logoutBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
                         <i class="fas fa-sign-out-alt ml-1"></i>
                         خروج
@@ -760,50 +746,6 @@
         </div>
     </footer>
 
-    <!-- Edit Profile Modal -->
-    <div class="modal-overlay" id="editProfileModal">
-        <div class="modal-content">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-xl font-bold text-white">تعديل الملف الشخصي</h3>
-                <button onclick="closeProfileModal()" class="text-gray-400 hover:text-white transition text-2xl">&times;</button>
-            </div>
-            <form id="editProfileForm" class="space-y-4">
-                <div>
-                    <label class="block text-gray-300 text-sm font-bold mb-2">الاسم</label>
-                    <input type="text" id="editProfileName" required placeholder="الاسم"
-                        class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
-                </div>
-                <div>
-                    <label class="block text-gray-300 text-sm font-bold mb-2">البريد الإلكتروني</label>
-                    <input type="email" id="editProfileEmail" required placeholder="البريد الإلكتروني"
-                        class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
-                </div>
-                <div>
-                    <label class="block text-gray-300 text-sm font-bold mb-2">رقم الهاتف</label>
-                    <input type="tel" id="editProfilePhone" placeholder="رقم الهاتف"
-                        class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
-                </div>
-                <div>
-                    <label class="block text-gray-300 text-sm font-bold mb-2">كلمة المرور الجديدة (اتركها فارغة إذا لم تريد التغيير)</label>
-                    <div class="password-wrapper">
-                        <input type="password" id="editProfilePassword" placeholder="كلمة المرور الجديدة"
-                            class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
-                        <button type="button" class="password-toggle" onclick="toggleProfilePasswordVisibility()">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                </div>
-                <div id="editProfileError" class="hidden bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded relative" role="alert">
-                    <span id="editProfileErrorMessage"></span>
-                </div>
-                <div class="flex gap-3">
-                    <button type="submit" class="flex-1 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition">حفظ التعديلات</button>
-                    <button type="button" onclick="closeProfileModal()" class="flex-1 py-2 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition">إلغاء</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Toast -->
     <div id="toast">
         <span class="toast-icon"><i class="fas fa-check-circle"></i></span>
@@ -811,374 +753,285 @@
     </div>
 
     <script>
-        // ============================================
-        // TOAST FUNCTION
-        // ============================================
-        let toastTimeout = null;
+        (() => {
+            'use strict';
 
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toastMessage');
-            const icon = toast.querySelector('.toast-icon i');
+            // ============================================
+            // DOM REFS
+            // ============================================
+            const $ = (id) => document.getElementById(id);
+            const toastEl = $('toast');
+            const toastMsg = $('toastMessage');
 
-            if (toastTimeout) {
-                clearTimeout(toastTimeout);
-                toastTimeout = null;
-            }
+            let toastTimeout = null;
 
-            toast.classList.remove('success', 'error', 'show');
+            // ============================================
+            // TOAST
+            // ============================================
+            function showToast(message, type = 'success') {
+                if (toastTimeout) {
+                    clearTimeout(toastTimeout);
+                    toastTimeout = null;
+                }
+                toastEl.className = 'fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300';
+                toastEl.classList.remove('success', 'error', 'show', 'translate-x-full', 'opacity-0');
+                toastMsg.textContent = message;
 
-            toastMessage.textContent = message;
-            if (type === 'success') {
-                toast.classList.add('success');
-                icon.className = 'fas fa-check-circle';
-            } else {
-                toast.classList.add('error');
-                icon.className = 'fas fa-exclamation-circle';
-            }
+                const icon = toastEl.querySelector('.toast-icon i');
+                if (type === 'success') {
+                    toastEl.classList.add('success', 'bg-green-600', 'text-white');
+                    icon.className = 'fas fa-check-circle';
+                } else {
+                    toastEl.classList.add('error', 'bg-red-600', 'text-white');
+                    icon.className = 'fas fa-exclamation-circle';
+                }
 
-            void toast.offsetWidth;
-            toast.classList.add('show');
-
-            toastTimeout = setTimeout(() => {
-                toast.classList.remove('show');
-                toastTimeout = null;
-            }, 3000);
-        }
-
-        // ============================================
-        // PROFILE MODAL FUNCTIONS
-        // ============================================
-        let profilePasswordToggle = false;
-
-        function toggleProfilePasswordVisibility() {
-            const input = document.getElementById('editProfilePassword');
-            const btn = document.querySelector('#editProfileModal .password-toggle');
-            if (!input || !btn) return;
-            const icon = btn.querySelector('i');
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.className = 'fas fa-eye-slash';
-            } else {
-                input.type = 'password';
-                icon.className = 'fas fa-eye';
-            }
-        }
-
-        function openProfileModal(user) {
-            document.getElementById('editProfileName').value = user.fullName || '';
-            document.getElementById('editProfileEmail').value = user.email || '';
-            document.getElementById('editProfilePhone').value = user.phone || '';
-            document.getElementById('editProfilePassword').value = '';
-            document.getElementById('editProfileError').classList.add('hidden');
-            document.getElementById('editProfileModal').classList.add('active');
-        }
-
-        function closeProfileModal() {
-            document.getElementById('editProfileModal').classList.remove('active');
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // Mobile Menu
-            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-            const mobileMenu = document.getElementById('mobileMenu');
-            if (mobileMenuBtn && mobileMenu) {
-                mobileMenuBtn.addEventListener('click', () => {
-                    mobileMenu.classList.toggle('hidden');
+                // trigger animation
+                requestAnimationFrame(() => {
+                    toastEl.classList.remove('translate-x-full', 'opacity-0');
+                    toastEl.classList.add('show');
                 });
+
+                toastTimeout = setTimeout(() => {
+                    toastEl.classList.add('translate-x-full', 'opacity-0');
+                    toastEl.classList.remove('show');
+                    toastTimeout = null;
+                }, 3000);
             }
 
-            // Auth State
+            // ============================================
+            // AUTH STATE
+            // ============================================
             let isAuthenticated = false;
             let currentUser = null;
 
-            // Auth Check
-            function checkAuth() {
-                fetch('/api/auth/verify', { credentials: 'include' })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.authenticated) {
-                            isAuthenticated = true;
-                            currentUser = data.user;
-                            updateUI(true, data.user);
-                        } else {
-                            isAuthenticated = false;
-                            currentUser = null;
-                            updateUI(false, null);
-                        }
-                    })
-                    .catch(() => {
+            // ============================================
+            // CHECK AUTH
+            // ============================================
+            async function checkAuth() {
+                try {
+                    const res = await fetch('/api/auth/verify', { credentials: 'include' });
+                    const data = await res.json();
+                    if (data.authenticated) {
+                        isAuthenticated = true;
+                        currentUser = data.user;
+                    } else {
                         isAuthenticated = false;
                         currentUser = null;
-                        updateUI(false, null);
-                    });
-            }
-
-            function updateUI(authenticated, user) {
-                const authButtons = document.getElementById('authButtons');
-                const userProfile = document.getElementById('userProfile');
-                const userName = document.getElementById('userName');
-
-                if (authenticated && user) {
-                    authButtons.classList.add('hidden');
-                    userProfile.classList.remove('hidden');
-                    userName.textContent = user.fullName || 'مستخدم';
-                    
-                    document.querySelectorAll('.auth-required .auth-overlay').forEach(overlay => {
-                        overlay.classList.remove('show');
-                    });
-                } else {
-                    authButtons.classList.remove('hidden');
-                    userProfile.classList.add('hidden');
-                    
-                    document.querySelectorAll('.auth-required .auth-overlay').forEach(overlay => {
-                        overlay.classList.add('show');
-                    });
-                }
-            }
-
-            // Logout
-            const logoutBtn = document.getElementById('logoutBtn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', async () => {
-                    await fetch('/api/auth/logout', { method: 'POST' });
+                    }
+                } catch (_) {
                     isAuthenticated = false;
                     currentUser = null;
-                    updateUI(false, null);
-                    showToast('تم تسجيل الخروج بنجاح', 'success');
-                });
+                }
+                updateUI();
             }
 
-            // Edit Profile Button
-            const editProfileBtn = document.getElementById('editProfileBtn');
-            if (editProfileBtn) {
-                editProfileBtn.addEventListener('click', () => {
-                    if (currentUser) {
-                        openProfileModal(currentUser);
-                    }
-                });
+            // ============================================
+            // UPDATE UI
+            // ============================================
+            function updateUI() {
+                const authButtons = $('authButtons');
+                const userProfile = $('userProfile');
+                const userName = $('userName');
+                const overlays = document.querySelectorAll('.auth-required .auth-overlay');
+
+                if (isAuthenticated && currentUser) {
+                    authButtons?.classList.add('hidden');
+                    userProfile?.classList.remove('hidden');
+                    if (userName) userName.textContent = currentUser.fullName || 'مستخدم';
+                    overlays.forEach(el => el.classList.remove('show'));
+                } else {
+                    authButtons?.classList.remove('hidden');
+                    userProfile?.classList.add('hidden');
+                    overlays.forEach(el => el.classList.add('show'));
+                }
             }
 
-            // Close modal on overlay click
-            document.getElementById('editProfileModal')?.addEventListener('click', (e) => {
-                if (e.target === e.currentTarget) closeProfileModal();
-            });
+            // ============================================
+            // LOGOUT
+            // ============================================
+            async function logout() {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                isAuthenticated = false;
+                currentUser = null;
+                updateUI();
+                showToast('تم تسجيل الخروج بنجاح', 'success');
+            }
 
-            // Edit Profile Form Submit
-            document.getElementById('editProfileForm')?.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                const name = document.getElementById('editProfileName').value.trim();
-                const email = document.getElementById('editProfileEmail').value.trim();
-                const phone = document.getElementById('editProfilePhone').value.trim();
-                const password = document.getElementById('editProfilePassword').value;
-                const errorDiv = document.getElementById('editProfileError');
-                const errorMessage = document.getElementById('editProfileErrorMessage');
-
-                errorDiv.classList.add('hidden');
-
-                if (!name) {
-                    errorMessage.textContent = 'الاسم مطلوب';
-                    errorDiv.classList.remove('hidden');
-                    return;
+            // ============================================
+            // MOBILE MENU
+            // ============================================
+            function initMobileMenu() {
+                const btn = $('mobileMenuBtn');
+                const menu = $('mobileMenu');
+                if (btn && menu) {
+                    btn.addEventListener('click', () => menu.classList.toggle('hidden'));
                 }
-                if (!email || !email.includes('@')) {
-                    errorMessage.textContent = 'بريد إلكتروني غير صحيح';
-                    errorDiv.classList.remove('hidden');
-                    return;
-                }
-                if (password && password.length < 6) {
-                    errorMessage.textContent = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
-                    errorDiv.classList.remove('hidden');
-                    return;
-                }
+            }
 
-                try {
-                    const body = { fullName: name, email, phone };
-                    if (password) body.password = password;
+            // ============================================
+            // BOOKING FORM
+            // ============================================
+            function initBookingForm() {
+                const form = $('bookingForm');
+                if (!form) return;
 
-                    const response = await fetch('/api/profile', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(body),
-                        credentials: 'include'
-                    });
-
-                    if (response.ok) {
-                        showToast('تم تحديث الملف الشخصي بنجاح', 'success');
-                        closeProfileModal();
-                        // Refresh user data
-                        checkAuth();
-                    } else {
-                        const data = await response.json();
-                        errorMessage.textContent = data.error || 'حدث خطأ';
-                        errorDiv.classList.remove('hidden');
-                    }
-                } catch (error) {
-                    errorMessage.textContent = 'حدث خطأ في التواصل مع الخادم';
-                    errorDiv.classList.remove('hidden');
-                }
-            });
-
-            // Booking Form
-            const bookingForm = document.getElementById('bookingForm');
-            if (bookingForm) {
-                bookingForm.addEventListener('submit', async (e) => {
+                form.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    
                     if (!isAuthenticated) {
                         showToast('يرجى تسجيل الدخول لحجز موعد', 'error');
                         return;
                     }
 
-                    const name = document.getElementById('bookingName').value.trim();
-                    const phone = document.getElementById('bookingPhone').value.trim();
-                    const date = document.getElementById('bookingDate').value;
-                    const time = document.getElementById('bookingTime').value;
-                    const errorDiv = document.getElementById('bookingError');
-                    const errorMessage = document.getElementById('bookingErrorMessage');
+                    const name = $('bookingName').value.trim();
+                    const phone = $('bookingPhone').value.trim();
+                    const date = $('bookingDate').value;
+                    const time = $('bookingTime').value;
+                    const errorDiv = $('bookingError');
+                    const errorMsg = $('bookingErrorMessage');
 
                     errorDiv.classList.add('hidden');
 
                     if (!name || !phone || !date || !time) {
-                        errorMessage.textContent = 'جميع الحقول مطلوبة';
+                        errorMsg.textContent = 'جميع الحقول مطلوبة';
                         errorDiv.classList.remove('hidden');
                         return;
                     }
 
                     try {
-                        const response = await fetch('/api/bookings', {
+                        const res = await fetch('/api/bookings', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ fullName: name, phone, date, time })
                         });
-
-                        const data = await response.json();
-
-                        if (response.ok) {
+                        const data = await res.json();
+                        if (res.ok) {
                             showToast('تم الحجز بنجاح! سيتم التواصل معك قريباً', 'success');
-                            bookingForm.reset();
+                            form.reset();
                         } else {
-                            errorMessage.textContent = data.error || 'حدث خطأ أثناء الحجز';
+                            errorMsg.textContent = data.error || 'حدث خطأ أثناء الحجز';
                             errorDiv.classList.remove('hidden');
                         }
-                    } catch (error) {
-                        errorMessage.textContent = 'حدث خطأ أثناء التواصل مع الخادم';
+                    } catch (_) {
+                        errorMsg.textContent = 'حدث خطأ أثناء التواصل مع الخادم';
                         errorDiv.classList.remove('hidden');
                     }
                 });
             }
 
-            // Results Form
-            const resultsForm = document.getElementById('resultsForm');
-            if (resultsForm) {
-                resultsForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
+            // ============================================
+            // RESULTS FORM
+            // ============================================
+            function initResultsForm() {
+                const form = $('resultsForm');
+                if (!form) return;
 
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
                     if (!isAuthenticated) {
                         showToast('يرجى تسجيل الدخول للاستعلام عن النتائج', 'error');
                         return;
                     }
 
-                    const phone = document.getElementById('resultPhone').value.trim();
-                    const errorDiv = document.getElementById('resultError');
-                    const errorMessage = document.getElementById('resultErrorMessage');
-                    const successDiv = document.getElementById('resultSuccess');
-                    const successMessage = document.getElementById('resultSuccessMessage');
-                    const resultLink = document.getElementById('resultLink');
-                    const viewLink = document.getElementById('resultViewLink');
-                    const downloadLink = document.getElementById('resultDownloadLink');
+                    const phone = $('resultPhone').value.trim();
+                    const errorDiv = $('resultError');
+                    const errorMsg = $('resultErrorMessage');
+                    const successDiv = $('resultSuccess');
+                    const successMsg = $('resultSuccessMessage');
+                    const linkDiv = $('resultLink');
+                    const viewLink = $('resultViewLink');
+                    const downloadLink = $('resultDownloadLink');
 
                     errorDiv.classList.add('hidden');
                     successDiv.classList.add('hidden');
-                    resultLink.classList.add('hidden');
+                    linkDiv.classList.add('hidden');
 
                     if (!phone) {
-                        errorMessage.textContent = 'رقم التليفون مطلوب';
+                        errorMsg.textContent = 'رقم التليفون مطلوب';
                         errorDiv.classList.remove('hidden');
                         return;
                     }
 
                     try {
-                        const response = await fetch('/api/results/check', {
+                        const res = await fetch('/api/results/check', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ phone })
                         });
-
-                        const data = await response.json();
-
+                        const data = await res.json();
                         if (data.exists) {
-                            successMessage.textContent = 'تم العثور على النتيجة';
+                            successMsg.textContent = 'تم العثور على النتيجة';
                             successDiv.classList.remove('hidden');
-                            
                             viewLink.href = data.result.url;
                             downloadLink.href = data.result.url;
-                            
-                            resultLink.classList.remove('hidden');
+                            linkDiv.classList.remove('hidden');
                         } else {
-                            errorMessage.textContent = 'لا توجد نتيجة لهذا الرقم';
+                            errorMsg.textContent = 'لا توجد نتيجة لهذا الرقم';
                             errorDiv.classList.remove('hidden');
                         }
-                    } catch (error) {
-                        errorMessage.textContent = 'حدث خطأ أثناء البحث';
+                    } catch (_) {
+                        errorMsg.textContent = 'حدث خطأ أثناء البحث';
                         errorDiv.classList.remove('hidden');
                     }
                 });
             }
 
-            // Contact Form
-            const contactForm = document.getElementById('contactForm');
-            if (contactForm) {
-                contactForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
+            // ============================================
+            // CONTACT FORM
+            // ============================================
+            function initContactForm() {
+                const form = $('contactForm');
+                if (!form) return;
 
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
                     if (!isAuthenticated) {
                         showToast('يرجى تسجيل الدخول لإرسال رسالة', 'error');
                         return;
                     }
 
-                    const name = document.getElementById('contactName').value.trim();
-                    const email = document.getElementById('contactEmail').value.trim();
-                    const phone = document.getElementById('contactPhone').value.trim();
-                    const message = document.getElementById('contactMessage').value.trim();
-                    const errorDiv = document.getElementById('contactError');
-                    const errorMessage = document.getElementById('contactErrorMessage');
+                    const name = $('contactName').value.trim();
+                    const email = $('contactEmail').value.trim();
+                    const phone = $('contactPhone').value.trim();
+                    const message = $('contactMessage').value.trim();
+                    const errorDiv = $('contactError');
+                    const errorMsg = $('contactErrorMessage');
 
                     errorDiv.classList.add('hidden');
 
                     if (!name || !email || !phone || !message) {
-                        errorMessage.textContent = 'جميع الحقول مطلوبة';
+                        errorMsg.textContent = 'جميع الحقول مطلوبة';
                         errorDiv.classList.remove('hidden');
                         return;
                     }
 
                     try {
-                        const response = await fetch('/api/contact', {
+                        const res = await fetch('/api/contact', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ name, email, phone, message })
                         });
-
-                        const data = await response.json();
-
-                        if (response.ok) {
+                        const data = await res.json();
+                        if (res.ok) {
                             showToast('تم إرسال الرسالة بنجاح', 'success');
-                            contactForm.reset();
+                            form.reset();
                         } else {
-                            errorMessage.textContent = data.error || 'حدث خطأ أثناء الإرسال';
+                            errorMsg.textContent = data.error || 'حدث خطأ أثناء الإرسال';
                             errorDiv.classList.remove('hidden');
                         }
-                    } catch (error) {
-                        errorMessage.textContent = 'حدث خطأ أثناء التواصل مع الخادم';
+                    } catch (_) {
+                        errorMsg.textContent = 'حدث خطأ أثناء التواصل مع الخادم';
                         errorDiv.classList.remove('hidden');
                     }
                 });
             }
 
-            // Fade Up Animations
-            if ('IntersectionObserver' in window) {
-                const fadeElements = document.querySelectorAll('.fade-up');
+            // ============================================
+            // FADE-UP ANIMATION
+            // ============================================
+            function initFadeUp() {
+                if (!('IntersectionObserver' in window)) return;
+                const els = document.querySelectorAll('.fade-up');
                 const observer = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
                         if (entry.isIntersecting) {
@@ -1186,16 +1039,29 @@
                         }
                     });
                 }, { threshold: 0.1 });
-
-                fadeElements.forEach(el => {
+                els.forEach(el => {
                     el.style.animationPlayState = 'paused';
                     observer.observe(el);
                 });
             }
 
-            // Check auth on load
-            checkAuth();
-        });
+            // ============================================
+            // INIT
+            // ============================================
+            document.addEventListener('DOMContentLoaded', () => {
+                const logoutBtn = $('logoutBtn');
+                if (logoutBtn) logoutBtn.addEventListener('click', logout);
+
+                initMobileMenu();
+                initBookingForm();
+                initResultsForm();
+                initContactForm();
+                initFadeUp();
+
+                checkAuth();
+            });
+
+        })();
     </script>
 </body>
 </html>
