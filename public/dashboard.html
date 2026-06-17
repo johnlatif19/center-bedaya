@@ -131,6 +131,8 @@
 
         .action-btn {
             transition: all 0.2s ease;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
         }
         .action-btn:hover {
             transform: scale(1.05);
@@ -192,6 +194,40 @@
             font-size: 0.875rem;
             display: block;
             margin-bottom: 0.25rem;
+        }
+
+        /* Toast - fixed and auto-hiding */
+        #toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            z-index: 2000;
+            transform: translateX(calc(100% + 30px));
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            max-width: 400px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        #toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        #toast.success {
+            background: linear-gradient(135deg, #065f46, #047857);
+            color: #d1fae5;
+            border: 1px solid rgba(52, 211, 153, 0.3);
+        }
+        #toast.error {
+            background: linear-gradient(135deg, #7f1d1d, #b91c1c);
+            color: #fca5a5;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+        #toast .toast-icon {
+            margin-left: 10px;
         }
     </style>
 </head>
@@ -439,7 +475,7 @@
                         <table class="w-full">
                             <thead><tr class="border-b border-gray-700 sticky top-0 bg-gray-900/95">
                                 <th class="text-right py-3 px-4 text-gray-400 text-sm">رقم الهاتف</th>
-                                <th class="text-right py-3 px-4 text-gray-400 text-sm">الرابط</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">الملف</th>
                                 <th class="text-right py-3 px-4 text-gray-400 text-sm">تاريخ الرفع</th>
                                 <th class="text-right py-3 px-4 text-gray-400 text-sm">الإجراءات</th>
                             </tr></thead>
@@ -527,15 +563,25 @@
                 <h3 class="text-xl font-bold text-white">تعديل النتيجة</h3>
                 <button onclick="closeModal('editResultModal')" class="text-gray-400 hover:text-white transition text-2xl">&times;</button>
             </div>
-            <form id="editResultForm" class="space-y-4">
+            <form id="editResultForm" class="space-y-4" enctype="multipart/form-data">
                 <input type="hidden" id="editResultId">
                 <div>
                     <label class="block text-gray-300 text-sm font-bold mb-2">رقم الهاتف</label>
                     <input type="tel" id="editResultPhone" required placeholder="رقم الهاتف" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                 </div>
                 <div>
-                    <label class="block text-gray-300 text-sm font-bold mb-2">رابط النتيجة</label>
-                    <input type="url" id="editResultUrl" required placeholder="https://example.com/file.pdf" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                    <label class="block text-gray-300 text-sm font-bold mb-2">رفع ملف جديد (اختياري)</label>
+                    <div class="file-upload-area" id="editFileUploadArea" style="padding:1rem;">
+                        <div class="file-icon" style="font-size:2rem;"><i class="fas fa-cloud-upload-alt"></i></div>
+                        <div class="file-text"><strong>اختر ملف</strong> أو اسحبه هنا<br><span class="text-xs text-gray-500">PDF, JPG, PNG, GIF (الحد الأقصى 10 ميجابايت)</span></div>
+                        <input type="file" id="editResultFile" accept=".pdf,.jpg,.jpeg,.png,.gif" class="hidden">
+                    </div>
+                    <div class="file-preview" id="editFilePreview">
+                        <div class="file-info"><div class="file-name" id="editFileName">اسم الملف</div><div class="file-size" id="editFileSize">حجم الملف</div></div>
+                        <div class="remove-file" id="editRemoveFile"><i class="fas fa-times-circle text-xl"></i></div>
+                    </div>
+                    <div id="editFileUploadError" class="hidden text-red-400 text-sm mt-2"></div>
+                    <p class="text-xs text-gray-500 mt-2">اترك الحقل فارغاً إذا كنت لا تريد تغيير الملف</p>
                 </div>
                 <div class="flex gap-3">
                     <button type="submit" class="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-lg hover:from-emerald-700 hover:to-teal-700 transition">حفظ التعديلات</button>
@@ -545,10 +591,55 @@
         </div>
     </div>
 
-    <div id="toast" class="fixed top-4 right-4 p-4 rounded-lg shadow-lg transform translate-x-full opacity-0 transition-all duration-300 z-50"></div>
+    <!-- Toast -->
+    <div id="toast">
+        <span class="toast-icon"><i class="fas fa-check-circle"></i></span>
+        <span id="toastMessage">تم بنجاح</span>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // ============================================
+            // TOAST FUNCTION - Auto hides after 3 seconds
+            // ============================================
+            let toastTimeout = null;
+
+            function showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                const toastMessage = document.getElementById('toastMessage');
+                const icon = toast.querySelector('.toast-icon i');
+
+                // Clear any existing timeout
+                if (toastTimeout) {
+                    clearTimeout(toastTimeout);
+                    toastTimeout = null;
+                }
+
+                // Remove previous classes
+                toast.classList.remove('success', 'error', 'show');
+
+                // Set message and icon
+                toastMessage.textContent = message;
+                if (type === 'success') {
+                    toast.classList.add('success');
+                    icon.className = 'fas fa-check-circle';
+                } else {
+                    toast.classList.add('error');
+                    icon.className = 'fas fa-exclamation-circle';
+                }
+
+                // Show toast
+                // Force reflow for animation
+                void toast.offsetWidth;
+                toast.classList.add('show');
+
+                // Auto hide after 3 seconds
+                toastTimeout = setTimeout(() => {
+                    toast.classList.remove('show');
+                    toastTimeout = null;
+                }, 3000);
+            }
+
             // ============================================
             // SINGLE SECTION VIEW CONTROLLER
             // ============================================
@@ -607,7 +698,6 @@
                 })
                 .then(data => {
                     if (!data || !data.authenticated) { window.location.href = '/login-dashboard'; return; }
-                    // Set greeting
                     const greeting = document.getElementById('adminGreeting');
                     if (greeting && data.admin) {
                         greeting.textContent = `مرحباً ${data.admin.username || 'مدير'}`;
@@ -620,17 +710,6 @@
             // DASHBOARD LOGIC
             // ============================================
             function initializeDashboard() {
-                // Toast
-                function showToast(message, type = 'success') {
-                    const toast = document.getElementById('toast');
-                    toast.textContent = message;
-                    toast.className = 'fixed top-4 right-4 p-4 rounded-lg shadow-lg transform translate-x-0 opacity-100 transition-all duration-300 z-50';
-                    toast.classList.add(type === 'success' ? 'bg-green-600' : 'bg-red-600', 'text-white');
-                    setTimeout(() => {
-                        toast.classList.add('translate-x-full', 'opacity-0');
-                    }, 3000);
-                }
-
                 // Logout - redirect to login-dashboard
                 document.getElementById('dashboardLogout')?.addEventListener('click', async () => {
                     await fetch('/api/auth/logout', { method: 'POST' });
@@ -644,14 +723,13 @@
                 window.closeModal = function(id) {
                     document.getElementById(id).classList.remove('active');
                 };
-                // Close modal on overlay click
                 document.querySelectorAll('.modal-overlay').forEach(modal => {
                     modal.addEventListener('click', (e) => {
                         if (e.target === modal) modal.classList.remove('active');
                     });
                 });
 
-                // File upload handlers
+                // File upload handlers for main upload
                 const fileUploadArea = document.getElementById('fileUploadArea');
                 const fileInput = document.getElementById('resultFile');
                 const filePreview = document.getElementById('filePreview');
@@ -697,6 +775,54 @@
                     fileUploadArea.style.display = 'block';
                     fileInput.value = '';
                     fileUploadError.classList.add('hidden');
+                });
+
+                // Edit file upload handlers
+                const editFileUploadArea = document.getElementById('editFileUploadArea');
+                const editFileInput = document.getElementById('editResultFile');
+                const editFilePreview = document.getElementById('editFilePreview');
+                const editFileName = document.getElementById('editFileName');
+                const editFileSize = document.getElementById('editFileSize');
+                const editRemoveFile = document.getElementById('editRemoveFile');
+                const editFileUploadError = document.getElementById('editFileUploadError');
+                let editSelectedFile = null;
+
+                editFileUploadArea?.addEventListener('click', () => editFileInput?.click());
+                editFileUploadArea?.addEventListener('dragover', (e) => { e.preventDefault(); editFileUploadArea.classList.add('dragover'); });
+                editFileUploadArea?.addEventListener('dragleave', () => editFileUploadArea.classList.remove('dragover'));
+                editFileUploadArea?.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    editFileUploadArea.classList.remove('dragover');
+                    if (e.dataTransfer.files.length > 0) handleEditFile(e.dataTransfer.files[0]);
+                });
+                editFileInput?.addEventListener('change', (e) => { if (e.target.files.length > 0) handleEditFile(e.target.files[0]); });
+
+                function handleEditFile(file) {
+                    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
+                    const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.gif'];
+                    const ext = '.' + file.name.split('.').pop().toLowerCase();
+                    if (!validTypes.includes(file.type) && !validExtensions.includes(ext)) {
+                        editFileUploadError.textContent = 'نوع الملف غير مدعوم. يرجى رفع PDF أو JPG أو PNG أو GIF';
+                        editFileUploadError.classList.remove('hidden'); return;
+                    }
+                    if (file.size > 10 * 1024 * 1024) {
+                        editFileUploadError.textContent = 'حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت';
+                        editFileUploadError.classList.remove('hidden'); return;
+                    }
+                    editFileUploadError.classList.add('hidden');
+                    editSelectedFile = file;
+                    editFileName.textContent = file.name;
+                    editFileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' ميجابايت';
+                    editFilePreview.classList.add('show');
+                    editFileUploadArea.style.display = 'none';
+                }
+
+                editRemoveFile?.addEventListener('click', () => {
+                    editSelectedFile = null;
+                    editFilePreview.classList.remove('show');
+                    editFileUploadArea.style.display = 'block';
+                    editFileInput.value = '';
+                    editFileUploadError.classList.add('hidden');
                 });
 
                 // Chart - Enhanced
@@ -882,7 +1008,7 @@
                             `).join('');
                         }
 
-                        // Render Results table
+                        // Render Results table with View and Download buttons
                         const resultsBody = document.getElementById('resultsTableBody');
                         if (results.length === 0) {
                             resultsBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد نتائج</td></tr>`;
@@ -890,12 +1016,19 @@
                             resultsBody.innerHTML = results.map(result => `
                                 <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
                                     <td class="py-3 px-4 text-gray-300">${result.phone}</td>
-                                    <td class="py-3 px-4 text-gray-300">
-                                        <a href="${result.url}" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition">عرض الرابط</a>
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <a href="${result.url}" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition action-btn bg-indigo-500/20 px-3 py-1 rounded-lg text-sm flex items-center gap-1">
+                                                <i class="fas fa-eye"></i> عرض
+                                            </a>
+                                            <a href="${result.url}" download class="text-emerald-400 hover:text-emerald-300 transition action-btn bg-emerald-500/20 px-3 py-1 rounded-lg text-sm flex items-center gap-1">
+                                                <i class="fas fa-download"></i> تحميل
+                                            </a>
+                                        </div>
                                     </td>
                                     <td class="py-3 px-4 text-gray-300">${result.createdAt ? new Date(result.createdAt).toLocaleDateString('ar') : '-'}</td>
                                     <td class="py-3 px-4">
-                                        <button onclick="editResult('${result.id}', '${result.phone}', '${result.url}')" class="text-indigo-400 hover:text-indigo-300 transition ml-2 action-btn"><i class="fas fa-edit"></i></button>
+                                        <button onclick="editResult('${result.id}', '${result.phone}')" class="text-indigo-400 hover:text-indigo-300 transition ml-2 action-btn"><i class="fas fa-edit"></i></button>
                                         <button onclick="deleteResult('${result.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
                                     </td>
                                 </tr>
@@ -1041,11 +1174,16 @@
                     } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
                 });
 
-                // Edit Result
-                window.editResult = function(id, phone, url) {
+                // Edit Result - now with file upload
+                window.editResult = function(id, phone) {
                     document.getElementById('editResultId').value = id;
                     document.getElementById('editResultPhone').value = phone;
-                    document.getElementById('editResultUrl').value = url;
+                    // Reset file input
+                    editSelectedFile = null;
+                    editFilePreview.classList.remove('show');
+                    editFileUploadArea.style.display = 'block';
+                    editFileInput.value = '';
+                    editFileUploadError.classList.add('hidden');
                     openModal('editResultModal');
                 };
 
@@ -1053,13 +1191,21 @@
                     e.preventDefault();
                     const id = document.getElementById('editResultId').value;
                     const phone = document.getElementById('editResultPhone').value.trim();
-                    const url = document.getElementById('editResultUrl').value.trim();
-                    if (!phone || !url) { showToast('جميع الحقول مطلوبة', 'error'); return; }
+                    
+                    if (!phone) { showToast('رقم الهاتف مطلوب', 'error'); return; }
+                    
+                    const formData = new FormData();
+                    formData.append('phone', phone);
+                    
+                    // Only append file if a new one was selected
+                    if (editSelectedFile) {
+                        formData.append('file', editSelectedFile);
+                    }
+
                     try {
                         const response = await fetch(`/api/admin/results/${id}`, {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ phone, url })
+                            body: formData
                         });
                         if (response.ok) {
                             showToast('تم تحديث النتيجة بنجاح', 'success');
