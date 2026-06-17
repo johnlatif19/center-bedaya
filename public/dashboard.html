@@ -649,7 +649,7 @@
         </div>
     </div>
 
-    <!-- Edit User Modal -->
+    <!-- Edit User Modal - بدون كلمة المرور -->
     <div class="modal-overlay" id="editUserModal">
         <div class="modal-content" style="max-width: 550px;">
             <div class="flex items-center justify-between mb-4">
@@ -670,15 +670,7 @@
                     <label class="block text-gray-300 text-sm font-bold mb-2">رقم الهاتف</label>
                     <input type="tel" id="editUserPhone" placeholder="رقم الهاتف" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                 </div>
-                <div>
-                    <label class="block text-gray-300 text-sm font-bold mb-2">كلمة المرور الجديدة (اتركها فارغة إذا لم تريد التغيير)</label>
-                    <div class="password-wrapper">
-                        <input type="password" id="editUserPassword" placeholder="كلمة المرور الجديدة" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
-                        <button type="button" class="password-toggle" onclick="togglePasswordVisibility('editUserPassword', this)">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                </div>
+                <!-- حقل كلمة المرور تم إزالته -->
                 <div id="editUserError" class="hidden bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded relative" role="alert">
                     <span id="editUserErrorMessage"></span>
                 </div>
@@ -708,6 +700,7 @@
 
             let toastTimeout = null;
             let refreshInterval = null;
+            let rateLimitCountdown = null;
 
             // ============================================
             // TOAST
@@ -740,6 +733,66 @@
                     toastEl.classList.remove('show');
                     toastTimeout = null;
                 }, 3000);
+            }
+
+            // ============================================
+            // RATE LIMIT COUNTDOWN TOAST
+            // ============================================
+            function showRateLimitError(message, retryAfter = 5) {
+                let seconds = retryAfter || 5;
+                
+                if (rateLimitCountdown) {
+                    clearInterval(rateLimitCountdown);
+                    rateLimitCountdown = null;
+                }
+                
+                toastEl.className = 'fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300';
+                toastEl.classList.remove('success', 'error', 'show', 'translate-x-full', 'opacity-0');
+                toastEl.classList.add('error', 'bg-red-600', 'text-white');
+                
+                const icon = toastEl.querySelector('.toast-icon i');
+                icon.className = 'fas fa-exclamation-circle';
+                
+                toastMsg.textContent = `${message} (${seconds}s)`;
+                
+                requestAnimationFrame(() => {
+                    toastEl.classList.remove('translate-x-full', 'opacity-0');
+                    toastEl.classList.add('show');
+                });
+                
+                rateLimitCountdown = setInterval(() => {
+                    seconds--;
+                    if (seconds <= 0) {
+                        clearInterval(rateLimitCountdown);
+                        rateLimitCountdown = null;
+                        toastMsg.textContent = 'يمكنك المحاولة الآن';
+                        setTimeout(() => {
+                            toastEl.classList.add('translate-x-full', 'opacity-0');
+                            toastEl.classList.remove('show');
+                        }, 1000);
+                    } else {
+                        toastMsg.textContent = `${message} (${seconds}s)`;
+                    }
+                }, 1000);
+            }
+
+            // ============================================
+            // FETCH WITH RETRY HANDLER
+            // ============================================
+            async function fetchWithRetry(url, options = {}) {
+                try {
+                    const res = await fetch(url, options);
+                    if (res.status === 503 || res.status === 429) {
+                        const data = await res.json();
+                        const retryAfter = data.retryAfter || 5;
+                        showRateLimitError(data.error || 'تم تجاوز عدد الطلبات المسموح بها، يرجى الانتظار قليلاً', retryAfter);
+                        throw new Error('RATE_LIMITED');
+                    }
+                    return res;
+                } catch (error) {
+                    if (error.message === 'RATE_LIMITED') throw error;
+                    throw error;
+                }
             }
 
             // ============================================
@@ -918,10 +971,10 @@
             // DASHBOARD LOGIC
             // ============================================
             function initDashboard() {
-                // Logout
+                // Logout - يخرج من الداشبورد والصفحة الرئيسية
                 $('dashboardLogout')?.addEventListener('click', async () => {
                     await fetch('/api/auth/logout', { method: 'POST' });
-                    window.location.href = '/login-dashboard';
+                    window.location.href = '/';
                 });
 
                 // Chart
@@ -988,42 +1041,56 @@
                         let sales = [], bookings = [], contacts = [], results = [], messages = [];
 
                         try {
-                            const res = await fetch('/api/admin/stats', { credentials: 'include' });
+                            const res = await fetchWithRetry('/api/admin/stats', { credentials: 'include' });
                             if (res.ok) stats = await res.json();
-                        } catch (_) {}
+                        } catch (error) {
+                            if (error.message === 'RATE_LIMITED') return;
+                        }
 
                         try {
-                            const res = await fetch('/api/admin/sales-chart', { credentials: 'include' });
+                            const res = await fetchWithRetry('/api/admin/sales-chart', { credentials: 'include' });
                             if (res.ok) {
                                 salesChartData = await res.json();
                                 if (!Array.isArray(salesChartData)) salesChartData = [];
                             }
-                        } catch (_) {}
+                        } catch (error) {
+                            if (error.message === 'RATE_LIMITED') return;
+                        }
 
                         try {
-                            const res = await fetch('/api/admin/sales', { credentials: 'include' });
+                            const res = await fetchWithRetry('/api/admin/sales', { credentials: 'include' });
                             if (res.ok) { sales = await res.json(); if (!Array.isArray(sales)) sales = []; }
-                        } catch (_) {}
+                        } catch (error) {
+                            if (error.message === 'RATE_LIMITED') return;
+                        }
 
                         try {
-                            const res = await fetch('/api/admin/bookings', { credentials: 'include' });
+                            const res = await fetchWithRetry('/api/admin/bookings', { credentials: 'include' });
                             if (res.ok) { bookings = await res.json(); if (!Array.isArray(bookings)) bookings = []; }
-                        } catch (_) {}
+                        } catch (error) {
+                            if (error.message === 'RATE_LIMITED') return;
+                        }
 
                         try {
-                            const res = await fetch('/api/admin/contacts', { credentials: 'include' });
+                            const res = await fetchWithRetry('/api/admin/contacts', { credentials: 'include' });
                             if (res.ok) { contacts = await res.json(); if (!Array.isArray(contacts)) contacts = []; }
-                        } catch (_) {}
+                        } catch (error) {
+                            if (error.message === 'RATE_LIMITED') return;
+                        }
 
                         try {
-                            const res = await fetch('/api/admin/results', { credentials: 'include' });
+                            const res = await fetchWithRetry('/api/admin/results', { credentials: 'include' });
                             if (res.ok) { results = await res.json(); if (!Array.isArray(results)) results = []; }
-                        } catch (_) {}
+                        } catch (error) {
+                            if (error.message === 'RATE_LIMITED') return;
+                        }
 
                         try {
-                            const res = await fetch('/api/admin/messages', { credentials: 'include' });
+                            const res = await fetchWithRetry('/api/admin/messages', { credentials: 'include' });
                             if (res.ok) { messages = await res.json(); if (!Array.isArray(messages)) messages = []; }
-                        } catch (_) {}
+                        } catch (error) {
+                            if (error.message === 'RATE_LIMITED') return;
+                        }
 
                         // Update stats
                         const todaySalesEl = $('todaySales');
@@ -1171,7 +1238,7 @@
                 // ============================================
                 async function loadUsers() {
                     try {
-                        const res = await fetch('/api/admin/users', { credentials: 'include' });
+                        const res = await fetchWithRetry('/api/admin/users', { credentials: 'include' });
                         if (!res.ok) throw new Error('Failed to load users');
                         const users = await res.json();
                         const body = $('usersTableBody');
@@ -1199,7 +1266,8 @@
                                 </td>
                             </tr>
                         `).join('');
-                    } catch (_) {
+                    } catch (error) {
+                        if (error.message === 'RATE_LIMITED') return;
                         const body = $('usersTableBody');
                         if (body) body.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">حدث خطأ في تحميل المستخدمين</td></tr>`;
                     }
@@ -1390,14 +1458,13 @@
                 };
 
                 // ============================================
-                // USER MANAGEMENT
+                // USER MANAGEMENT - بدون كلمة المرور
                 // ============================================
                 window.editUser = function(id, fullName, email, phone) {
                     $('editUserId').value = id;
                     $('editUserFullName').value = fullName || '';
                     $('editUserEmail').value = email || '';
                     $('editUserPhone').value = phone || '';
-                    $('editUserPassword').value = '';
                     $('editUserError').classList.add('hidden');
                     openModal('editUserModal');
                 };
@@ -1408,7 +1475,6 @@
                     const fullName = $('editUserFullName').value.trim();
                     const email = $('editUserEmail').value.trim();
                     const phone = $('editUserPhone').value.trim();
-                    const password = $('editUserPassword').value;
                     const errorDiv = $('editUserError');
                     const errorMsg = $('editUserErrorMessage');
 
@@ -1424,26 +1490,32 @@
                         errorDiv.classList.remove('hidden');
                         return;
                     }
-                    if (password && password.length < 6) {
-                        errorMsg.textContent = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
-                        errorDiv.classList.remove('hidden');
-                        return;
-                    }
 
                     try {
                         const body = { fullName, email, phone };
-                        if (password) body.password = password;
+                        // لا نرسل كلمة المرور أبداً
                         const res = await fetch(`/api/admin/users/${id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(body)
                         });
+                        const data = await res.json();
                         if (res.ok) {
                             showToast('تم تحديث بيانات المستخدم بنجاح', 'success');
                             closeModal('editUserModal');
-                            loadUsers();
+                            
+                            // ✅ إذا كان المستخدم المعدّل هو نفسه المسجل حالياً
+                            if (data.shouldLogout) {
+                                showToast('تم تحديث بياناتك، سيتم تسجيل الخروج...', 'success');
+                                setTimeout(async () => {
+                                    await fetch('/api/auth/logout', { method: 'POST' });
+                                    window.location.href = '/';
+                                }, 1500);
+                            } else {
+                                loadUsers();
+                                loadDashboard();
+                            }
                         } else {
-                            const data = await res.json();
                             errorMsg.textContent = data.error || 'حدث خطأ';
                             errorDiv.classList.remove('hidden');
                         }
@@ -1460,6 +1532,7 @@
                         if (res.ok) {
                             showToast('تم حذف المستخدم بنجاح', 'success');
                             loadUsers();
+                            loadDashboard();
                         } else {
                             const data = await res.json();
                             showToast(data.error || 'حدث خطأ', 'error');
