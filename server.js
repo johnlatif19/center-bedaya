@@ -114,7 +114,7 @@ const upload = multer({
 const limiter = rateLimit({
   windowMs: 60 * 1000, // دقيقة واحدة
   max: 30, // 30 طلب فقط في الدقيقة لكل IP
-  message: { error: 'تم تجاوز عدد الطلبات المسموح بها، يرجى الانتظار قليلاً' },
+  message: { error: 'تم تجاوز عدد الطلبات المسموح بها، يرجى الانتظار قليلاً', retryAfter: 5 },
   standardHeaders: true,
   legacyHeaders: false,
   // تخطي الملفات الثابتة
@@ -277,7 +277,7 @@ app.post('/api/auth/signup', [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
@@ -468,7 +468,11 @@ app.post('/api/auth/admin-login', [
 
 // Logout
 app.post('/api/auth/logout', (req, res) => {
-  res.clearCookie('token');
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  });
   res.json({ success: true });
 });
 
@@ -568,7 +572,7 @@ app.post('/api/auth/forgot-password', [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
@@ -703,7 +707,7 @@ app.post('/api/auth/reset-password', [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
@@ -769,11 +773,11 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
   }
 });
 
+// ✅ تعديل المستخدم - بدون تغيير كلمة المرور
 app.put('/api/admin/users/:id', authenticateAdmin, [
   body('fullName').optional().notEmpty().withMessage('الاسم مطلوب'),
   body('email').optional().isEmail().withMessage('بريد إلكتروني غير صحيح'),
-  body('phone').optional(),
-  body('password').optional().isLength({ min: 6 }).withMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
+  body('phone').optional()
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -781,7 +785,7 @@ app.put('/api/admin/users/:id', authenticateAdmin, [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { fullName, email, phone, password } = req.body;
+    const { fullName, email, phone } = req.body;
     const userId = req.params.id;
 
     const userRef = db.collection('users').doc(userId);
@@ -806,16 +810,18 @@ app.put('/api/admin/users/:id', authenticateAdmin, [
       updateData.email = email;
     }
     if (phone !== undefined) updateData.phone = phone;
-    if (password) {
-      updateData.password = await bcrypt.hash(password, 10);
-    }
     updateData.updatedAt = new Date().toISOString();
 
     await userRef.update(updateData);
 
+    // ✅ إرسال إشارة للفرونتاند بأن المستخدم يجب أن يسجل خروج
+    // نتحقق إذا كان المستخدم المعدل هو نفسه المدير الحالي
+    const isCurrentUser = req.user.id === userId;
+    
     res.json({
       success: true,
-      message: 'تم تحديث بيانات المستخدم بنجاح'
+      message: 'تم تحديث بيانات المستخدم بنجاح',
+      shouldLogout: isCurrentUser // ✅ إذا كان المستخدم نفسه، سجل خروج
     });
   } catch (error) {
     console.error('Update user error:', error);
@@ -976,7 +982,7 @@ app.post('/api/contact', [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
@@ -1442,7 +1448,7 @@ app.post('/api/admin/send-email', authenticateAdmin, [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
