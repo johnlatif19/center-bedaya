@@ -866,6 +866,38 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+// Verify Admin - مخصص للداشبورد
+app.get('/api/auth/verify-admin', authenticateToken, async (req, res) => {
+  try {
+    // تحقق من أن المستخدم مدير
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    const doc = await db.collection('users').doc(req.user.id).get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const userData = doc.data();
+    if (!userData.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    res.json({
+      authenticated: true,
+      admin: {
+        id: doc.id,
+        email: userData.email,
+        username: userData.fullName || 'Admin'
+      }
+    });
+  } catch (error) {
+    console.error('Verify admin error:', error);
+    res.status(500).json({ error: 'Error verifying admin' });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
