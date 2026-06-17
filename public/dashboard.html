@@ -9,203 +9,61 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * {
-            font-family: 'Cairo', sans-serif;
-        }
-        html {
-            scroll-behavior: smooth;
-        }
-        body {
-            direction: rtl;
-            background: #0f172a;
-        }
-        .glass-card {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .glass-card-hover {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: all 0.3s ease;
-        }
-        .glass-card-hover:hover {
-            border-color: rgba(79, 70, 229, 0.3);
-            box-shadow: 0 10px 30px -10px rgba(79, 70, 229, 0.2);
-        }
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1e293b;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(to bottom, #4f46e5, #7c3aed);
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(to bottom, #4338ca, #6d28d9);
-        }
-        .hover-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .hover-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px -12px rgba(79, 70, 229, 0.3);
-        }
-        input:focus,
-        textarea:focus {
-            outline: none;
-        }
-        input:focus-visible,
-        textarea:focus-visible {
-            outline: 2px solid #4f46e5;
-            outline-offset: 2px;
-        }
+        * { font-family: 'Cairo', sans-serif; }
+        html { scroll-behavior: smooth; }
+        body { direction: rtl; background: #0f172a; }
+        .glass-card { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); }
+        .glass-card-hover { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); transition: all 0.3s ease; }
+        .glass-card-hover:hover { border-color: rgba(79,70,229,0.3); box-shadow: 0 10px 30px -10px rgba(79,70,229,0.2); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #4f46e5, #7c3aed); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: linear-gradient(to bottom, #4338ca, #6d28d9); }
+        .hover-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .hover-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -12px rgba(79,70,229,0.3); }
+        input:focus, textarea:focus { outline: none; }
+        input:focus-visible, textarea:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
         @media (max-width: 1024px) {
-            aside {
-                transform: translateX(100%);
-            }
-            aside.open {
-                transform: translateX(0);
-            }
-            main {
-                margin-right: 0;
-            }
+            aside { transform: translateX(100%); }
+            aside.open { transform: translateX(0); }
+            main { margin-right: 0; }
         }
         @media (max-width: 768px) {
-            table {
-                font-size: 0.875rem;
-            }
-            table th,
-            table td {
-                padding: 0.5rem 0.25rem;
-            }
+            table { font-size: 0.875rem; }
+            table th, table td { padding: 0.5rem 0.25rem; }
         }
-        .skeleton {
-            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
-            background-size: 200% 100%;
-            animation: skeleton-loading 1.5s infinite;
-            border-radius: 8px;
-        }
-        @keyframes skeleton-loading {
-            0% {
-                background-position: 200% 0;
-            }
-            100% {
-                background-position: -200% 0;
-            }
-        }
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        @keyframes slideOut {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-        .section-divider {
-            border-bottom: 2px dashed rgba(79, 70, 229, 0.15);
-            margin: 2.5rem 0;
-        }
-        .nav-blur {
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        }
-        .file-upload-area {
-            border: 2px dashed rgba(79, 70, 229, 0.3);
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border-radius: 12px;
-            padding: 2rem;
-            text-align: center;
-        }
-        .file-upload-area:hover {
-            border-color: #4f46e5;
-            background: rgba(79, 70, 229, 0.05);
-        }
-        .file-upload-area.dragover {
-            border-color: #4f46e5;
-            background: rgba(79, 70, 229, 0.1);
-        }
-        .file-upload-area .file-icon {
-            font-size: 3rem;
-            color: #4f46e5;
-            margin-bottom: 0.5rem;
-        }
-        .file-upload-area .file-text {
-            color: #94a3b8;
-            font-size: 0.875rem;
-        }
-        .file-upload-area .file-text strong {
-            color: #818cf8;
-        }
-        .file-preview {
-            margin-top: 1rem;
-            padding: 1rem;
-            background: rgba(30, 41, 59, 0.5);
-            border-radius: 8px;
-            display: none;
-            align-items: center;
-            gap: 1rem;
-        }
-        .file-preview.show {
-            display: flex;
-        }
-        .file-preview .file-info {
-            flex: 1;
-        }
-        .file-preview .file-info .file-name {
-            color: #e2e8f0;
-            font-weight: bold;
-        }
-        .file-preview .file-info .file-size {
-            color: #94a3b8;
-            font-size: 0.75rem;
-        }
-        .file-preview .remove-file {
-            color: #ef4444;
-            cursor: pointer;
-            transition: color 0.3s ease;
-        }
-        .file-preview .remove-file:hover {
-            color: #dc2626;
-        }
-        .chart-container {
-            position: relative;
-            height: 280px;
-            width: 100%;
-        }
+        .section-divider { border-bottom: 2px dashed rgba(79,70,229,0.15); margin: 2.5rem 0; }
+        .nav-blur { background: rgba(15,23,42,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .file-upload-area { border: 2px dashed rgba(79,70,229,0.3); transition: all 0.3s ease; cursor: pointer; border-radius: 12px; padding: 2rem; text-align: center; }
+        .file-upload-area:hover { border-color: #4f46e5; background: rgba(79,70,229,0.05); }
+        .file-upload-area.dragover { border-color: #4f46e5; background: rgba(79,70,229,0.1); }
+        .file-upload-area .file-icon { font-size: 3rem; color: #4f46e5; margin-bottom: 0.5rem; }
+        .file-upload-area .file-text { color: #94a3b8; font-size: 0.875rem; }
+        .file-upload-area .file-text strong { color: #818cf8; }
+        .file-preview { margin-top: 1rem; padding: 1rem; background: rgba(30,41,59,0.5); border-radius: 8px; display: none; align-items: center; gap: 1rem; }
+        .file-preview.show { display: flex; }
+        .file-preview .file-info { flex: 1; }
+        .file-preview .file-info .file-name { color: #e2e8f0; font-weight: bold; }
+        .file-preview .file-info .file-size { color: #94a3b8; font-size: 0.75rem; }
+        .file-preview .remove-file { color: #ef4444; cursor: pointer; transition: color 0.3s ease; }
+        .file-preview .remove-file:hover { color: #dc2626; }
+        .chart-container { position: relative; height: 280px; width: 100%; }
+
+        /* Modal Styles */
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0,0,0,0.7);
             backdrop-filter: blur(4px);
             display: none;
             align-items: center;
             justify-content: center;
             z-index: 1000;
         }
-        .modal-overlay.active {
-            display: flex;
-        }
+        .modal-overlay.active { display: flex; }
         .modal-content {
             background: #1e293b;
-            border: 1px solid rgba(79, 70, 229, 0.2);
+            border: 1px solid rgba(79,70,229,0.2);
             border-radius: 16px;
             padding: 2rem;
             max-width: 500px;
@@ -213,59 +71,16 @@
             max-height: 90vh;
             overflow-y: auto;
         }
-        .modal-content h3 {
-            color: #fff;
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 1.5rem;
-        }
-        .modal-content label {
-            color: #94a3b8;
-            font-size: 0.875rem;
-            font-weight: bold;
-            display: block;
-            margin-bottom: 0.25rem;
-        }
-        .modal-content input {
-            width: 100%;
-            padding: 0.5rem 1rem;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            background: rgba(15, 23, 42, 0.5);
-            color: #fff;
-            margin-bottom: 1rem;
-        }
-        .modal-content input:focus {
-            outline: 2px solid #4f46e5;
-            outline-offset: 2px;
-        }
-        .modal-actions {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 1rem;
-        }
-        .modal-actions button {
-            flex: 1;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .modal-actions .btn-save {
-            background: linear-gradient(to right, #4f46e5, #7c3aed);
-            color: #fff;
-        }
-        .modal-actions .btn-save:hover {
-            transform: scale(1.02);
-        }
-        .modal-actions .btn-cancel {
-            background: #334155;
-            color: #94a3b8;
-        }
-        .modal-actions .btn-cancel:hover {
-            background: #475569;
-        }
+        .modal-content h3 { color: #fff; font-size: 1.5rem; font-weight: bold; margin-bottom: 1.5rem; }
+        .modal-content label { color: #94a3b8; font-size: 0.875rem; font-weight: bold; display: block; margin-bottom: 0.25rem; }
+        .modal-content input { width: 100%; padding: 0.5rem 1rem; border: 1px solid #334155; border-radius: 8px; background: rgba(15,23,42,0.5); color: #fff; margin-bottom: 1rem; }
+        .modal-content input:focus { outline: 2px solid #4f46e5; outline-offset: 2px; }
+        .modal-actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
+        .modal-actions button { flex: 1; padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; }
+        .modal-actions .btn-save { background: linear-gradient(to right, #4f46e5, #7c3aed); color: #fff; }
+        .modal-actions .btn-save:hover { transform: scale(1.02); }
+        .modal-actions .btn-cancel { background: #334155; color: #94a3b8; }
+        .modal-actions .btn-cancel:hover { background: #475569; }
     </style>
 </head>
 <body class="font-cairo bg-gray-900 transition-colors duration-300">
@@ -312,7 +127,6 @@
 
     <!-- Main Content -->
     <main class="mr-64 min-h-screen">
-        <!-- Header -->
         <header class="sticky top-0 z-40 nav-blur shadow-lg">
             <div class="px-6 py-4 flex justify-between items-center">
                 <button id="sidebarToggle" class="lg:hidden p-2 text-gray-300 hover:bg-gray-800 rounded-lg transition">
@@ -334,7 +148,6 @@
                     <h2 class="text-2xl font-bold text-white">نظام المبيعات</h2>
                 </div>
 
-                <!-- Stats Cards -->
                 <div class="grid md:grid-cols-3 gap-6 mb-8">
                     <div class="glass-card-hover p-6 rounded-2xl shadow-lg hover-card">
                         <div class="flex items-center justify-between">
@@ -343,9 +156,7 @@
                                 <p id="todaySales" class="text-3xl font-bold text-indigo-400">0</p>
                                 <p class="text-xs text-gray-500">جنيه</p>
                             </div>
-                            <div class="text-4xl text-indigo-400">
-                                <i class="fas fa-coins"></i>
-                            </div>
+                            <div class="text-4xl text-indigo-400"><i class="fas fa-coins"></i></div>
                         </div>
                     </div>
                     <div class="glass-card-hover p-6 rounded-2xl shadow-lg hover-card">
@@ -354,9 +165,7 @@
                                 <p class="text-sm text-gray-400">إجمالي الحجوزات</p>
                                 <p id="totalBookings" class="text-3xl font-bold text-purple-400">0</p>
                             </div>
-                            <div class="text-4xl text-purple-400">
-                                <i class="fas fa-calendar-alt"></i>
-                            </div>
+                            <div class="text-4xl text-purple-400"><i class="fas fa-calendar-alt"></i></div>
                         </div>
                     </div>
                     <div class="glass-card-hover p-6 rounded-2xl shadow-lg hover-card">
@@ -365,9 +174,7 @@
                                 <p class="text-sm text-gray-400">الرسائل المرسلة</p>
                                 <p id="totalMessages" class="text-3xl font-bold text-emerald-400">0</p>
                             </div>
-                            <div class="text-4xl text-emerald-400">
-                                <i class="fas fa-envelope"></i>
-                            </div>
+                            <div class="text-4xl text-emerald-400"><i class="fas fa-envelope"></i></div>
                         </div>
                     </div>
                 </div>
@@ -386,19 +193,15 @@
                     <form id="addSaleForm" class="grid md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">اسم العميل</label>
-                            <input type="text" id="saleCustomer" required 
-                                class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            <input type="text" id="saleCustomer" required class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                         </div>
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">مبلغ البيع (جنيه)</label>
-                            <input type="number" id="saleAmount" required 
-                                class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            <input type="number" id="saleAmount" required class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                         </div>
                         <div class="flex items-end">
-                            <button type="submit" 
-                                class="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition shadow-lg shadow-indigo-500/25">
-                                <i class="fas fa-plus ml-2"></i>
-                                تسجيل عملية البيع
+                            <button type="submit" class="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition shadow-lg shadow-indigo-500/25">
+                                <i class="fas fa-plus ml-2"></i>تسجيل عملية البيع
                             </button>
                         </div>
                     </form>
@@ -419,9 +222,7 @@
                                 </tr>
                             </thead>
                             <tbody id="salesTableBody">
-                                <tr>
-                                    <td colspan="5" class="text-center py-8 text-gray-500">لا توجد مبيعات مسجلة</td>
-                                </tr>
+                                <tr><td colspan="5" class="text-center py-8 text-gray-500">لا توجد مبيعات مسجلة</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -432,13 +233,11 @@
             <!-- SECTION 2: الحجوزات الواردة -->
             <!-- ============================================ -->
             <div class="section-divider"></div>
-
             <section id="section-bookings" class="mb-8">
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-1 h-8 bg-gradient-to-b from-purple-500 to-pink-600 rounded-full"></div>
                     <h2 class="text-2xl font-bold text-white">الحجوزات الواردة</h2>
                 </div>
-
                 <div class="glass-card p-6 rounded-2xl shadow-lg">
                     <div class="overflow-x-auto">
                         <table class="w-full">
@@ -452,9 +251,7 @@
                                 </tr>
                             </thead>
                             <tbody id="bookingsTableBody">
-                                <tr>
-                                    <td colspan="5" class="text-center py-8 text-gray-500">لا توجد حجوزات</td>
-                                </tr>
+                                <tr><td colspan="5" class="text-center py-8 text-gray-500">لا توجد حجوزات</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -465,13 +262,11 @@
             <!-- SECTION 3: التواصل -->
             <!-- ============================================ -->
             <div class="section-divider"></div>
-
             <section id="section-contacts" class="mb-8">
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-1 h-8 bg-gradient-to-b from-amber-500 to-orange-600 rounded-full"></div>
                     <h2 class="text-2xl font-bold text-white">رسائل التواصل</h2>
                 </div>
-
                 <div class="glass-card p-6 rounded-2xl shadow-lg">
                     <div class="overflow-x-auto">
                         <table class="w-full">
@@ -486,9 +281,7 @@
                                 </tr>
                             </thead>
                             <tbody id="contactsTableBody">
-                                <tr>
-                                    <td colspan="6" class="text-center py-8 text-gray-500">لا توجد رسائل تواصل</td>
-                                </tr>
+                                <tr><td colspan="6" class="text-center py-8 text-gray-500">لا توجد رسائل تواصل</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -499,7 +292,6 @@
             <!-- SECTION 4: رفع نتائج جديدة -->
             <!-- ============================================ -->
             <div class="section-divider"></div>
-
             <section id="section-results" class="mb-8">
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-1 h-8 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></div>
@@ -510,37 +302,23 @@
                     <form id="uploadResultForm" class="space-y-4">
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">رقم هاتف العميل</label>
-                            <input type="tel" id="resultPhoneUpload" required 
-                                class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            <input type="tel" id="resultPhoneUpload" required class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                         </div>
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">رفع ملف النتيجة</label>
                             <div class="file-upload-area" id="fileUploadArea">
-                                <div class="file-icon">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                </div>
-                                <div class="file-text">
-                                    <strong>اختر ملف</strong> أو اسحبه هنا
-                                    <br>
-                                    <span class="text-xs text-gray-500">PDF, JPG, PNG, GIF (الحد الأقصى 10 ميجابايت)</span>
-                                </div>
+                                <div class="file-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                                <div class="file-text"><strong>اختر ملف</strong> أو اسحبه هنا<br><span class="text-xs text-gray-500">PDF, JPG, PNG, GIF (الحد الأقصى 10 ميجابايت)</span></div>
                                 <input type="file" id="resultFile" accept=".pdf,.jpg,.jpeg,.png,.gif" class="hidden">
                             </div>
                             <div class="file-preview" id="filePreview">
-                                <div class="file-info">
-                                    <div class="file-name" id="fileName">اسم الملف</div>
-                                    <div class="file-size" id="fileSize">حجم الملف</div>
-                                </div>
-                                <div class="remove-file" id="removeFile">
-                                    <i class="fas fa-times-circle text-xl"></i>
-                                </div>
+                                <div class="file-info"><div class="file-name" id="fileName">اسم الملف</div><div class="file-size" id="fileSize">حجم الملف</div></div>
+                                <div class="remove-file" id="removeFile"><i class="fas fa-times-circle text-xl"></i></div>
                             </div>
                             <div id="fileUploadError" class="hidden text-red-400 text-sm mt-2"></div>
                         </div>
-                        <button type="submit" 
-                            class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-lg hover:from-emerald-700 hover:to-teal-700 transition shadow-lg shadow-emerald-500/25">
-                            <i class="fas fa-upload ml-2"></i>
-                            حفظ النتيجة
+                        <button type="submit" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-lg hover:from-emerald-700 hover:to-teal-700 transition shadow-lg shadow-emerald-500/25">
+                            <i class="fas fa-upload ml-2"></i>حفظ النتيجة
                         </button>
                     </form>
                 </div>
@@ -560,9 +338,7 @@
                                 </tr>
                             </thead>
                             <tbody id="resultsTableBody">
-                                <tr>
-                                    <td colspan="5" class="text-center py-8 text-gray-500">لا توجد نتائج مسجلة</td>
-                                </tr>
+                                <tr><td colspan="5" class="text-center py-8 text-gray-500">لا توجد نتائج مسجلة</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -573,7 +349,6 @@
             <!-- SECTION 5: الرسائل -->
             <!-- ============================================ -->
             <div class="section-divider"></div>
-
             <section id="section-messages" class="mb-8">
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-1 h-8 bg-gradient-to-b from-blue-500 to-cyan-600 rounded-full"></div>
@@ -584,18 +359,14 @@
                     <form id="sendEmailForm" class="space-y-4">
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">البريد الإلكتروني للمستخدم</label>
-                            <input type="email" id="emailRecipient" required 
-                                class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            <input type="email" id="emailRecipient" required class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                         </div>
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">نص الرسالة</label>
-                            <textarea id="emailMessage" rows="4" required 
-                                class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition"></textarea>
+                            <textarea id="emailMessage" rows="4" required class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition"></textarea>
                         </div>
-                        <button type="submit" 
-                            class="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold rounded-lg hover:from-blue-700 hover:to-cyan-700 transition shadow-lg shadow-blue-500/25">
-                            <i class="fas fa-paper-plane ml-2"></i>
-                            إرسال رسالة
+                        <button type="submit" class="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold rounded-lg hover:from-blue-700 hover:to-cyan-700 transition shadow-lg shadow-blue-500/25">
+                            <i class="fas fa-paper-plane ml-2"></i>إرسال رسالة
                         </button>
                     </form>
                 </div>
@@ -613,15 +384,12 @@
                                 </tr>
                             </thead>
                             <tbody id="messagesTableBody">
-                                <tr>
-                                    <td colspan="4" class="text-center py-8 text-gray-500">لا توجد رسائل مرسلة</td>
-                                </tr>
+                                <tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد رسائل مرسلة</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </section>
-
         </div>
     </main>
 
@@ -644,25 +412,30 @@
     <div id="toast" class="fixed top-4 right-4 p-4 rounded-lg shadow-lg transform translate-x-full opacity-0 transition-all duration-300 z-50"></div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Check authentication
-            const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-            if (!token) {
+    document.addEventListener('DOMContentLoaded', () => {
+        // ============================================
+        // AUTH VERIFICATION - Using /api/auth/verify-admin
+        // ============================================
+        fetch('/api/auth/verify-admin', { credentials: 'include' })
+        .then(response => {
+            if (!response.ok) {
                 window.location.href = '/login-dashboard';
                 return;
             }
-
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                if (!payload.isAdmin || payload.exp * 1000 < Date.now()) {
-                    window.location.href = '/login-dashboard';
-                    return;
-                }
-            } catch {
+            return response.json();
+        })
+        .then(data => {
+            if (!data || !data.authenticated) {
                 window.location.href = '/login-dashboard';
                 return;
             }
+            initializeDashboard();
+        })
+        .catch(() => {
+            window.location.href = '/login-dashboard';
+        });
 
+        function initializeDashboard() {
             // Sidebar Toggle
             const sidebarToggle = document.getElementById('sidebarToggle');
             const sidebar = document.querySelector('aside');
@@ -671,8 +444,6 @@
                     sidebar.classList.toggle('open');
                 });
             }
-
-            // Close sidebar on outside click (mobile)
             document.addEventListener('click', (e) => {
                 if (window.innerWidth < 1024) {
                     const isClickInside = sidebar.contains(e.target) || sidebarToggle.contains(e.target);
@@ -682,31 +453,24 @@
                 }
             });
 
-            // Toast Notification
+            // Toast
             function showToast(message, type = 'success') {
                 const toast = document.getElementById('toast');
                 toast.textContent = message;
                 toast.className = 'fixed top-4 right-4 p-4 rounded-lg shadow-lg transform translate-x-0 opacity-100 transition-all duration-300 z-50';
-                if (type === 'success') {
-                    toast.classList.add('bg-green-600', 'text-white');
-                } else {
-                    toast.classList.add('bg-red-600', 'text-white');
-                }
+                toast.classList.add(type === 'success' ? 'bg-green-600' : 'bg-red-600', 'text-white');
                 setTimeout(() => {
                     toast.classList.add('translate-x-full', 'opacity-0');
                 }, 3000);
             }
 
             // Logout
-            const logoutBtn = document.getElementById('dashboardLogout');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', async () => {
-                    await fetch('/api/auth/logout', { method: 'POST' });
-                    window.location.href = '/';
-                });
-            }
+            document.getElementById('dashboardLogout')?.addEventListener('click', async () => {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                window.location.href = '/';
+            });
 
-            // File Upload
+            // File upload handlers
             const fileUploadArea = document.getElementById('fileUploadArea');
             const fileInput = document.getElementById('resultFile');
             const filePreview = document.getElementById('filePreview');
@@ -716,61 +480,37 @@
             const fileUploadError = document.getElementById('fileUploadError');
             let selectedFile = null;
 
-            fileUploadArea.addEventListener('click', () => {
-                fileInput.click();
-            });
-
-            fileUploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                fileUploadArea.classList.add('dragover');
-            });
-
-            fileUploadArea.addEventListener('dragleave', () => {
-                fileUploadArea.classList.remove('dragover');
-            });
-
-            fileUploadArea.addEventListener('drop', (e) => {
+            fileUploadArea?.addEventListener('click', () => fileInput?.click());
+            fileUploadArea?.addEventListener('dragover', (e) => { e.preventDefault(); fileUploadArea.classList.add('dragover'); });
+            fileUploadArea?.addEventListener('dragleave', () => fileUploadArea.classList.remove('dragover'));
+            fileUploadArea?.addEventListener('drop', (e) => {
                 e.preventDefault();
                 fileUploadArea.classList.remove('dragover');
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    handleFile(files[0]);
-                }
+                if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
             });
-
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    handleFile(e.target.files[0]);
-                }
-            });
+            fileInput?.addEventListener('change', (e) => { if (e.target.files.length > 0) handleFile(e.target.files[0]); });
 
             function handleFile(file) {
                 const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
                 const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.gif'];
                 const ext = '.' + file.name.split('.').pop().toLowerCase();
-                
                 if (!validTypes.includes(file.type) && !validExtensions.includes(ext)) {
                     fileUploadError.textContent = 'نوع الملف غير مدعوم. يرجى رفع PDF أو JPG أو PNG أو GIF';
-                    fileUploadError.classList.remove('hidden');
-                    return;
+                    fileUploadError.classList.remove('hidden'); return;
                 }
-
                 if (file.size > 10 * 1024 * 1024) {
                     fileUploadError.textContent = 'حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت';
-                    fileUploadError.classList.remove('hidden');
-                    return;
+                    fileUploadError.classList.remove('hidden'); return;
                 }
-
                 fileUploadError.classList.add('hidden');
                 selectedFile = file;
-
                 fileName.textContent = file.name;
                 fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' ميجابايت';
                 filePreview.classList.add('show');
                 fileUploadArea.style.display = 'none';
             }
 
-            removeFile.addEventListener('click', () => {
+            removeFile?.addEventListener('click', () => {
                 selectedFile = null;
                 filePreview.classList.remove('show');
                 fileUploadArea.style.display = 'block';
@@ -778,7 +518,7 @@
                 fileUploadError.classList.add('hidden');
             });
 
-            // Chart.js Sales Chart - Improved
+            // Chart - Improved
             let salesChart = null;
             const ctx = document.getElementById('salesChart');
             if (ctx) {
@@ -813,10 +553,7 @@
                             legend: {
                                 labels: {
                                     color: '#94a3b8',
-                                    font: {
-                                        family: 'Cairo',
-                                        size: 14
-                                    }
+                                    font: { family: 'Cairo', size: 14 }
                                 }
                             },
                             tooltip: {
@@ -832,35 +569,15 @@
                         scales: {
                             y: {
                                 beginAtZero: true,
-                                grid: {
-                                    color: 'rgba(255,255,255,0.05)',
-                                    drawBorder: false
-                                },
-                                ticks: {
-                                    color: '#94a3b8',
-                                    font: {
-                                        family: 'Cairo'
-                                    }
-                                }
+                                grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+                                ticks: { color: '#94a3b8', font: { family: 'Cairo' } }
                             },
                             x: {
-                                grid: {
-                                    display: false
-                                },
-                                ticks: {
-                                    color: '#94a3b8',
-                                    font: {
-                                        family: 'Cairo'
-                                    },
-                                    maxRotation: 45,
-                                    minRotation: 0
-                                }
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8', font: { family: 'Cairo' }, maxRotation: 45, minRotation: 0 }
                             }
                         },
-                        interaction: {
-                            intersect: false,
-                            mode: 'index'
-                        }
+                        interaction: { intersect: false, mode: 'index' }
                     }
                 });
             }
@@ -905,7 +622,7 @@
             };
 
             // Edit Form Submit
-            document.getElementById('editForm').addEventListener('submit', async (e) => {
+            document.getElementById('editForm')?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const id = document.getElementById('editId').value;
                 const type = document.getElementById('editType').value;
@@ -976,19 +693,17 @@
                     const results = await resultsRes.json();
                     const messages = await messagesRes.json();
 
-                    // Update Stats
                     document.getElementById('todaySales').textContent = stats.todaySales || 0;
                     document.getElementById('totalBookings').textContent = stats.totalBookings || 0;
                     document.getElementById('totalMessages').textContent = stats.totalMessages || 0;
 
-                    // Update Sales Chart
                     if (salesChart && salesChartData.length > 0) {
                         salesChart.data.labels = salesChartData.map(d => d.date);
                         salesChart.data.datasets[0].data = salesChartData.map(d => d.amount);
                         salesChart.update();
                     }
 
-                    // Update Sales Table
+                    // Sales Table
                     const salesBody = document.getElementById('salesTableBody');
                     if (sales.length === 0) {
                         salesBody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500">لا توجد مبيعات مسجلة</td></tr>`;
@@ -1012,7 +727,7 @@
                         `).join('');
                     }
 
-                    // Update Bookings Table
+                    // Bookings Table
                     const bookingsBody = document.getElementById('bookingsTableBody');
                     if (bookings.length === 0) {
                         bookingsBody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500">لا توجد حجوزات</td></tr>`;
@@ -1032,7 +747,7 @@
                         `).join('');
                     }
 
-                    // Update Contacts Table
+                    // Contacts Table
                     const contactsBody = document.getElementById('contactsTableBody');
                     if (contacts.length === 0) {
                         contactsBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">لا توجد رسائل تواصل</td></tr>`;
@@ -1053,7 +768,7 @@
                         `).join('');
                     }
 
-                    // Update Results Table
+                    // Results Table
                     const resultsBody = document.getElementById('resultsTableBody');
                     if (results.length === 0) {
                         resultsBody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500">لا توجد نتائج مسجلة</td></tr>`;
@@ -1081,7 +796,7 @@
                         `).join('');
                     }
 
-                    // Update Messages Table
+                    // Messages Table
                     const messagesBody = document.getElementById('messagesTableBody');
                     if (messages.length === 0) {
                         messagesBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد رسائل مرسلة</td></tr>`;
@@ -1107,191 +822,118 @@
             }
 
             // Add Sale
-            const addSaleForm = document.getElementById('addSaleForm');
-            if (addSaleForm) {
-                addSaleForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const customer = document.getElementById('saleCustomer').value.trim();
-                    const amount = document.getElementById('saleAmount').value;
-
-                    if (!customer || !amount) {
-                        showToast('جميع الحقول مطلوبة', 'error');
-                        return;
+            document.getElementById('addSaleForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const customer = document.getElementById('saleCustomer').value.trim();
+                const amount = document.getElementById('saleAmount').value;
+                if (!customer || !amount) { showToast('جميع الحقول مطلوبة', 'error'); return; }
+                try {
+                    const response = await fetch('/api/admin/sales', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ customer, amount: parseFloat(amount) })
+                    });
+                    if (response.ok) {
+                        showToast('تم تسجيل البيع بنجاح', 'success');
+                        document.getElementById('addSaleForm').reset();
+                        loadDashboard();
+                    } else {
+                        const data = await response.json();
+                        showToast(data.error || 'حدث خطأ', 'error');
                     }
-
-                    try {
-                        const response = await fetch('/api/admin/sales', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ customer, amount: parseFloat(amount) })
-                        });
-
-                        if (response.ok) {
-                            showToast('تم تسجيل البيع بنجاح', 'success');
-                            addSaleForm.reset();
-                            loadDashboard();
-                        } else {
-                            const data = await response.json();
-                            showToast(data.error || 'حدث خطأ', 'error');
-                        }
-                    } catch (error) {
-                        showToast('حدث خطأ في التواصل مع الخادم', 'error');
-                    }
-                });
-            }
+                } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
+            });
 
             // Upload Result
-            const uploadResultForm = document.getElementById('uploadResultForm');
-            if (uploadResultForm) {
-                uploadResultForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-
-                    if (!selectedFile) {
-                        showToast('يرجى اختيار ملف للرفع', 'error');
-                        return;
+            document.getElementById('uploadResultForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!selectedFile) { showToast('يرجى اختيار ملف للرفع', 'error'); return; }
+                const phone = document.getElementById('resultPhoneUpload').value.trim();
+                if (!phone) { showToast('رقم الهاتف مطلوب', 'error'); return; }
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                formData.append('phone', phone);
+                try {
+                    const response = await fetch('/api/admin/results/upload', { method: 'POST', body: formData });
+                    if (response.ok) {
+                        showToast('تم رفع النتيجة بنجاح', 'success');
+                        document.getElementById('uploadResultForm').reset();
+                        selectedFile = null;
+                        filePreview.classList.remove('show');
+                        fileUploadArea.style.display = 'block';
+                        fileInput.value = '';
+                        loadDashboard();
+                    } else {
+                        const data = await response.json();
+                        showToast(data.error || 'حدث خطأ', 'error');
                     }
-
-                    const phone = document.getElementById('resultPhoneUpload').value.trim();
-
-                    if (!phone) {
-                        showToast('رقم الهاتف مطلوب', 'error');
-                        return;
-                    }
-
-                    const formData = new FormData();
-                    formData.append('file', selectedFile);
-                    formData.append('phone', phone);
-
-                    try {
-                        const response = await fetch('/api/admin/results/upload', {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        if (response.ok) {
-                            showToast('تم رفع النتيجة بنجاح', 'success');
-                            uploadResultForm.reset();
-                            selectedFile = null;
-                            filePreview.classList.remove('show');
-                            fileUploadArea.style.display = 'block';
-                            fileInput.value = '';
-                            loadDashboard();
-                        } else {
-                            const data = await response.json();
-                            showToast(data.error || 'حدث خطأ', 'error');
-                        }
-                    } catch (error) {
-                        showToast('حدث خطأ في التواصل مع الخادم', 'error');
-                    }
-                });
-            }
+                } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
+            });
 
             // Send Email
-            const sendEmailForm = document.getElementById('sendEmailForm');
-            if (sendEmailForm) {
-                sendEmailForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const email = document.getElementById('emailRecipient').value.trim();
-                    const message = document.getElementById('emailMessage').value.trim();
-
-                    if (!email || !message) {
-                        showToast('جميع الحقول مطلوبة', 'error');
-                        return;
+            document.getElementById('sendEmailForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('emailRecipient').value.trim();
+                const message = document.getElementById('emailMessage').value.trim();
+                if (!email || !message) { showToast('جميع الحقول مطلوبة', 'error'); return; }
+                try {
+                    const response = await fetch('/api/admin/send-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, message })
+                    });
+                    if (response.ok) {
+                        showToast('تم إرسال الرسالة بنجاح', 'success');
+                        document.getElementById('sendEmailForm').reset();
+                        loadDashboard();
+                    } else {
+                        const data = await response.json();
+                        showToast(data.error || 'حدث خطأ', 'error');
                     }
+                } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
+            });
 
-                    try {
-                        const response = await fetch('/api/admin/send-email', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email, message })
-                        });
-
-                        if (response.ok) {
-                            showToast('تم إرسال الرسالة بنجاح', 'success');
-                            sendEmailForm.reset();
-                            loadDashboard();
-                        } else {
-                            const data = await response.json();
-                            showToast(data.error || 'حدث خطأ', 'error');
-                        }
-                    } catch (error) {
-                        showToast('حدث خطأ في التواصل مع الخادم', 'error');
-                    }
-                });
-            }
-
-            // Delete Functions
+            // Delete functions
             window.deleteSale = async (id) => {
                 if (!confirm('هل أنت متأكد من حذف هذه العملية؟')) return;
                 try {
                     const response = await fetch(`/api/admin/sales/${id}`, { method: 'DELETE' });
-                    if (response.ok) {
-                        showToast('تم الحذف بنجاح', 'success');
-                        loadDashboard();
-                    }
-                } catch (error) {
-                    showToast('حدث خطأ', 'error');
-                }
+                    if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
+                } catch (error) { showToast('حدث خطأ', 'error'); }
             };
-
             window.deleteBooking = async (id) => {
                 if (!confirm('هل أنت متأكد من حذف هذا الحجز؟')) return;
                 try {
                     const response = await fetch(`/api/admin/bookings/${id}`, { method: 'DELETE' });
-                    if (response.ok) {
-                        showToast('تم الحذف بنجاح', 'success');
-                        loadDashboard();
-                    }
-                } catch (error) {
-                    showToast('حدث خطأ', 'error');
-                }
+                    if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
+                } catch (error) { showToast('حدث خطأ', 'error'); }
             };
-
             window.deleteContact = async (id) => {
                 if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
                 try {
                     const response = await fetch(`/api/admin/contacts/${id}`, { method: 'DELETE' });
-                    if (response.ok) {
-                        showToast('تم الحذف بنجاح', 'success');
-                        loadDashboard();
-                    }
-                } catch (error) {
-                    showToast('حدث خطأ', 'error');
-                }
+                    if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
+                } catch (error) { showToast('حدث خطأ', 'error'); }
             };
-
             window.deleteResult = async (id) => {
                 if (!confirm('هل أنت متأكد من حذف هذه النتيجة؟')) return;
                 try {
                     const response = await fetch(`/api/admin/results/${id}`, { method: 'DELETE' });
-                    if (response.ok) {
-                        showToast('تم الحذف بنجاح', 'success');
-                        loadDashboard();
-                    }
-                } catch (error) {
-                    showToast('حدث خطأ', 'error');
-                }
+                    if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
+                } catch (error) { showToast('حدث خطأ', 'error'); }
             };
-
             window.deleteMessage = async (id) => {
                 if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
                 try {
                     const response = await fetch(`/api/admin/messages/${id}`, { method: 'DELETE' });
-                    if (response.ok) {
-                        showToast('تم الحذف بنجاح', 'success');
-                        loadDashboard();
-                    }
-                } catch (error) {
-                    showToast('حدث خطأ', 'error');
-                }
+                    if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
+                } catch (error) { showToast('حدث خطأ', 'error'); }
             };
 
-            // Initial Load
             loadDashboard();
-
-            // Auto-refresh every 30 seconds
             setInterval(loadDashboard, 30000);
-        });
+        }
+    });
     </script>
 </body>
 </html>
