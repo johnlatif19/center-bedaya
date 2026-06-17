@@ -105,7 +105,7 @@ const authenticateAdmin = (req, res, next) => {
   }
 };
 
-// Telegram Notification Function
+// Telegram Notification Function - Only for bookings and contacts
 const sendTelegramNotification = async (message) => {
   try {
     const url = `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`;
@@ -189,12 +189,7 @@ app.post('/api/auth/signup', [
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    // Send Telegram notification
-    await sendTelegramNotification(
-      `🆕 <b>تسجيل جديد</b>\n\n` +
-      `👤 الاسم: ${fullName}\n` +
-      `📧 البريد: ${email}`
-    );
+    // No Telegram notification for signup
 
     res.status(201).json({
       success: true,
@@ -248,12 +243,7 @@ app.post('/api/auth/login', [
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    // Send Telegram notification
-    await sendTelegramNotification(
-      `🔐 <b>تسجيل دخول</b>\n\n` +
-      `👤 المستخدم: ${user.fullName}\n` +
-      `📧 البريد: ${user.email}`
-    );
+    // No Telegram notification for login
 
     res.json({
       success: true,
@@ -313,10 +303,7 @@ app.post('/api/auth/admin-login', [
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    await sendTelegramNotification(
-      `👑 <b>تسجيل دخول إداري</b>\n\n` +
-      `👤 المدير: ${process.env.ADMIN_USERNAME}`
-    );
+    // No Telegram notification for admin login
 
     res.json({
       success: true,
@@ -367,7 +354,7 @@ app.post('/api/bookings', [
   body('phone').notEmpty().withMessage('رقم التليفون مطلوب'),
   body('date').notEmpty().withMessage('التاريخ مطلوب'),
   body('time').notEmpty().withMessage('الوقت مطلوب')
-], async (req, res) => {
+], authenticateToken, async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -386,6 +373,7 @@ app.post('/api/bookings', [
 
     const docRef = await db.collection('bookings').add(booking);
 
+    // Send Telegram notification for bookings only
     await sendTelegramNotification(
       `📅 <b>حجز جديد</b>\n\n` +
       `👤 الاسم: ${fullName}\n` +
@@ -411,7 +399,7 @@ app.post('/api/contact', [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
   body('phone').notEmpty().withMessage('رقم التليفون مطلوب'),
   body('message').notEmpty().withMessage('الرسالة مطلوبة')
-], async (req, res) => {
+], authenticateToken, async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -420,25 +408,178 @@ app.post('/api/contact', [
 
     const { name, email, phone, message } = req.body;
 
-    // Send email
+    // Save contact to database
+    const contactData = {
+      name,
+      email,
+      phone,
+      message,
+      createdAt: new Date().toISOString()
+    };
+
+    await db.collection('contacts').add(contactData);
+
+    // Send email with beautiful HTML template
     const mailOptions = {
       from: process.env.SMTP_USER,
       to: process.env.ADMIN_EMAIL,
-      subject: 'رسالة جديدة من مركز بداية',
+      subject: '📩 رسالة جديدة من مركز بداية',
       html: `
-        <h2>رسالة جديدة من موقع مركز بداية</h2>
-        <p><strong>الاسم:</strong> ${name}</p>
-        <p><strong>البريد الإلكتروني:</strong> ${email}</p>
-        <p><strong>رقم التليفون:</strong> ${phone}</p>
-        <p><strong>الرسالة:</strong></p>
-        <p>${message}</p>
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>رسالة جديدة</title>
+          <style>
+            body {
+              font-family: 'Cairo', 'Tahoma', sans-serif;
+              background-color: #f8fafc;
+              margin: 0;
+              padding: 0;
+              direction: rtl;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              background-color: #ffffff;
+              border-radius: 16px;
+              overflow: hidden;
+              box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+              margin-top: 30px;
+              margin-bottom: 30px;
+            }
+            .header {
+              background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+              padding: 30px 40px;
+              text-align: center;
+            }
+            .header h1 {
+              color: #ffffff;
+              font-size: 28px;
+              font-weight: 800;
+              margin: 0;
+              letter-spacing: 1px;
+            }
+            .header .subtitle {
+              color: rgba(255, 255, 255, 0.8);
+              font-size: 16px;
+              margin-top: 8px;
+            }
+            .header .logo {
+              font-size: 48px;
+              margin-bottom: 10px;
+              display: block;
+            }
+            .content {
+              padding: 40px 40px 30px;
+            }
+            .content .greeting {
+              font-size: 20px;
+              font-weight: 700;
+              color: #1e293b;
+              margin-bottom: 20px;
+            }
+            .content .message-label {
+              font-weight: 700;
+              color: #1e293b;
+              font-size: 16px;
+              margin-bottom: 10px;
+              display: block;
+            }
+            .content .message-box {
+              background-color: #f1f5f9;
+              padding: 20px;
+              border-radius: 12px;
+              border-right: 4px solid #4f46e5;
+              color: #334155;
+              line-height: 1.8;
+              margin-bottom: 25px;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: 100px 1fr;
+              gap: 8px 16px;
+              background-color: #f8fafc;
+              padding: 16px 20px;
+              border-radius: 12px;
+              margin-bottom: 25px;
+            }
+            .info-grid .label {
+              font-weight: 700;
+              color: #475569;
+              font-size: 14px;
+            }
+            .info-grid .value {
+              color: #1e293b;
+              font-size: 14px;
+            }
+            .footer {
+              background-color: #f1f5f9;
+              padding: 20px 40px;
+              text-align: center;
+              border-top: 1px solid #e2e8f0;
+            }
+            .footer p {
+              color: #94a3b8;
+              font-size: 13px;
+              margin: 0;
+            }
+            .footer .brand {
+              color: #4f46e5;
+              font-weight: 700;
+            }
+            .badge {
+              display: inline-block;
+              background: linear-gradient(135deg, #4f46e5, #7c3aed);
+              color: #fff;
+              padding: 4px 16px;
+              border-radius: 20px;
+              font-size: 12px;
+              font-weight: 700;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <span class="logo">🏥</span>
+              <h1>مركز بداية</h1>
+              <p class="subtitle">للتدخل المبكر والتأهيل</p>
+              <span class="badge" style="margin-top: 12px;">📩 رسالة جديدة</span>
+            </div>
+            <div class="content">
+              <p class="greeting">📬 لديك رسالة جديدة من أحد الزوار</p>
+              
+              <div class="info-grid">
+                <span class="label">👤 الاسم:</span>
+                <span class="value">${name}</span>
+                <span class="label">📧 البريد:</span>
+                <span class="value">${email}</span>
+                <span class="label">📱 الهاتف:</span>
+                <span class="value">${phone}</span>
+              </div>
+              
+              <span class="message-label">📝 محتوى الرسالة:</span>
+              <div class="message-box">
+                ${message}
+              </div>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} <span class="brand">مركز بداية</span> - جميع الحقوق محفوظة</p>
+              <p style="font-size: 11px; color: #cbd5e1; margin-top: 4px;">هذه رسالة آلية من نظام التواصل</p>
+            </div>
+          </div>
+        </body>
+        </html>
       `
     };
 
     await transporter.sendMail(mailOptions);
 
+    // Send Telegram notification for contacts only
     await sendTelegramNotification(
-      `📧 <b>رسالة جديدة</b>\n\n` +
+      `📧 <b>رسالة تواصل جديدة</b>\n\n` +
       `👤 الاسم: ${name}\n` +
       `📧 البريد: ${email}\n` +
       `📱 التليفون: ${phone}\n` +
@@ -572,11 +713,7 @@ app.post('/api/admin/sales', authenticateAdmin, [
 
     const docRef = await db.collection('sales').add(sale);
 
-    await sendTelegramNotification(
-      `💰 <b>عملية بيع جديدة</b>\n\n` +
-      `👤 العميل: ${customer}\n` +
-      `💵 المبلغ: ${amount} جنيه`
-    );
+    // No Telegram notification for sales
 
     res.status(201).json({
       success: true,
@@ -604,6 +741,34 @@ app.get('/api/admin/sales', authenticateAdmin, async (req, res) => {
   } catch (error) {
     console.error('Get sales error:', error);
     res.status(500).json({ error: 'Error fetching sales' });
+  }
+});
+
+// Update Sale
+app.put('/api/admin/sales/:id', authenticateAdmin, [
+  body('customer').notEmpty().withMessage('اسم العميل مطلوب'),
+  body('amount').isNumeric().withMessage('المبلغ يجب أن يكون رقماً')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { customer, amount } = req.body;
+    const today = new Date().toISOString().split('T')[0];
+
+    await db.collection('sales').doc(req.params.id).update({
+      customer,
+      amount: parseFloat(amount),
+      date: today,
+      updatedAt: new Date().toISOString()
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update sale error:', error);
+    res.status(500).json({ error: 'Error updating sale' });
   }
 });
 
@@ -648,6 +813,96 @@ app.delete('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
+// ==================== CONTACTS ROUTES ====================
+
+// Get Contacts
+app.get('/api/admin/contacts', authenticateAdmin, async (req, res) => {
+  try {
+    const contactsSnapshot = await db.collection('contacts')
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    const contacts = [];
+    contactsSnapshot.forEach(doc => {
+      contacts.push({ id: doc.id, ...doc.data() });
+    });
+
+    res.json(contacts);
+  } catch (error) {
+    console.error('Get contacts error:', error);
+    res.status(500).json({ error: 'Error fetching contacts' });
+  }
+});
+
+// Delete Contact
+app.delete('/api/admin/contacts/:id', authenticateAdmin, async (req, res) => {
+  try {
+    await db.collection('contacts').doc(req.params.id).delete();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete contact error:', error);
+    res.status(500).json({ error: 'Error deleting contact' });
+  }
+});
+
+// ==================== RESULTS ADMIN ROUTES ====================
+
+// Get Results
+app.get('/api/admin/results', authenticateAdmin, async (req, res) => {
+  try {
+    const resultsSnapshot = await db.collection('results')
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    const results = [];
+    resultsSnapshot.forEach(doc => {
+      results.push({ id: doc.id, ...doc.data() });
+    });
+
+    res.json(results);
+  } catch (error) {
+    console.error('Get results error:', error);
+    res.status(500).json({ error: 'Error fetching results' });
+  }
+});
+
+// Update Result
+app.put('/api/admin/results/:id', authenticateAdmin, [
+  body('phone').notEmpty().withMessage('رقم التليفون مطلوب'),
+  body('url').notEmpty().withMessage('رابط الملف مطلوب')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { phone, url } = req.body;
+
+    await db.collection('results').doc(req.params.id).update({
+      phone,
+      url,
+      updatedAt: new Date().toISOString()
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update result error:', error);
+    res.status(500).json({ error: 'Error updating result' });
+  }
+});
+
+// Delete Result
+app.delete('/api/admin/results/:id', authenticateAdmin, async (req, res) => {
+  try {
+    await db.collection('results').doc(req.params.id).delete();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete result error:', error);
+    res.status(500).json({ error: 'Error deleting result' });
+  }
+});
+
 // Upload Result (by URL - legacy)
 app.post('/api/admin/results', authenticateAdmin, [
   body('phone').notEmpty().withMessage('رقم التليفون مطلوب'),
@@ -682,11 +937,7 @@ app.post('/api/admin/results', authenticateAdmin, [
       });
     }
 
-    await sendTelegramNotification(
-      `📄 <b>نتيجة جديدة</b>\n\n` +
-      `📱 رقم التليفون: ${phone}\n` +
-      `🔗 رابط النتيجة: ${url}`
-    );
+    // No Telegram notification for results
 
     res.json({
       success: true,
@@ -698,7 +949,7 @@ app.post('/api/admin/results', authenticateAdmin, [
   }
 });
 
-// Upload Result (by File - new)
+// Upload Result (by File)
 app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), async (req, res) => {
   try {
     const { phone } = req.body;
@@ -745,11 +996,7 @@ app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), 
       });
     }
 
-    await sendTelegramNotification(
-      `📄 <b>نتيجة جديدة</b>\n\n` +
-      `📱 رقم التليفون: ${phone}\n` +
-      `🔗 رابط النتيجة: ${url}`
-    );
+    // No Telegram notification for results
 
     res.json({ 
       success: true, 
@@ -761,6 +1008,8 @@ app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), 
     res.status(500).json({ error: 'حدث خطأ أثناء رفع الملف' });
   }
 });
+
+// ==================== MESSAGES ROUTES ====================
 
 // Get Messages
 app.get('/api/admin/messages', authenticateAdmin, async (req, res) => {
@@ -781,7 +1030,7 @@ app.get('/api/admin/messages', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Send Email
+// Send Email with beautiful template
 app.post('/api/admin/send-email', authenticateAdmin, [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
   body('message').notEmpty().withMessage('الرسالة مطلوبة')
@@ -797,14 +1046,136 @@ app.post('/api/admin/send-email', authenticateAdmin, [
     const mailOptions = {
       from: process.env.SMTP_USER,
       to: email,
-      subject: 'رسالة من مركز بداية للتدخل المبكر والتأهيل',
+      subject: '📩 رسالة من مركز بداية للتدخل المبكر والتأهيل',
       html: `
-        <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
-          <h2 style="color: #4F46E5;">مركز بداية للتدخل المبكر والتأهيل</h2>
-          <p>${message}</p>
-          <hr>
-          <p style="color: #666; font-size: 12px;">هذه رسالة آلية، يرجى عدم الرد على هذا البريد.</p>
-        </div>
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>رسالة من مركز بداية</title>
+          <style>
+            body {
+              font-family: 'Cairo', 'Tahoma', sans-serif;
+              background-color: #f8fafc;
+              margin: 0;
+              padding: 0;
+              direction: rtl;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              background-color: #ffffff;
+              border-radius: 16px;
+              overflow: hidden;
+              box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+              margin-top: 30px;
+              margin-bottom: 30px;
+            }
+            .header {
+              background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+              padding: 30px 40px;
+              text-align: center;
+            }
+            .header h1 {
+              color: #ffffff;
+              font-size: 28px;
+              font-weight: 800;
+              margin: 0;
+              letter-spacing: 1px;
+            }
+            .header .subtitle {
+              color: rgba(255, 255, 255, 0.8);
+              font-size: 16px;
+              margin-top: 8px;
+            }
+            .header .logo {
+              font-size: 48px;
+              margin-bottom: 10px;
+              display: block;
+            }
+            .content {
+              padding: 40px 40px 30px;
+            }
+            .content .greeting {
+              font-size: 20px;
+              font-weight: 700;
+              color: #1e293b;
+              margin-bottom: 10px;
+            }
+            .content .message-box {
+              background-color: #f1f5f9;
+              padding: 24px;
+              border-radius: 12px;
+              border-right: 4px solid #4f46e5;
+              color: #334155;
+              line-height: 1.8;
+              font-size: 16px;
+              margin-bottom: 20px;
+            }
+            .content .footer-text {
+              color: #64748b;
+              font-size: 14px;
+              line-height: 1.6;
+            }
+            .footer {
+              background-color: #f1f5f9;
+              padding: 20px 40px;
+              text-align: center;
+              border-top: 1px solid #e2e8f0;
+            }
+            .footer p {
+              color: #94a3b8;
+              font-size: 13px;
+              margin: 0;
+            }
+            .footer .brand {
+              color: #4f46e5;
+              font-weight: 700;
+            }
+            .divider {
+              height: 1px;
+              background: linear-gradient(to right, transparent, #4f46e5, transparent);
+              margin: 20px 0;
+            }
+            .badge {
+              display: inline-block;
+              background: linear-gradient(135deg, #4f46e5, #7c3aed);
+              color: #fff;
+              padding: 4px 16px;
+              border-radius: 20px;
+              font-size: 12px;
+              font-weight: 700;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <span class="logo">🏥</span>
+              <h1>مركز بداية</h1>
+              <p class="subtitle">للتدخل المبكر والتأهيل</p>
+              <span class="badge" style="margin-top: 12px;">📨 رسالة رسمية</span>
+            </div>
+            <div class="content">
+              <p class="greeting">🌹 مرحباً بك،</p>
+              <div class="message-box">
+                ${message.replace(/\n/g, '<br>')}
+              </div>
+              <div class="divider"></div>
+              <p class="footer-text">
+                💙 مع تحيات <strong style="color: #4f46e5;">مركز بداية</strong> للتدخل المبكر والتأهيل<br>
+                📍 ٢٩ شارع سلطان ابو العلا، العروبة، امبابة<br>
+                📱 للتواصل: 01278127159
+              </p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} <span class="brand">مركز بداية</span> - جميع الحقوق محفوظة</p>
+              <p style="font-size: 11px; color: #cbd5e1; margin-top: 4px;">هذه رسالة آلية، يرجى عدم الرد على هذا البريد</p>
+            </div>
+          </div>
+        </body>
+        </html>
       `
     };
 
@@ -817,11 +1188,7 @@ app.post('/api/admin/send-email', authenticateAdmin, [
       sentAt: new Date().toISOString()
     });
 
-    await sendTelegramNotification(
-      `📧 <b>رسالة مرسلة</b>\n\n` +
-      `📧 إلى: ${email}\n` +
-      `💬 الرسالة: ${message.substring(0, 100)}...`
-    );
+    // No Telegram notification for emails
 
     res.json({
       success: true,
@@ -844,8 +1211,8 @@ app.delete('/api/admin/messages/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Serve HTML pages
-// Serve HTML pages
+// ==================== SERVE HTML PAGES ====================
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -864,38 +1231,6 @@ app.get('/login-dashboard', (req, res) => {
 
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-});
-
-// Verify Admin - مخصص للداشبورد
-app.get('/api/auth/verify-admin', authenticateToken, async (req, res) => {
-  try {
-    // تحقق من أن المستخدم مدير
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
-    const doc = await db.collection('users').doc(req.user.id).get();
-    if (!doc.exists) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    const userData = doc.data();
-    if (!userData.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
-    res.json({
-      authenticated: true,
-      admin: {
-        id: doc.id,
-        email: userData.email,
-        username: userData.fullName || 'Admin'
-      }
-    });
-  } catch (error) {
-    console.error('Verify admin error:', error);
-    res.status(500).json({ error: 'Error verifying admin' });
-  }
 });
 
 // Start server
