@@ -1,4 +1,3 @@
-// server.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -246,7 +245,7 @@ app.post('/api/auth/login', [
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSide: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
@@ -855,6 +854,56 @@ app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), 
   }
 });
 
+// Update Result with file upload
+app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), async (req, res) => {
+  try {
+    const { phone } = req.body;
+    const file = req.file;
+    const resultId = req.params.id;
+
+    if (!phone) {
+      return res.status(400).json({ error: 'رقم الهاتف مطلوب' });
+    }
+
+    const resultRef = db.collection('results').doc(resultId);
+    const resultDoc = await resultRef.get();
+
+    if (!resultDoc.exists) {
+      return res.status(404).json({ error: 'Result not found' });
+    }
+
+    let updateData = {
+      phone,
+      updatedAt: new Date().toISOString()
+    };
+
+    // If a file was uploaded, upload to Cloudinary
+    if (file) {
+      const result = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream({
+          folder: 'results',
+          resource_type: 'auto'
+        }, (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        });
+        uploadStream.end(file.buffer);
+      });
+      updateData.url = result.secure_url;
+    }
+
+    await resultRef.update(updateData);
+
+    res.json({
+      success: true,
+      message: 'تم تحديث النتيجة بنجاح'
+    });
+  } catch (error) {
+    console.error('Update result error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء تحديث النتيجة' });
+  }
+});
+
 // Get all results (for admin)
 app.get('/api/admin/results', authenticateAdmin, async (req, res) => {
   try {
@@ -871,41 +920,6 @@ app.get('/api/admin/results', authenticateAdmin, async (req, res) => {
   } catch (error) {
     console.error('Get results error:', error);
     res.status(500).json({ error: 'Error fetching results' });
-  }
-});
-
-// Update Result
-app.put('/api/admin/results/:id', authenticateAdmin, [
-  body('phone').notEmpty().withMessage('رقم التليفون مطلوب'),
-  body('url').notEmpty().withMessage('رابط النتيجة مطلوب')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { phone, url } = req.body;
-    const resultRef = db.collection('results').doc(req.params.id);
-    const resultDoc = await resultRef.get();
-
-    if (!resultDoc.exists) {
-      return res.status(404).json({ error: 'Result not found' });
-    }
-
-    await resultRef.update({
-      phone,
-      url,
-      updatedAt: new Date().toISOString()
-    });
-
-    res.json({
-      success: true,
-      message: 'تم تحديث النتيجة بنجاح'
-    });
-  } catch (error) {
-    console.error('Update result error:', error);
-    res.status(500).json({ error: 'حدث خطأ أثناء تحديث النتيجة' });
   }
 });
 
