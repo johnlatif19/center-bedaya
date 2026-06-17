@@ -482,26 +482,37 @@
 
     <div id="toast" class="fixed top-4 right-4 p-4 rounded-lg shadow-lg transform translate-x-full opacity-0 transition-all duration-300 z-50"></div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Check authentication
-            const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-            if (!token) {
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // ============================================
+        // التحقق من صلاحية المدير عن طريق الخادم
+        // ============================================
+        fetch('/api/auth/verify-admin', {
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) {
                 window.location.href = '/login-dashboard';
                 return;
             }
-
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                if (!payload.isAdmin || payload.exp * 1000 < Date.now()) {
-                    window.location.href = '/login-dashboard';
-                    return;
-                }
-            } catch {
+            return response.json();
+        })
+        .then(data => {
+            if (!data || !data.authenticated) {
                 window.location.href = '/login-dashboard';
                 return;
             }
+            // ✅ تم التحقق بنجاح، تابع تحميل الداشبورد
+            initializeDashboard();
+        })
+        .catch(() => {
+            window.location.href = '/login-dashboard';
+        });
 
+        // ============================================
+        // كل الكود الخاص بالداشبورد
+        // ============================================
+        function initializeDashboard() {
             // Sidebar Toggle
             const sidebarToggle = document.getElementById('sidebarToggle');
             const sidebar = document.querySelector('aside');
@@ -555,12 +566,10 @@
             const fileUploadError = document.getElementById('fileUploadError');
             let selectedFile = null;
 
-            // Click to upload
             fileUploadArea.addEventListener('click', () => {
                 fileInput.click();
             });
 
-            // Drag and drop
             fileUploadArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 fileUploadArea.classList.add('dragover');
@@ -579,7 +588,6 @@
                 }
             });
 
-            // File input change
             fileInput.addEventListener('change', (e) => {
                 if (e.target.files.length > 0) {
                     handleFile(e.target.files[0]);
@@ -587,7 +595,6 @@
             });
 
             function handleFile(file) {
-                // Validate file type
                 const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
                 const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.gif'];
                 const ext = '.' + file.name.split('.').pop().toLowerCase();
@@ -598,7 +605,6 @@
                     return;
                 }
 
-                // Validate size (10MB)
                 if (file.size > 10 * 1024 * 1024) {
                     fileUploadError.textContent = 'حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت';
                     fileUploadError.classList.remove('hidden');
@@ -608,14 +614,12 @@
                 fileUploadError.classList.add('hidden');
                 selectedFile = file;
 
-                // Show preview
                 fileName.textContent = file.name;
                 fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' ميجابايت';
                 filePreview.classList.add('show');
                 fileUploadArea.style.display = 'none';
             }
 
-            // Remove file
             removeFile.addEventListener('click', () => {
                 selectedFile = null;
                 filePreview.classList.remove('show');
@@ -628,7 +632,6 @@
             let salesChart = null;
             const ctx = document.getElementById('salesChart');
             if (ctx) {
-                const isDark = true;
                 salesChart = new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -699,77 +702,69 @@
                     const bookings = await bookingsRes.json();
                     const messages = await messagesRes.json();
 
-                    // Update Stats
                     document.getElementById('todaySales').textContent = stats.todaySales || 0;
                     document.getElementById('totalBookings').textContent = stats.totalBookings || 0;
                     document.getElementById('totalMessages').textContent = stats.totalMessages || 0;
 
-                    // Update Sales Chart
                     if (salesChart && salesChartData.length > 0) {
                         salesChart.data.labels = salesChartData.map(d => d.date);
                         salesChart.data.datasets[0].data = salesChartData.map(d => d.amount);
                         salesChart.update();
                     }
 
-                    // Update Sales Table
                     const salesBody = document.getElementById('salesTableBody');
                     if (sales.length === 0) {
-                        salesBody.innerHTML =
-                            `<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد مبيعات مسجلة</td></tr>`;
+                        salesBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد مبيعات مسجلة</td></tr>`;
                     } else {
                         salesBody.innerHTML = sales.map(sale => `
-                                <tr class="border-b border-gray-700">
-                                    <td class="py-3 px-4 text-gray-300">${sale.customer}</td>
-                                    <td class="py-3 px-4 text-gray-300">${sale.amount} جنيه</td>
-                                    <td class="py-3 px-4 text-gray-300">${sale.date}</td>
-                                    <td class="py-3 px-4">
-                                        <button onclick="deleteSale('${sale.id}')" class="text-red-400 hover:text-red-300 transition">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `).join('');
+                            <tr class="border-b border-gray-700">
+                                <td class="py-3 px-4 text-gray-300">${sale.customer}</td>
+                                <td class="py-3 px-4 text-gray-300">${sale.amount} جنيه</td>
+                                <td class="py-3 px-4 text-gray-300">${sale.date}</td>
+                                <td class="py-3 px-4">
+                                    <button onclick="deleteSale('${sale.id}')" class="text-red-400 hover:text-red-300 transition">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('');
                     }
 
-                    // Update Bookings Table
                     const bookingsBody = document.getElementById('bookingsTableBody');
                     if (bookings.length === 0) {
-                        bookingsBody.innerHTML =
-                            `<tr><td colspan="5" class="text-center py-8 text-gray-500">لا توجد حجوزات</td></tr>`;
+                        bookingsBody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500">لا توجد حجوزات</td></tr>`;
                     } else {
                         bookingsBody.innerHTML = bookings.map(booking => `
-                                <tr class="border-b border-gray-700">
-                                    <td class="py-3 px-4 text-gray-300">${booking.fullName}</td>
-                                    <td class="py-3 px-4 text-gray-300">${booking.phone}</td>
-                                    <td class="py-3 px-4 text-gray-300">${booking.date}</td>
-                                    <td class="py-3 px-4 text-gray-300">${booking.time}</td>
-                                    <td class="py-3 px-4">
-                                        <button onclick="deleteBooking('${booking.id}')" class="text-red-400 hover:text-red-300 transition">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `).join('');
+                            <tr class="border-b border-gray-700">
+                                <td class="py-3 px-4 text-gray-300">${booking.fullName}</td>
+                                <td class="py-3 px-4 text-gray-300">${booking.phone}</td>
+                                <td class="py-3 px-4 text-gray-300">${booking.date}</td>
+                                <td class="py-3 px-4 text-gray-300">${booking.time}</td>
+                                <td class="py-3 px-4">
+                                    <button onclick="deleteBooking('${booking.id}')" class="text-red-400 hover:text-red-300 transition">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('');
                     }
 
-                    // Update Messages Table
                     const messagesBody = document.getElementById('messagesTableBody');
                     if (messages.length === 0) {
-                        messagesBody.innerHTML =
-                            `<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد رسائل مرسلة</td></tr>`;
+                        messagesBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد رسائل مرسلة</td></tr>`;
                     } else {
                         messagesBody.innerHTML = messages.map(msg => `
-                                <tr class="border-b border-gray-700">
-                                    <td class="py-3 px-4 text-gray-300">${msg.email}</td>
-                                    <td class="py-3 px-4 text-gray-300">${msg.message.substring(0, 50)}${msg.message.length > 50 ? '...' : ''}</td>
-                                    <td class="py-3 px-4 text-gray-300">${new Date(msg.sentAt).toLocaleDateString('ar')}</td>
-                                    <td class="py-3 px-4">
-                                        <button onclick="deleteMessage('${msg.id}')" class="text-red-400 hover:text-red-300 transition">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `).join('');
+                            <tr class="border-b border-gray-700">
+                                <td class="py-3 px-4 text-gray-300">${msg.email}</td>
+                                <td class="py-3 px-4 text-gray-300">${msg.message.substring(0, 50)}${msg.message.length > 50 ? '...' : ''}</td>
+                                <td class="py-3 px-4 text-gray-300">${new Date(msg.sentAt).toLocaleDateString('ar')}</td>
+                                <td class="py-3 px-4">
+                                    <button onclick="deleteMessage('${msg.id}')" class="text-red-400 hover:text-red-300 transition">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('');
                     }
 
                 } catch (error) {
@@ -830,7 +825,6 @@
                         return;
                     }
 
-                    // Upload to Cloudinary via server
                     const formData = new FormData();
                     formData.append('file', selectedFile);
                     formData.append('phone', phone);
@@ -938,7 +932,8 @@
 
             // Auto-refresh every 30 seconds
             setInterval(loadDashboard, 30000);
-        });
-    </script>
+        }
+    });
+</script>
 </body>
 </html>
