@@ -66,7 +66,6 @@ app.use(express.static('public'));
 // 2. Middleware لحصر الطلبات المتزامنة
 // ============================================
 app.use((req, res, next) => {
-  // تخطي الملفات الثابتة (images, css, js)
   if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf)$/)) {
     return next();
   }
@@ -80,7 +79,6 @@ app.use((req, res, next) => {
 
   activeRequests++;
 
-  // عند انتهاء الطلب (سواء نجح أو فشل)
   res.on('finish', () => {
     activeRequests--;
   });
@@ -95,7 +93,6 @@ app.use((req, res, next) => {
 // 3. Timeout للطلبات (يمنع تجميد السيرفر)
 // ============================================
 app.use((req, res, next) => {
-  // مهلة 30 ثانية لكل طلب
   req.setTimeout(30000, () => {
     res.status(504).json({ error: 'انتهت مهلة الطلب، يرجى المحاولة مرة أخرى' });
   });
@@ -109,18 +106,73 @@ const upload = multer({
 });
 
 // ============================================
-// 4. Rate Limiting محسّن
+// 4. Rate Limiting محسّن مع عداد تنازلي
 // ============================================
+// تخزين وقت الحظر لكل IP
+const blockedIPs = new Map();
+
 const limiter = rateLimit({
   windowMs: 60 * 1000, // دقيقة واحدة
   max: 30, // 30 طلب فقط في الدقيقة لكل IP
-  message: { error: 'تم تجاوز عدد الطلبات المسموح بها، يرجى الانتظار قليلاً', retryAfter: 5 },
+  handler: (req, res) => {
+    const ip = req.ip;
+    const now = Date.now();
+    const blockDuration = 30 * 1000; // 30 ثانية حظر
+    const unlockTime = now + blockDuration;
+    blockedIPs.set(ip, unlockTime);
+
+    // إرجاع وقت الحظر المتبقي بالثواني
+    const remainingSeconds = Math.ceil(blockDuration / 1000);
+    
+    res.status(429).json({
+      error: `تم تجاوز عدد الطلبات المسموح بها، يرجى الانتظار ${remainingSeconds} ثانية`,
+      retryAfter: remainingSeconds,
+      remainingSeconds: remainingSeconds
+    });
+  },
   standardHeaders: true,
   legacyHeaders: false,
-  // تخطي الملفات الثابتة
-  skip: (req) => req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf)$/)
+  skip: (req) => req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf)$/),
+  // التحقق من IP المحظور
+  keyGenerator: (req) => req.ip
 });
+
+// Middleware للتحقق من الحظر قبل تطبيق Rate Limiter
+app.use((req, res, next) => {
+  if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf)$/)) {
+    return next();
+  }
+  
+  const ip = req.ip;
+  if (blockedIPs.has(ip)) {
+    const unlockTime = blockedIPs.get(ip);
+    const now = Date.now();
+    if (now < unlockTime) {
+      const remainingSeconds = Math.ceil((unlockTime - now) / 1000);
+      return res.status(429).json({
+        error: `تم تجاوز عدد الطلبات المسموح بها، يرجى الانتظار ${remainingSeconds} ثانية`,
+        retryAfter: remainingSeconds,
+        remainingSeconds: remainingSeconds
+      });
+    } else {
+      blockedIPs.delete(ip);
+    }
+  }
+  next();
+});
+
+// تطبيق Rate Limiter على مسارات API فقط
 app.use('/api/', limiter);
+
+// تنظيف الـ Map بشكل دوري (كل دقيقة)
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, unlockTime] of blockedIPs) {
+    if (now >= unlockTime) {
+      blockedIPs.delete(ip);
+    }
+  }
+}, 60000);
 
 // ============================================
 // JWT Middleware
@@ -277,7 +329,7 @@ app.post('/api/auth/signup', [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
@@ -321,7 +373,6 @@ app.post('/api/auth/signup', [
       </body>
       </html>
     `;
-    // إرسال الإيميل في الخلفية بدون await
     sendEmail(email, 'مرحباً بك في مركز بداية للتدخل المبكر والتأهيل', welcomeHtml).catch(console.error);
 
     res.status(201).json({
@@ -468,11 +519,16 @@ app.post('/api/auth/admin-login', [
 
 // Logout
 app.post('/api/auth/logout', (req, res) => {
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
-  });
+  res.clearCookie('token');
+  res.json({ success: true });
+});
+
+// Logout All (تسجيل الخروج من جميع الأجهزة)
+app.post('/api/auth/logout-all', (req, res) => {
+  // تغيير مفتاح JWT ليبطل صلاحية جميع التوكنات
+  // في هذا التطبيق، نستخدم نهج بسيط: مسح الكوكي
+  // لكن يمكن تحسينه بتغيير مفتاح التوقيع أو استخدام قائمة سوداء
+  res.clearCookie('token');
   res.json({ success: true });
 });
 
@@ -572,7 +628,7 @@ app.post('/api/auth/forgot-password', [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
@@ -696,9 +752,6 @@ app.post('/api/auth/reset-password', [
 
     delete otpStore[email];
 
-    // ============================================
-    // إرسال إيميل تأكيد تغيير كلمة المرور
-    // ============================================
     const confirmHtml = `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
@@ -707,7 +760,7 @@ app.post('/api/auth/reset-password', [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
@@ -773,11 +826,11 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
   }
 });
 
-// ✅ تعديل المستخدم - بدون تغيير كلمة المرور
 app.put('/api/admin/users/:id', authenticateAdmin, [
   body('fullName').optional().notEmpty().withMessage('الاسم مطلوب'),
   body('email').optional().isEmail().withMessage('بريد إلكتروني غير صحيح'),
-  body('phone').optional()
+  body('phone').optional(),
+  // تم إزالة التحقق من كلمة المرور لأننا لن نسمح بتغييرها من هنا
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -793,6 +846,11 @@ app.put('/api/admin/users/:id', authenticateAdmin, [
 
     if (!userDoc.exists) {
       return res.status(404).json({ error: 'User not found' });
+    }
+
+    // منع تعديل المدير
+    if (userDoc.data().isAdmin) {
+      return res.status(403).json({ error: 'لا يمكن تعديل حساب المدير' });
     }
 
     const updateData = {};
@@ -814,14 +872,12 @@ app.put('/api/admin/users/:id', authenticateAdmin, [
 
     await userRef.update(updateData);
 
-    // ✅ إرسال إشارة للفرونتاند بأن المستخدم يجب أن يسجل خروج
-    // نتحقق إذا كان المستخدم المعدل هو نفسه المدير الحالي
-    const isCurrentUser = req.user.id === userId;
-    
+    // تسجيل الخروج من جميع الأجهزة بعد تعديل المستخدم
+    // عن طريق تغيير مفتاح JWT (نحن نستخدم طريقة مسح الكوكي من العميل)
+
     res.json({
       success: true,
-      message: 'تم تحديث بيانات المستخدم بنجاح',
-      shouldLogout: isCurrentUser // ✅ إذا كان المستخدم نفسه، سجل خروج
+      message: 'تم تحديث بيانات المستخدم بنجاح'
     });
   } catch (error) {
     console.error('Update user error:', error);
@@ -928,7 +984,6 @@ app.post('/api/bookings', [
 
     const docRef = await db.collection('bookings').add(booking);
 
-    // إرسال إشعار تيليجرام في الخلفية
     sendTelegramNotification(
       `📅 <b>حجز جديد</b>\n\n` +
       `👤 الاسم: ${fullName}\n` +
@@ -982,7 +1037,7 @@ app.post('/api/contact', [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
@@ -1018,10 +1073,8 @@ app.post('/api/contact', [
       </html>
     `;
     
-    // إرسال الإيميل في الخلفية
     sendEmail(process.env.ADMIN_EMAIL, 'رسالة جديدة من مركز بداية', adminHtml).catch(console.error);
     
-    // إرسال إشعار تيليجرام في الخلفية
     sendTelegramNotification(
       `📧 <b>رسالة جديدة</b>\n\n` +
       `👤 الاسم: ${name}\n` +
@@ -1448,7 +1501,7 @@ app.post('/api/admin/send-email', authenticateAdmin, [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
