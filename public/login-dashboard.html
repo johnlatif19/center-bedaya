@@ -71,7 +71,6 @@
                 opacity: 0;
             }
         }
-        /* Password toggle styles */
         .password-wrapper {
             position: relative;
         }
@@ -148,9 +147,6 @@
     </div>
     <div id="toast" class="fixed top-4 right-4 p-4 rounded-lg shadow-lg transform translate-x-full opacity-0 transition-all duration-300 z-50"></div>
     <script>
-        // ============================================
-        // PASSWORD TOGGLE FUNCTION
-        // ============================================
         function togglePasswordVisibility(inputId, button) {
             const input = document.getElementById(inputId);
             if (!input) return;
@@ -170,14 +166,17 @@
             const errorMessage = document.getElementById('errorMessage');
             const toast = document.getElementById('toast');
 
-            // Check if already logged in
-            fetch('/api/auth/verify-admin', { credentials: 'include' })
-                .then(res => {
-                    if (res.ok) {
-                        window.location.href = '/dashboard';
-                    }
-                })
-                .catch(() => {});
+            fetch('/api/auth/verify-admin', { 
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => {
+                if (res.ok) {
+                    window.location.href = '/dashboard';
+                }
+                return res.json().catch(() => {});
+            })
+            .catch(() => {});
 
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -216,6 +215,7 @@
                     const response = await fetch('/api/auth/admin-login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
                         body: JSON.stringify({ username, password })
                     });
 
