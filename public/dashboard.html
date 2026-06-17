@@ -196,6 +196,29 @@
             margin-bottom: 0.25rem;
         }
 
+        /* Password toggle */
+        .password-wrapper {
+            position: relative;
+        }
+        .password-wrapper input {
+            padding-left: 2.5rem;
+        }
+        .password-toggle {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+        }
+        .password-toggle:hover {
+            color: #e2e8f0;
+        }
+
         /* Toast - fixed and auto-hiding */
         #toast {
             position: fixed;
@@ -229,6 +252,21 @@
         #toast .toast-icon {
             margin-left: 10px;
         }
+
+        /* User profile management */
+        .user-status-badge {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.6rem;
+            border-radius: 9999px;
+        }
+        .user-status-badge.admin {
+            background: rgba(79,70,229,0.2);
+            color: #818cf8;
+        }
+        .user-status-badge.user {
+            background: rgba(16,185,129,0.2);
+            color: #34d399;
+        }
     </style>
 </head>
 <body class="font-cairo bg-gray-900 transition-colors duration-300">
@@ -240,7 +278,7 @@
                     <i class="fas fa-stethoscope"></i>
                 </div>
                 <h2 class="text-xl font-bold text-white">مركز بداية</h2>
-                <p class="text-sm text-gray-400">لوحة التحكم</p>
+                <p id="adminGreetingSidebar" class="text-sm text-gray-400">لوحة التحكم</p>
             </div>
             <nav class="space-y-2" id="sidebarNav">
                 <a data-section="section-sales" class="sidebar-link flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-indigo-900/30 text-gray-300 hover:text-indigo-400 transition">
@@ -262,6 +300,11 @@
                 <a data-section="section-messages" class="sidebar-link flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-indigo-900/30 text-gray-300 hover:text-indigo-400 transition">
                     <i class="fas fa-paper-plane w-5"></i>
                     <span>إرسال رسائل</span>
+                </a>
+                <!-- NEW: User Profile Management -->
+                <a data-section="section-users" class="sidebar-link flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-indigo-900/30 text-gray-300 hover:text-indigo-400 transition">
+                    <i class="fas fa-users-cog w-5"></i>
+                    <span>تعديل الملف الشخصي للمستخدمين</span>
                 </a>
             </nav>
             <div class="absolute bottom-6 right-6 left-6">
@@ -527,6 +570,36 @@
                     </div>
                 </div>
             </section>
+
+            <!-- ============================================ -->
+            <!-- SECTION 6: تعديل الملف الشخصي للمستخدمين (NEW) -->
+            <!-- ============================================ -->
+            <section id="section-users" class="dashboard-section">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-1 h-8 bg-gradient-to-b from-pink-500 to-rose-600 rounded-full"></div>
+                    <h2 class="text-2xl font-bold text-white">تعديل الملف الشخصي للمستخدمين</h2>
+                </div>
+
+                <!-- Users List -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-bold text-white mb-4">قائمة المستخدمين</h3>
+                    <div class="table-scroll">
+                        <table class="w-full">
+                            <thead><tr class="border-b border-gray-700 sticky top-0 bg-gray-900/95">
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">المعرف</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">الاسم</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">البريد الإلكتروني</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">رقم الهاتف</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">النوع</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">الإجراءات</th>
+                            </tr></thead>
+                            <tbody id="usersTableBody">
+                                <tr><td colspan="6" class="text-center py-8 text-gray-500">جارٍ تحميل المستخدمين...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         </div>
     </main>
 
@@ -591,6 +664,47 @@
         </div>
     </div>
 
+    <!-- Edit User Modal (NEW) -->
+    <div class="modal-overlay" id="editUserModal">
+        <div class="modal-content" style="max-width: 550px;">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-white">تعديل بيانات المستخدم</h3>
+                <button onclick="closeModal('editUserModal')" class="text-gray-400 hover:text-white transition text-2xl">&times;</button>
+            </div>
+            <form id="editUserForm" class="space-y-4">
+                <input type="hidden" id="editUserId">
+                <div>
+                    <label class="block text-gray-300 text-sm font-bold mb-2">الاسم</label>
+                    <input type="text" id="editUserFullName" required placeholder="الاسم" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                </div>
+                <div>
+                    <label class="block text-gray-300 text-sm font-bold mb-2">البريد الإلكتروني</label>
+                    <input type="email" id="editUserEmail" required placeholder="البريد الإلكتروني" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                </div>
+                <div>
+                    <label class="block text-gray-300 text-sm font-bold mb-2">رقم الهاتف</label>
+                    <input type="tel" id="editUserPhone" placeholder="رقم الهاتف" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                </div>
+                <div>
+                    <label class="block text-gray-300 text-sm font-bold mb-2">كلمة المرور الجديدة (اتركها فارغة إذا لم تريد التغيير)</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="editUserPassword" placeholder="كلمة المرور الجديدة" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                        <button type="button" class="password-toggle" onclick="togglePasswordVisibility('editUserPassword', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="editUserError" class="hidden bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded relative" role="alert">
+                    <span id="editUserErrorMessage"></span>
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" class="flex-1 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition">حفظ التعديلات</button>
+                    <button type="button" onclick="closeModal('editUserModal')" class="flex-1 py-2 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div id="toast">
         <span class="toast-icon"><i class="fas fa-check-circle"></i></span>
@@ -609,16 +723,13 @@
                 const toastMessage = document.getElementById('toastMessage');
                 const icon = toast.querySelector('.toast-icon i');
 
-                // Clear any existing timeout
                 if (toastTimeout) {
                     clearTimeout(toastTimeout);
                     toastTimeout = null;
                 }
 
-                // Remove previous classes
                 toast.classList.remove('success', 'error', 'show');
 
-                // Set message and icon
                 toastMessage.textContent = message;
                 if (type === 'success') {
                     toast.classList.add('success');
@@ -628,17 +739,30 @@
                     icon.className = 'fas fa-exclamation-circle';
                 }
 
-                // Show toast
-                // Force reflow for animation
                 void toast.offsetWidth;
                 toast.classList.add('show');
 
-                // Auto hide after 3 seconds
                 toastTimeout = setTimeout(() => {
                     toast.classList.remove('show');
                     toastTimeout = null;
                 }, 3000);
             }
+
+            // ============================================
+            // PASSWORD TOGGLE FUNCTION
+            // ============================================
+            window.togglePasswordVisibility = function(inputId, button) {
+                const input = document.getElementById(inputId);
+                if (!input) return;
+                const icon = button.querySelector('i');
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.className = 'fas fa-eye-slash';
+                } else {
+                    input.type = 'password';
+                    icon.className = 'fas fa-eye';
+                }
+            };
 
             // ============================================
             // SINGLE SECTION VIEW CONTROLLER
@@ -691,6 +815,8 @@
             // ============================================
             // AUTH VERIFICATION
             // ============================================
+            let currentAdmin = null;
+
             fetch('/api/auth/verify-admin', { credentials: 'include' })
                 .then(response => {
                     if (!response.ok) { window.location.href = '/login-dashboard'; return; }
@@ -698,10 +824,12 @@
                 })
                 .then(data => {
                     if (!data || !data.authenticated) { window.location.href = '/login-dashboard'; return; }
+                    currentAdmin = data.admin;
                     const greeting = document.getElementById('adminGreeting');
-                    if (greeting && data.admin) {
-                        greeting.textContent = `مرحباً ${data.admin.username || 'مدير'}`;
-                    }
+                    const sidebarGreeting = document.getElementById('adminGreetingSidebar');
+                    const name = data.admin.name || 'مدير';
+                    if (greeting) greeting.textContent = `مرحباً ${name}`;
+                    if (sidebarGreeting) sidebarGreeting.textContent = `مرحباً ${name}`;
                     initializeDashboard();
                 })
                 .catch(() => { window.location.href = '/login-dashboard'; });
@@ -710,7 +838,7 @@
             // DASHBOARD LOGIC
             // ============================================
             function initializeDashboard() {
-                // Logout - redirect to login-dashboard
+                // Logout
                 document.getElementById('dashboardLogout')?.addEventListener('click', async () => {
                     await fetch('/api/auth/logout', { method: 'POST' });
                     window.location.href = '/login-dashboard';
@@ -906,7 +1034,9 @@
                     });
                 }
 
-                // Load Dashboard Data
+                // ============================================
+                // LOAD DASHBOARD DATA
+                // ============================================
                 async function loadDashboard() {
                     try {
                         const [statsRes, salesChartRes, salesRes, bookingsRes, contactsRes, resultsRes, messagesRes] = await Promise.all([
@@ -922,10 +1052,6 @@
                         if (statsRes.status === 401 || statsRes.status === 403) {
                             window.location.href = '/login-dashboard';
                             return;
-                        }
-
-                        if (!statsRes.ok || !salesChartRes.ok || !salesRes.ok || !bookingsRes.ok || !contactsRes.ok || !resultsRes.ok || !messagesRes.ok) {
-                            throw new Error('Failed to load data');
                         }
 
                         const stats = await statsRes.json();
@@ -945,7 +1071,6 @@
                         if (salesChart && salesChartData.length > 0) {
                             const labels = salesChartData.map(d => d.date);
                             const data = salesChartData.map(d => d.amount);
-                            
                             if (labels.length > 0) {
                                 salesChart.data.labels = labels;
                                 salesChart.data.datasets[0].data = data;
@@ -1051,6 +1176,10 @@
                                 </tr>
                             `).join('');
                         }
+
+                        // Load users for the new section
+                        loadUsers();
+
                     } catch (error) {
                         console.error('Error loading dashboard:', error);
                         showToast('حدث خطأ في تحميل البيانات', 'error');
@@ -1058,9 +1187,49 @@
                 }
 
                 // ============================================
+                // LOAD USERS (NEW)
+                // ============================================
+                async function loadUsers() {
+                    try {
+                        const response = await fetch('/api/admin/users', { credentials: 'include' });
+                        if (!response.ok) throw new Error('Failed to load users');
+                        const users = await response.json();
+
+                        const usersBody = document.getElementById('usersTableBody');
+                        if (users.length === 0) {
+                            usersBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">لا يوجد مستخدمين</td></tr>`;
+                        } else {
+                            usersBody.innerHTML = users.map(user => `
+                                <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
+                                    <td class="py-3 px-4 text-gray-300 text-sm">${user.id.substring(0, 8)}...</td>
+                                    <td class="py-3 px-4 text-gray-300">${user.fullName || '-'}</td>
+                                    <td class="py-3 px-4 text-gray-300">${user.email || '-'}</td>
+                                    <td class="py-3 px-4 text-gray-300">${user.phone || '-'}</td>
+                                    <td class="py-3 px-4">
+                                        <span class="user-status-badge ${user.isAdmin ? 'admin' : 'user'}">
+                                            ${user.isAdmin ? 'مدير' : 'مستخدم'}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        ${!user.isAdmin ? `
+                                            <button onclick="editUser('${user.id}', '${user.fullName || ''}', '${user.email || ''}', '${user.phone || ''}')" class="text-indigo-400 hover:text-indigo-300 transition ml-2 action-btn"><i class="fas fa-edit"></i></button>
+                                            <button onclick="deleteUser('${user.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
+                                        ` : `
+                                            <span class="text-gray-500 text-sm">لا يمكن التعديل</span>
+                                        `}
+                                    </td>
+                                </tr>
+                            `).join('');
+                        }
+                    } catch (error) {
+                        console.error('Error loading users:', error);
+                        document.getElementById('usersTableBody').innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">حدث خطأ في تحميل المستخدمين</td></tr>`;
+                    }
+                }
+
+                // ============================================
                 // SALE CRUD
                 // ============================================
-                // Add Sale
                 document.getElementById('addSaleForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const customer = document.getElementById('saleCustomer').value.trim();
@@ -1083,7 +1252,6 @@
                     } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
                 });
 
-                // Edit Sale
                 window.editSale = function(id, customer, amount) {
                     document.getElementById('editSaleId').value = id;
                     document.getElementById('editSaleCustomer').value = customer;
@@ -1114,7 +1282,6 @@
                     } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
                 });
 
-                // Delete Sale
                 window.deleteSale = async (id) => {
                     if (!confirm('هل أنت متأكد من حذف هذه العملية؟')) return;
                     try {
@@ -1148,7 +1315,6 @@
                 // ============================================
                 // RESULT CRUD
                 // ============================================
-                // Upload Result
                 document.getElementById('uploadResultForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     if (!selectedFile) { showToast('يرجى اختيار ملف للرفع', 'error'); return; }
@@ -1174,11 +1340,9 @@
                     } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
                 });
 
-                // Edit Result - now with file upload
                 window.editResult = function(id, phone) {
                     document.getElementById('editResultId').value = id;
                     document.getElementById('editResultPhone').value = phone;
-                    // Reset file input
                     editSelectedFile = null;
                     editFilePreview.classList.remove('show');
                     editFileUploadArea.style.display = 'block';
@@ -1191,17 +1355,12 @@
                     e.preventDefault();
                     const id = document.getElementById('editResultId').value;
                     const phone = document.getElementById('editResultPhone').value.trim();
-                    
                     if (!phone) { showToast('رقم الهاتف مطلوب', 'error'); return; }
-                    
                     const formData = new FormData();
                     formData.append('phone', phone);
-                    
-                    // Only append file if a new one was selected
                     if (editSelectedFile) {
                         formData.append('file', editSelectedFile);
                     }
-
                     try {
                         const response = await fetch(`/api/admin/results/${id}`, {
                             method: 'PUT',
@@ -1218,7 +1377,6 @@
                     } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
                 });
 
-                // Delete Result
                 window.deleteResult = async (id) => {
                     if (!confirm('هل أنت متأكد من حذف هذه النتيجة؟')) return;
                     try {
@@ -1230,7 +1388,6 @@
                 // ============================================
                 // MESSAGE CRUD
                 // ============================================
-                // Send Email
                 document.getElementById('sendEmailForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const email = document.getElementById('emailRecipient').value.trim();
@@ -1253,13 +1410,92 @@
                     } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
                 });
 
-                // Delete Message
                 window.deleteMessage = async (id) => {
                     if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
                     try {
                         const response = await fetch(`/api/admin/messages/${id}`, { method: 'DELETE' });
                         if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
                     } catch (error) { showToast('حدث خطأ', 'error'); }
+                };
+
+                // ============================================
+                // USER MANAGEMENT (NEW)
+                // ============================================
+                window.editUser = function(id, fullName, email, phone) {
+                    document.getElementById('editUserId').value = id;
+                    document.getElementById('editUserFullName').value = fullName || '';
+                    document.getElementById('editUserEmail').value = email || '';
+                    document.getElementById('editUserPhone').value = phone || '';
+                    document.getElementById('editUserPassword').value = '';
+                    document.getElementById('editUserError').classList.add('hidden');
+                    openModal('editUserModal');
+                };
+
+                document.getElementById('editUserForm')?.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const id = document.getElementById('editUserId').value;
+                    const fullName = document.getElementById('editUserFullName').value.trim();
+                    const email = document.getElementById('editUserEmail').value.trim();
+                    const phone = document.getElementById('editUserPhone').value.trim();
+                    const password = document.getElementById('editUserPassword').value;
+                    const errorDiv = document.getElementById('editUserError');
+                    const errorMessage = document.getElementById('editUserErrorMessage');
+
+                    errorDiv.classList.add('hidden');
+
+                    if (!fullName) {
+                        errorMessage.textContent = 'الاسم مطلوب';
+                        errorDiv.classList.remove('hidden');
+                        return;
+                    }
+                    if (!email || !email.includes('@')) {
+                        errorMessage.textContent = 'بريد إلكتروني غير صحيح';
+                        errorDiv.classList.remove('hidden');
+                        return;
+                    }
+                    if (password && password.length < 6) {
+                        errorMessage.textContent = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                        errorDiv.classList.remove('hidden');
+                        return;
+                    }
+
+                    try {
+                        const body = { fullName, email, phone };
+                        if (password) body.password = password;
+
+                        const response = await fetch(`/api/admin/users/${id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(body)
+                        });
+
+                        if (response.ok) {
+                            showToast('تم تحديث بيانات المستخدم بنجاح', 'success');
+                            closeModal('editUserModal');
+                            loadUsers();
+                        } else {
+                            const data = await response.json();
+                            errorMessage.textContent = data.error || 'حدث خطأ';
+                            errorDiv.classList.remove('hidden');
+                        }
+                    } catch (error) {
+                        errorMessage.textContent = 'حدث خطأ في التواصل مع الخادم';
+                        errorDiv.classList.remove('hidden');
+                    }
+                });
+
+                window.deleteUser = async (id) => {
+                    if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) return;
+                    try {
+                        const response = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+                        if (response.ok) {
+                            showToast('تم حذف المستخدم بنجاح', 'success');
+                            loadUsers();
+                        } else {
+                            const data = await response.json();
+                            showToast(data.error || 'حدث خطأ', 'error');
+                        }
+                    } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
                 };
 
                 // Initial load and auto-refresh
