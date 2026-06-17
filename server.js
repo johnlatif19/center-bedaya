@@ -43,7 +43,15 @@ const transporter = nodemailer.createTransport({
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ============================================
+// 1. منع التزاحم (Concurrency Throttling)
+// ============================================
+let activeRequests = 0;
+const MAX_CONCURRENT_REQUESTS = 20;
+
+// ============================================
 // Middleware
+// ============================================
 app.use(helmet());
 app.use(cors({
   origin: true,
@@ -54,16 +62,63 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 app.use(express.static('public'));
 
+// ============================================
+// 2. Middleware لحصر الطلبات المتزامنة
+// ============================================
+app.use((req, res, next) => {
+  // تخطي الملفات الثابتة (images, css, js)
+  if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf)$/)) {
+    return next();
+  }
+
+  if (activeRequests >= MAX_CONCURRENT_REQUESTS) {
+    return res.status(503).json({
+      error: 'الخادم مشغول حالياً، يرجى المحاولة بعد قليل',
+      retryAfter: 5
+    });
+  }
+
+  activeRequests++;
+
+  // عند انتهاء الطلب (سواء نجح أو فشل)
+  res.on('finish', () => {
+    activeRequests--;
+  });
+  res.on('close', () => {
+    activeRequests--;
+  });
+
+  next();
+});
+
+// ============================================
+// 3. Timeout للطلبات (يمنع تجميد السيرفر)
+// ============================================
+app.use((req, res, next) => {
+  // مهلة 30 ثانية لكل طلب
+  req.setTimeout(30000, () => {
+    res.status(504).json({ error: 'انتهت مهلة الطلب، يرجى المحاولة مرة أخرى' });
+  });
+  next();
+});
+
 // Configure Multer for file uploads
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// Rate Limiting
+// ============================================
+// 4. Rate Limiting محسّن
+// ============================================
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100
+  windowMs: 60 * 1000, // دقيقة واحدة
+  max: 30, // 30 طلب فقط في الدقيقة لكل IP
+  message: { error: 'تم تجاوز عدد الطلبات المسموح بها، يرجى الانتظار قليلاً' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // تخطي الملفات الثابتة
+  skip: (req) => req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf)$/)
 });
 app.use('/api/', limiter);
 
@@ -106,9 +161,9 @@ const authenticateAdmin = (req, res, next) => {
 // ============================================
 const generateToken = (user, isAdmin = false, adminData = null) => {
   return jwt.sign(
-    { 
-      id: user.id, 
-      email: user.email, 
+    {
+      id: user.id,
+      email: user.email,
       username: user.fullName || user.username,
       isAdmin,
       adminName: adminData?.adminName || null,
@@ -213,7 +268,7 @@ app.post('/api/auth/signup', [
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    // Send welcome email
+    // Send welcome email (async, لا ننتظر النتيجة)
     const welcomeHtml = `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
@@ -266,7 +321,8 @@ app.post('/api/auth/signup', [
       </body>
       </html>
     `;
-    await sendEmail(email, 'مرحباً بك في مركز بداية للتدخل المبكر والتأهيل', welcomeHtml);
+    // إرسال الإيميل في الخلفية بدون await
+    sendEmail(email, 'مرحباً بك في مركز بداية للتدخل المبكر والتأهيل', welcomeHtml).catch(console.error);
 
     res.status(201).json({
       success: true,
@@ -866,14 +922,15 @@ app.post('/api/bookings', [
 
     const docRef = await db.collection('bookings').add(booking);
 
-    await sendTelegramNotification(
+    // إرسال إشعار تيليجرام في الخلفية
+    sendTelegramNotification(
       `📅 <b>حجز جديد</b>\n\n` +
       `👤 الاسم: ${fullName}\n` +
       `📱 التليفون: ${phone}\n` +
       `📆 التاريخ: ${date}\n` +
       `🕐 الوقت: ${time}`,
       'booking'
-    );
+    ).catch(console.error);
 
     res.status(201).json({
       success: true,
@@ -954,16 +1011,19 @@ app.post('/api/contact', [
       </body>
       </html>
     `;
-    await sendEmail(process.env.ADMIN_EMAIL, 'رسالة جديدة من مركز بداية', adminHtml);
-
-    await sendTelegramNotification(
+    
+    // إرسال الإيميل في الخلفية
+    sendEmail(process.env.ADMIN_EMAIL, 'رسالة جديدة من مركز بداية', adminHtml).catch(console.error);
+    
+    // إرسال إشعار تيليجرام في الخلفية
+    sendTelegramNotification(
       `📧 <b>رسالة جديدة</b>\n\n` +
       `👤 الاسم: ${name}\n` +
       `📧 البريد: ${email}\n` +
       `📱 التليفون: ${phone}\n` +
       `💬 الرسالة: ${message}`,
       'contact'
-    );
+    ).catch(console.error);
 
     res.json({
       success: true,
@@ -1461,4 +1521,6 @@ app.get('/reset-password', (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`🌐 http://localhost:${PORT}`);
+  console.log(`📊 Max concurrent requests: ${MAX_CONCURRENT_REQUESTS}`);
+  console.log(`⏱️ Request timeout: 30 seconds`);
 });
