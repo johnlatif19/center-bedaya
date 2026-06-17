@@ -242,6 +242,87 @@
         .result-btn.download:hover {
             background: rgba(16, 185, 129, 0.3);
         }
+
+        /* Password toggle styles for profile modal */
+        .password-wrapper {
+            position: relative;
+        }
+        .password-wrapper input {
+            padding-left: 2.5rem;
+        }
+        .password-toggle {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+        }
+        .password-toggle:hover {
+            color: #e2e8f0;
+        }
+
+        /* Profile modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 1px solid rgba(79,70,229,0.2);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+            animation: modalIn 0.3s ease;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .modal-content input,
+        .modal-content textarea {
+            background: rgba(15,23,42,0.6);
+            border: 1px solid rgba(79,70,229,0.2);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: #e2e8f0;
+            width: 100%;
+            transition: border-color 0.3s ease;
+        }
+        .modal-content input:focus,
+        .modal-content textarea:focus {
+            border-color: #4f46e5;
+            outline: none;
+        }
+        .modal-content input::placeholder,
+        .modal-content textarea::placeholder {
+            color: #64748b;
+        }
+        .modal-content label {
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 0.875rem;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
     </style>
 </head>
 <body class="font-cairo bg-gray-900 transition-colors duration-300">
@@ -274,6 +355,10 @@
                 </div>
                 <div id="userProfile" class="hidden items-center space-x-3 space-x-reverse">
                     <span id="userName" class="text-gray-300 font-bold"></span>
+                    <button id="editProfileBtn" class="px-3 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm">
+                        <i class="fas fa-user-edit ml-1"></i>
+                        تعديل الملف
+                    </button>
                     <button id="logoutBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
                         <i class="fas fa-sign-out-alt ml-1"></i>
                         خروج
@@ -675,6 +760,50 @@
         </div>
     </footer>
 
+    <!-- Edit Profile Modal -->
+    <div class="modal-overlay" id="editProfileModal">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-white">تعديل الملف الشخصي</h3>
+                <button onclick="closeProfileModal()" class="text-gray-400 hover:text-white transition text-2xl">&times;</button>
+            </div>
+            <form id="editProfileForm" class="space-y-4">
+                <div>
+                    <label class="block text-gray-300 text-sm font-bold mb-2">الاسم</label>
+                    <input type="text" id="editProfileName" required placeholder="الاسم"
+                        class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                </div>
+                <div>
+                    <label class="block text-gray-300 text-sm font-bold mb-2">البريد الإلكتروني</label>
+                    <input type="email" id="editProfileEmail" required placeholder="البريد الإلكتروني"
+                        class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                </div>
+                <div>
+                    <label class="block text-gray-300 text-sm font-bold mb-2">رقم الهاتف</label>
+                    <input type="tel" id="editProfilePhone" placeholder="رقم الهاتف"
+                        class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                </div>
+                <div>
+                    <label class="block text-gray-300 text-sm font-bold mb-2">كلمة المرور الجديدة (اتركها فارغة إذا لم تريد التغيير)</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="editProfilePassword" placeholder="كلمة المرور الجديدة"
+                            class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                        <button type="button" class="password-toggle" onclick="toggleProfilePasswordVisibility()">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="editProfileError" class="hidden bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded relative" role="alert">
+                    <span id="editProfileErrorMessage"></span>
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" class="flex-1 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition">حفظ التعديلات</button>
+                    <button type="button" onclick="closeProfileModal()" class="flex-1 py-2 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div id="toast">
         <span class="toast-icon"><i class="fas fa-check-circle"></i></span>
@@ -683,7 +812,7 @@
 
     <script>
         // ============================================
-        // TOAST FUNCTION - Fixed version
+        // TOAST FUNCTION
         // ============================================
         let toastTimeout = null;
 
@@ -692,16 +821,13 @@
             const toastMessage = document.getElementById('toastMessage');
             const icon = toast.querySelector('.toast-icon i');
 
-            // Clear any existing timeout
             if (toastTimeout) {
                 clearTimeout(toastTimeout);
                 toastTimeout = null;
             }
 
-            // Remove previous classes
             toast.classList.remove('success', 'error', 'show');
 
-            // Set message and icon
             toastMessage.textContent = message;
             if (type === 'success') {
                 toast.classList.add('success');
@@ -711,15 +837,45 @@
                 icon.className = 'fas fa-exclamation-circle';
             }
 
-            // Show toast - force reflow for animation
             void toast.offsetWidth;
             toast.classList.add('show');
 
-            // Auto hide after 3 seconds
             toastTimeout = setTimeout(() => {
                 toast.classList.remove('show');
                 toastTimeout = null;
             }, 3000);
+        }
+
+        // ============================================
+        // PROFILE MODAL FUNCTIONS
+        // ============================================
+        let profilePasswordToggle = false;
+
+        function toggleProfilePasswordVisibility() {
+            const input = document.getElementById('editProfilePassword');
+            const btn = document.querySelector('#editProfileModal .password-toggle');
+            if (!input || !btn) return;
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        function openProfileModal(user) {
+            document.getElementById('editProfileName').value = user.fullName || '';
+            document.getElementById('editProfileEmail').value = user.email || '';
+            document.getElementById('editProfilePhone').value = user.phone || '';
+            document.getElementById('editProfilePassword').value = '';
+            document.getElementById('editProfileError').classList.add('hidden');
+            document.getElementById('editProfileModal').classList.add('active');
+        }
+
+        function closeProfileModal() {
+            document.getElementById('editProfileModal').classList.remove('active');
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -768,7 +924,6 @@
                     userProfile.classList.remove('hidden');
                     userName.textContent = user.fullName || 'مستخدم';
                     
-                    // Show protected content, hide auth overlays
                     document.querySelectorAll('.auth-required .auth-overlay').forEach(overlay => {
                         overlay.classList.remove('show');
                     });
@@ -776,7 +931,6 @@
                     authButtons.classList.remove('hidden');
                     userProfile.classList.add('hidden');
                     
-                    // Show auth overlays for protected sections
                     document.querySelectorAll('.auth-required .auth-overlay').forEach(overlay => {
                         overlay.classList.add('show');
                     });
@@ -792,9 +946,79 @@
                     currentUser = null;
                     updateUI(false, null);
                     showToast('تم تسجيل الخروج بنجاح', 'success');
-                    // Keep user on same page as guest
                 });
             }
+
+            // Edit Profile Button
+            const editProfileBtn = document.getElementById('editProfileBtn');
+            if (editProfileBtn) {
+                editProfileBtn.addEventListener('click', () => {
+                    if (currentUser) {
+                        openProfileModal(currentUser);
+                    }
+                });
+            }
+
+            // Close modal on overlay click
+            document.getElementById('editProfileModal')?.addEventListener('click', (e) => {
+                if (e.target === e.currentTarget) closeProfileModal();
+            });
+
+            // Edit Profile Form Submit
+            document.getElementById('editProfileForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const name = document.getElementById('editProfileName').value.trim();
+                const email = document.getElementById('editProfileEmail').value.trim();
+                const phone = document.getElementById('editProfilePhone').value.trim();
+                const password = document.getElementById('editProfilePassword').value;
+                const errorDiv = document.getElementById('editProfileError');
+                const errorMessage = document.getElementById('editProfileErrorMessage');
+
+                errorDiv.classList.add('hidden');
+
+                if (!name) {
+                    errorMessage.textContent = 'الاسم مطلوب';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+                if (!email || !email.includes('@')) {
+                    errorMessage.textContent = 'بريد إلكتروني غير صحيح';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+                if (password && password.length < 6) {
+                    errorMessage.textContent = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+
+                try {
+                    const body = { fullName: name, email, phone };
+                    if (password) body.password = password;
+
+                    const response = await fetch('/api/profile', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body),
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        showToast('تم تحديث الملف الشخصي بنجاح', 'success');
+                        closeProfileModal();
+                        // Refresh user data
+                        checkAuth();
+                    } else {
+                        const data = await response.json();
+                        errorMessage.textContent = data.error || 'حدث خطأ';
+                        errorDiv.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    errorMessage.textContent = 'حدث خطأ في التواصل مع الخادم';
+                    errorDiv.classList.remove('hidden');
+                }
+            });
 
             // Booking Form
             const bookingForm = document.getElementById('bookingForm');
@@ -802,7 +1026,6 @@
                 bookingForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     
-                    // Check authentication
                     if (!isAuthenticated) {
                         showToast('يرجى تسجيل الدخول لحجز موعد', 'error');
                         return;
@@ -846,13 +1069,12 @@
                 });
             }
 
-            // Results Form - with View and Download buttons
+            // Results Form
             const resultsForm = document.getElementById('resultsForm');
             if (resultsForm) {
                 resultsForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
 
-                    // Check authentication
                     if (!isAuthenticated) {
                         showToast('يرجى تسجيل الدخول للاستعلام عن النتائج', 'error');
                         return;
@@ -890,7 +1112,6 @@
                             successMessage.textContent = 'تم العثور على النتيجة';
                             successDiv.classList.remove('hidden');
                             
-                            // Set both view and download links
                             viewLink.href = data.result.url;
                             downloadLink.href = data.result.url;
                             
@@ -912,7 +1133,6 @@
                 contactForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
 
-                    // Check authentication
                     if (!isAuthenticated) {
                         showToast('يرجى تسجيل الدخول لإرسال رسالة', 'error');
                         return;
