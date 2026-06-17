@@ -50,7 +50,6 @@
         .file-preview .remove-file { color: #ef4444; cursor: pointer; transition: color 0.3s ease; }
         .file-preview .remove-file:hover { color: #dc2626; }
 
-        /* Dashboard Sections - each section is a separate page */
         .dashboard-section {
             display: none;
             opacity: 0;
@@ -74,7 +73,6 @@
             width: 1.5rem;
         }
 
-        /* Enhanced Chart Styles */
         .chart-container {
             position: relative;
             height: 280px;
@@ -91,7 +89,6 @@
             }
         }
 
-        /* Custom scroll for tables */
         .table-scroll {
             max-height: 500px;
             overflow-y: auto;
@@ -138,7 +135,6 @@
             transform: scale(1.05);
         }
 
-        /* Modal styles */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -196,7 +192,6 @@
             margin-bottom: 0.25rem;
         }
 
-        /* Password toggle */
         .password-wrapper {
             position: relative;
         }
@@ -219,7 +214,6 @@
             color: #e2e8f0;
         }
 
-        /* Toast - fixed and auto-hiding */
         #toast {
             position: fixed;
             top: 20px;
@@ -253,7 +247,6 @@
             margin-left: 10px;
         }
 
-        /* User profile management */
         .user-status-badge {
             font-size: 0.7rem;
             padding: 0.15rem 0.6rem;
@@ -301,7 +294,6 @@
                     <i class="fas fa-paper-plane w-5"></i>
                     <span>إرسال رسائل</span>
                 </a>
-                <!-- NEW: User Profile Management -->
                 <a data-section="section-users" class="sidebar-link flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-indigo-900/30 text-gray-300 hover:text-indigo-400 transition">
                     <i class="fas fa-users-cog w-5"></i>
                     <span>تعديل الملف الشخصي للمستخدمين</span>
@@ -372,7 +364,7 @@
                     </div>
                 </div>
 
-                <!-- Sales Chart - Enhanced -->
+                <!-- Sales Chart -->
                 <div class="glass-card p-6 rounded-2xl shadow-lg mb-8">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-xl font-bold text-white">مخطط المبيعات</h3>
@@ -484,7 +476,6 @@
                     <h2 class="text-2xl font-bold text-white">النتائج</h2>
                 </div>
                 
-                <!-- Upload Result -->
                 <div class="glass-card p-6 rounded-2xl shadow-lg mb-8">
                     <h3 class="text-xl font-bold text-white mb-4">رفع نتيجة جديدة</h3>
                     <form id="uploadResultForm" class="space-y-4">
@@ -511,7 +502,6 @@
                     </form>
                 </div>
 
-                <!-- Results History -->
                 <div class="glass-card p-6 rounded-2xl shadow-lg">
                     <h3 class="text-xl font-bold text-white mb-4">سجل النتائج</h3>
                     <div class="table-scroll">
@@ -572,7 +562,7 @@
             </section>
 
             <!-- ============================================ -->
-            <!-- SECTION 6: تعديل الملف الشخصي للمستخدمين (NEW) -->
+            <!-- SECTION 6: تعديل الملف الشخصي للمستخدمين -->
             <!-- ============================================ -->
             <section id="section-users" class="dashboard-section">
                 <div class="flex items-center gap-3 mb-6">
@@ -580,7 +570,6 @@
                     <h2 class="text-2xl font-bold text-white">تعديل الملف الشخصي للمستخدمين</h2>
                 </div>
 
-                <!-- Users List -->
                 <div class="glass-card p-6 rounded-2xl shadow-lg">
                     <h3 class="text-xl font-bold text-white mb-4">قائمة المستخدمين</h3>
                     <div class="table-scroll">
@@ -664,7 +653,7 @@
         </div>
     </div>
 
-    <!-- Edit User Modal (NEW) -->
+    <!-- Edit User Modal -->
     <div class="modal-overlay" id="editUserModal">
         <div class="modal-content" style="max-width: 550px;">
             <div class="flex items-center justify-between mb-4">
@@ -710,799 +699,836 @@
         <span class="toast-icon"><i class="fas fa-check-circle"></i></span>
         <span id="toastMessage">تم بنجاح</span>
     </div>
-
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // ============================================
-            // TOAST FUNCTION - Auto hides after 3 seconds
-            // ============================================
-            let toastTimeout = null;
+document.addEventListener('DOMContentLoaded', () => {
+    // ============================================
+    // TOAST FUNCTION
+    // ============================================
+    let toastTimeout = null;
 
-            function showToast(message, type = 'success') {
-                const toast = document.getElementById('toast');
-                const toastMessage = document.getElementById('toastMessage');
-                const icon = toast.querySelector('.toast-icon i');
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        const icon = toast.querySelector('.toast-icon i');
 
-                if (toastTimeout) {
-                    clearTimeout(toastTimeout);
-                    toastTimeout = null;
-                }
+        if (toastTimeout) {
+            clearTimeout(toastTimeout);
+            toastTimeout = null;
+        }
 
-                toast.classList.remove('success', 'error', 'show');
+        toast.classList.remove('success', 'error', 'show');
 
-                toastMessage.textContent = message;
-                if (type === 'success') {
-                    toast.classList.add('success');
-                    icon.className = 'fas fa-check-circle';
-                } else {
-                    toast.classList.add('error');
-                    icon.className = 'fas fa-exclamation-circle';
-                }
+        toastMessage.textContent = message;
+        if (type === 'success') {
+            toast.classList.add('success');
+            icon.className = 'fas fa-check-circle';
+        } else {
+            toast.classList.add('error');
+            icon.className = 'fas fa-exclamation-circle';
+        }
 
-                void toast.offsetWidth;
-                toast.classList.add('show');
+        void toast.offsetWidth;
+        toast.classList.add('show');
 
-                toastTimeout = setTimeout(() => {
-                    toast.classList.remove('show');
-                    toastTimeout = null;
-                }, 3000);
+        toastTimeout = setTimeout(() => {
+            toast.classList.remove('show');
+            toastTimeout = null;
+        }, 3000);
+    }
+
+    // ============================================
+    // PASSWORD TOGGLE
+    // ============================================
+    window.togglePasswordVisibility = function(inputId, button) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const icon = button.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'fas fa-eye-slash';
+        } else {
+            input.type = 'password';
+            icon.className = 'fas fa-eye';
+        }
+    };
+
+    // ============================================
+    // SECTION CONTROLLER
+    // ============================================
+    const sections = document.querySelectorAll('.dashboard-section');
+    const sidebarLinks = document.querySelectorAll('.sidebar-link');
+
+    function showSection(sectionId) {
+        sections.forEach(sec => sec.classList.remove('active'));
+        const target = document.getElementById(sectionId);
+        if (target) target.classList.add('active');
+
+        sidebarLinks.forEach(link => {
+            link.classList.remove('active-link');
+            if (link.dataset.section === sectionId) {
+                link.classList.add('active-link');
             }
+        });
 
-            // ============================================
-            // PASSWORD TOGGLE FUNCTION
-            // ============================================
-            window.togglePasswordVisibility = function(inputId, button) {
-                const input = document.getElementById(inputId);
-                if (!input) return;
-                const icon = button.querySelector('i');
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    icon.className = 'fas fa-eye-slash';
-                } else {
-                    input.type = 'password';
-                    icon.className = 'fas fa-eye';
-                }
-            };
+        const sidebar = document.querySelector('aside');
+        if (window.innerWidth < 1024 && sidebar.classList.contains('open')) {
+            sidebar.classList.remove('open');
+        }
+    }
 
-            // ============================================
-            // SINGLE SECTION VIEW CONTROLLER
-            // ============================================
-            const sections = document.querySelectorAll('.dashboard-section');
-            const sidebarLinks = document.querySelectorAll('.sidebar-link');
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const sectionId = link.dataset.section;
+            if (sectionId) showSection(sectionId);
+        });
+    });
 
-            function showSection(sectionId) {
-                sections.forEach(sec => {
-                    sec.classList.remove('active');
-                });
-                const target = document.getElementById(sectionId);
-                if (target) target.classList.add('active');
+    showSection('section-sales');
 
-                sidebarLinks.forEach(link => {
-                    link.classList.remove('active-link');
-                    if (link.dataset.section === sectionId) {
-                        link.classList.add('active-link');
-                    }
-                });
+    // ============================================
+    // SIDEBAR TOGGLE
+    // ============================================
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.querySelector('aside');
+    if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+        });
+    }
 
-                const sidebar = document.querySelector('aside');
-                if (window.innerWidth < 1024 && sidebar.classList.contains('open')) {
-                    sidebar.classList.remove('open');
-                }
-            }
+    // ============================================
+    // AUTH VERIFICATION
+    // ============================================
+    let currentAdmin = null;
+    let salesChart = null;
 
-            sidebarLinks.forEach(link => {
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const sectionId = link.dataset.section;
-                    if (sectionId) showSection(sectionId);
-                });
+    fetch('/api/auth/verify-admin', { credentials: 'include' })
+        .then(response => {
+            if (!response.ok) { window.location.href = '/login-dashboard'; return; }
+            return response.json();
+        })
+        .then(data => {
+            if (!data || !data.authenticated) { window.location.href = '/login-dashboard'; return; }
+            currentAdmin = data.admin;
+            const greeting = document.getElementById('adminGreeting');
+            const sidebarGreeting = document.getElementById('adminGreetingSidebar');
+            const name = data.admin.name || 'مدير';
+            if (greeting) greeting.textContent = `مرحباً ${name}`;
+            if (sidebarGreeting) sidebarGreeting.textContent = `مرحباً ${name}`;
+            initializeDashboard();
+        })
+        .catch(() => { window.location.href = '/login-dashboard'; });
+
+    // ============================================
+    // DASHBOARD LOGIC
+    // ============================================
+    function initializeDashboard() {
+        // Logout
+        document.getElementById('dashboardLogout')?.addEventListener('click', async () => {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/login-dashboard';
+        });
+
+        // Modal functions
+        window.openModal = function(id) {
+            document.getElementById(id).classList.add('active');
+        };
+        window.closeModal = function(id) {
+            document.getElementById(id).classList.remove('active');
+        };
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.classList.remove('active');
             });
+        });
 
-            // Default: show sales
-            showSection('section-sales');
+        // File upload handlers
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        const fileInput = document.getElementById('resultFile');
+        const filePreview = document.getElementById('filePreview');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const removeFile = document.getElementById('removeFile');
+        const fileUploadError = document.getElementById('fileUploadError');
+        let selectedFile = null;
 
-            // ============================================
-            // SIDEBAR TOGGLE
-            // ============================================
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebar = document.querySelector('aside');
-            if (sidebarToggle && sidebar) {
-                sidebarToggle.addEventListener('click', () => {
-                    sidebar.classList.toggle('open');
-                });
+        fileUploadArea?.addEventListener('click', () => fileInput?.click());
+        fileUploadArea?.addEventListener('dragover', (e) => { e.preventDefault(); fileUploadArea.classList.add('dragover'); });
+        fileUploadArea?.addEventListener('dragleave', () => fileUploadArea.classList.remove('dragover'));
+        fileUploadArea?.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput?.addEventListener('change', (e) => { if (e.target.files.length > 0) handleFile(e.target.files[0]); });
+
+        function handleFile(file) {
+            const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
+            const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.gif'];
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            if (!validTypes.includes(file.type) && !validExtensions.includes(ext)) {
+                fileUploadError.textContent = 'نوع الملف غير مدعوم. يرجى رفع PDF أو JPG أو PNG أو GIF';
+                fileUploadError.classList.remove('hidden'); return;
             }
+            if (file.size > 10 * 1024 * 1024) {
+                fileUploadError.textContent = 'حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت';
+                fileUploadError.classList.remove('hidden'); return;
+            }
+            fileUploadError.classList.add('hidden');
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' ميجابايت';
+            filePreview.classList.add('show');
+            fileUploadArea.style.display = 'none';
+        }
 
-            // ============================================
-            // AUTH VERIFICATION
-            // ============================================
-            let currentAdmin = null;
+        removeFile?.addEventListener('click', () => {
+            selectedFile = null;
+            filePreview.classList.remove('show');
+            fileUploadArea.style.display = 'block';
+            fileInput.value = '';
+            fileUploadError.classList.add('hidden');
+        });
 
-            fetch('/api/auth/verify-admin', { credentials: 'include' })
-                .then(response => {
-                    if (!response.ok) { window.location.href = '/login-dashboard'; return; }
-                    return response.json();
-                })
-                .then(data => {
-                    if (!data || !data.authenticated) { window.location.href = '/login-dashboard'; return; }
-                    currentAdmin = data.admin;
-                    const greeting = document.getElementById('adminGreeting');
-                    const sidebarGreeting = document.getElementById('adminGreetingSidebar');
-                    const name = data.admin.name || 'مدير';
-                    if (greeting) greeting.textContent = `مرحباً ${name}`;
-                    if (sidebarGreeting) sidebarGreeting.textContent = `مرحباً ${name}`;
-                    initializeDashboard();
-                })
-                .catch(() => { window.location.href = '/login-dashboard'; });
+        // Edit file upload handlers
+        const editFileUploadArea = document.getElementById('editFileUploadArea');
+        const editFileInput = document.getElementById('editResultFile');
+        const editFilePreview = document.getElementById('editFilePreview');
+        const editFileName = document.getElementById('editFileName');
+        const editFileSize = document.getElementById('editFileSize');
+        const editRemoveFile = document.getElementById('editRemoveFile');
+        const editFileUploadError = document.getElementById('editFileUploadError');
+        let editSelectedFile = null;
 
-            // ============================================
-            // DASHBOARD LOGIC
-            // ============================================
-            function initializeDashboard() {
-                // Logout
-                document.getElementById('dashboardLogout')?.addEventListener('click', async () => {
-                    await fetch('/api/auth/logout', { method: 'POST' });
-                    window.location.href = '/login-dashboard';
-                });
+        editFileUploadArea?.addEventListener('click', () => editFileInput?.click());
+        editFileUploadArea?.addEventListener('dragover', (e) => { e.preventDefault(); editFileUploadArea.classList.add('dragover'); });
+        editFileUploadArea?.addEventListener('dragleave', () => editFileUploadArea.classList.remove('dragover'));
+        editFileUploadArea?.addEventListener('drop', (e) => {
+            e.preventDefault();
+            editFileUploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) handleEditFile(e.dataTransfer.files[0]);
+        });
+        editFileInput?.addEventListener('change', (e) => { if (e.target.files.length > 0) handleEditFile(e.target.files[0]); });
 
-                // Modal functions
-                window.openModal = function(id) {
-                    document.getElementById(id).classList.add('active');
-                };
-                window.closeModal = function(id) {
-                    document.getElementById(id).classList.remove('active');
-                };
-                document.querySelectorAll('.modal-overlay').forEach(modal => {
-                    modal.addEventListener('click', (e) => {
-                        if (e.target === modal) modal.classList.remove('active');
-                    });
-                });
+        function handleEditFile(file) {
+            const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
+            const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.gif'];
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            if (!validTypes.includes(file.type) && !validExtensions.includes(ext)) {
+                editFileUploadError.textContent = 'نوع الملف غير مدعوم. يرجى رفع PDF أو JPG أو PNG أو GIF';
+                editFileUploadError.classList.remove('hidden'); return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                editFileUploadError.textContent = 'حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت';
+                editFileUploadError.classList.remove('hidden'); return;
+            }
+            editFileUploadError.classList.add('hidden');
+            editSelectedFile = file;
+            editFileName.textContent = file.name;
+            editFileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' ميجابايت';
+            editFilePreview.classList.add('show');
+            editFileUploadArea.style.display = 'none';
+        }
 
-                // File upload handlers for main upload
-                const fileUploadArea = document.getElementById('fileUploadArea');
-                const fileInput = document.getElementById('resultFile');
-                const filePreview = document.getElementById('filePreview');
-                const fileName = document.getElementById('fileName');
-                const fileSize = document.getElementById('fileSize');
-                const removeFile = document.getElementById('removeFile');
-                const fileUploadError = document.getElementById('fileUploadError');
-                let selectedFile = null;
+        editRemoveFile?.addEventListener('click', () => {
+            editSelectedFile = null;
+            editFilePreview.classList.remove('show');
+            editFileUploadArea.style.display = 'block';
+            editFileInput.value = '';
+            editFileUploadError.classList.add('hidden');
+        });
 
-                fileUploadArea?.addEventListener('click', () => fileInput?.click());
-                fileUploadArea?.addEventListener('dragover', (e) => { e.preventDefault(); fileUploadArea.classList.add('dragover'); });
-                fileUploadArea?.addEventListener('dragleave', () => fileUploadArea.classList.remove('dragover'));
-                fileUploadArea?.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    fileUploadArea.classList.remove('dragover');
-                    if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
-                });
-                fileInput?.addEventListener('change', (e) => { if (e.target.files.length > 0) handleFile(e.target.files[0]); });
+        // Chart
+        const ctx = document.getElementById('salesChart');
+        if (ctx) {
+            salesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'المبيعات (جنيه)',
+                        data: [],
+                        borderColor: '#818cf8',
+                        backgroundColor: 'rgba(79,70,229,0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#4f46e5',
+                        pointBorderColor: '#818cf8',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#94a3b8',
+                                font: { family: 'Cairo', size: 12 },
+                                boxWidth: 12,
+                                padding: 16
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15,23,42,0.9)',
+                            borderColor: 'rgba(79,70,229,0.2)',
+                            borderWidth: 1,
+                            titleColor: '#e2e8f0',
+                            bodyColor: '#94a3b8',
+                            cornerRadius: 8,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y + ' جنيه';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+                            ticks: { color: '#94a3b8', font: { family: 'Cairo', size: 11 }, callback: function(value) { return value + ' ج'; } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8', font: { family: 'Cairo', size: 11 } }
+                        }
+                    },
+                    interaction: { intersect: false, mode: 'index' }
+                }
+            });
+        }
 
-                function handleFile(file) {
-                    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
-                    const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.gif'];
-                    const ext = '.' + file.name.split('.').pop().toLowerCase();
-                    if (!validTypes.includes(file.type) && !validExtensions.includes(ext)) {
-                        fileUploadError.textContent = 'نوع الملف غير مدعوم. يرجى رفع PDF أو JPG أو PNG أو GIF';
-                        fileUploadError.classList.remove('hidden'); return;
+        // ============================================
+        // LOAD DASHBOARD DATA
+        // ============================================
+        async function loadDashboard() {
+            try {
+                let stats = { todaySales: 0, totalBookings: 0, totalMessages: 0, totalContacts: 0 };
+                let salesChartData = [];
+                let sales = [];
+                let bookings = [];
+                let contacts = [];
+                let results = [];
+                let messages = [];
+
+                try {
+                    const statsRes = await fetch('/api/admin/stats', { credentials: 'include' });
+                    if (statsRes.ok) stats = await statsRes.json();
+                } catch (e) { console.warn('Stats error:', e); }
+
+                try {
+                    const chartRes = await fetch('/api/admin/sales-chart', { credentials: 'include' });
+                    if (chartRes.ok) {
+                        salesChartData = await chartRes.json();
+                        if (!Array.isArray(salesChartData)) salesChartData = [];
                     }
-                    if (file.size > 10 * 1024 * 1024) {
-                        fileUploadError.textContent = 'حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت';
-                        fileUploadError.classList.remove('hidden'); return;
+                } catch (e) { console.warn('Chart error:', e); }
+
+                try {
+                    const salesRes = await fetch('/api/admin/sales', { credentials: 'include' });
+                    if (salesRes.ok) {
+                        sales = await salesRes.json();
+                        if (!Array.isArray(sales)) sales = [];
                     }
-                    fileUploadError.classList.add('hidden');
-                    selectedFile = file;
-                    fileName.textContent = file.name;
-                    fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' ميجابايت';
-                    filePreview.classList.add('show');
-                    fileUploadArea.style.display = 'none';
+                } catch (e) { console.warn('Sales error:', e); }
+
+                try {
+                    const bookingsRes = await fetch('/api/admin/bookings', { credentials: 'include' });
+                    if (bookingsRes.ok) {
+                        bookings = await bookingsRes.json();
+                        if (!Array.isArray(bookings)) bookings = [];
+                    }
+                } catch (e) { console.warn('Bookings error:', e); }
+
+                try {
+                    const contactsRes = await fetch('/api/admin/contacts', { credentials: 'include' });
+                    if (contactsRes.ok) {
+                        contacts = await contactsRes.json();
+                        if (!Array.isArray(contacts)) contacts = [];
+                    }
+                } catch (e) { console.warn('Contacts error:', e); }
+
+                try {
+                    const resultsRes = await fetch('/api/admin/results', { credentials: 'include' });
+                    if (resultsRes.ok) {
+                        results = await resultsRes.json();
+                        if (!Array.isArray(results)) results = [];
+                    }
+                } catch (e) { console.warn('Results error:', e); }
+
+                try {
+                    const messagesRes = await fetch('/api/admin/messages', { credentials: 'include' });
+                    if (messagesRes.ok) {
+                        messages = await messagesRes.json();
+                        if (!Array.isArray(messages)) messages = [];
+                    }
+                } catch (e) { console.warn('Messages error:', e); }
+
+                // Update stats
+                const todaySalesEl = document.getElementById('todaySales');
+                const totalBookingsEl = document.getElementById('totalBookings');
+                const totalMessagesEl = document.getElementById('totalMessages');
+                
+                if (todaySalesEl) todaySalesEl.textContent = stats.todaySales || 0;
+                if (totalBookingsEl) totalBookingsEl.textContent = stats.totalBookings || 0;
+                if (totalMessagesEl) totalMessagesEl.textContent = stats.totalMessages || 0;
+
+                // Update chart
+                if (salesChart && salesChartData.length > 0) {
+                    const labels = salesChartData.map(d => d.date || '');
+                    const data = salesChartData.map(d => d.amount || 0);
+                    if (labels.length > 0) {
+                        salesChart.data.labels = labels;
+                        salesChart.data.datasets[0].data = data;
+                        salesChart.update();
+                    }
                 }
 
-                removeFile?.addEventListener('click', () => {
+                // Render Sales table
+                const salesBody = document.getElementById('salesTableBody');
+                if (salesBody) {
+                    if (!Array.isArray(sales) || sales.length === 0) {
+                        salesBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد مبيعات مسجلة</td></tr>`;
+                    } else {
+                        salesBody.innerHTML = sales.map(sale => `
+                            <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
+                                <td class="py-3 px-4 text-gray-300">${sale.customer || '-'}</td>
+                                <td class="py-3 px-4 text-gray-300">${sale.amount || 0} جنيه</td>
+                                <td class="py-3 px-4 text-gray-300">${sale.date || '-'}</td>
+                                <td class="py-3 px-4">
+                                    <button onclick="editSale('${sale.id}', '${sale.customer || ''}', '${sale.amount || 0}')" class="text-indigo-400 hover:text-indigo-300 transition ml-2 action-btn"><i class="fas fa-edit"></i></button>
+                                    <button onclick="deleteSale('${sale.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+
+                // Render Bookings table
+                const bookingsBody = document.getElementById('bookingsTableBody');
+                if (bookingsBody) {
+                    if (!Array.isArray(bookings) || bookings.length === 0) {
+                        bookingsBody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500">لا توجد حجوزات</td></tr>`;
+                    } else {
+                        bookingsBody.innerHTML = bookings.map(booking => `
+                            <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
+                                <td class="py-3 px-4 text-gray-300">${booking.fullName || '-'}</td>
+                                <td class="py-3 px-4 text-gray-300">${booking.phone || '-'}</td>
+                                <td class="py-3 px-4 text-gray-300">${booking.date || '-'}</td>
+                                <td class="py-3 px-4 text-gray-300">${booking.time || '-'}</td>
+                                <td class="py-3 px-4">
+                                    <button onclick="deleteBooking('${booking.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+
+                // Render Contacts table
+                const contactsBody = document.getElementById('contactsTableBody');
+                if (contactsBody) {
+                    if (!Array.isArray(contacts) || contacts.length === 0) {
+                        contactsBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">لا توجد رسائل</td></tr>`;
+                    } else {
+                        contactsBody.innerHTML = contacts.map(contact => `
+                            <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
+                                <td class="py-3 px-4 text-gray-300">${contact.name || '-'}</td>
+                                <td class="py-3 px-4 text-gray-300">${contact.email || '-'}</td>
+                                <td class="py-3 px-4 text-gray-300">${contact.phone || '-'}</td>
+                                <td class="py-3 px-4 text-gray-300 max-w-xs truncate" title="${contact.message || ''}">${(contact.message || '').substring(0, 50)}${(contact.message || '').length > 50 ? '...' : ''}</td>
+                                <td class="py-3 px-4 text-gray-300">${contact.sentAt ? new Date(contact.sentAt).toLocaleDateString('ar') : '-'}</td>
+                                <td class="py-3 px-4">
+                                    <button onclick="deleteContact('${contact.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+
+                // Render Results table
+                const resultsBody = document.getElementById('resultsTableBody');
+                if (resultsBody) {
+                    if (!Array.isArray(results) || results.length === 0) {
+                        resultsBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد نتائج</td></tr>`;
+                    } else {
+                        resultsBody.innerHTML = results.map(result => `
+                            <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
+                                <td class="py-3 px-4 text-gray-300">${result.phone || '-'}</td>
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <a href="${result.url}" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition action-btn bg-indigo-500/20 px-3 py-1 rounded-lg text-sm flex items-center gap-1">
+                                            <i class="fas fa-eye"></i> عرض
+                                        </a>
+                                        <a href="${result.url}" download class="text-emerald-400 hover:text-emerald-300 transition action-btn bg-emerald-500/20 px-3 py-1 rounded-lg text-sm flex items-center gap-1">
+                                            <i class="fas fa-download"></i> تحميل
+                                        </a>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4 text-gray-300">${result.createdAt ? new Date(result.createdAt).toLocaleDateString('ar') : '-'}</td>
+                                <td class="py-3 px-4">
+                                    <button onclick="editResult('${result.id}', '${result.phone || ''}')" class="text-indigo-400 hover:text-indigo-300 transition ml-2 action-btn"><i class="fas fa-edit"></i></button>
+                                    <button onclick="deleteResult('${result.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+
+                // Render Messages table
+                const messagesBody = document.getElementById('messagesTableBody');
+                if (messagesBody) {
+                    if (!Array.isArray(messages) || messages.length === 0) {
+                        messagesBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد رسائل مرسلة</td></tr>`;
+                    } else {
+                        messagesBody.innerHTML = messages.map(msg => `
+                            <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
+                                <td class="py-3 px-4 text-gray-300">${msg.email || '-'}</td>
+                                <td class="py-3 px-4 text-gray-300 max-w-xs truncate" title="${msg.message || ''}">${(msg.message || '').substring(0, 50)}${(msg.message || '').length > 50 ? '...' : ''}</td>
+                                <td class="py-3 px-4 text-gray-300">${msg.sentAt ? new Date(msg.sentAt).toLocaleDateString('ar') : '-'}</td>
+                                <td class="py-3 px-4">
+                                    <button onclick="deleteMessage('${msg.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+
+                // Load users
+                loadUsers();
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                showToast('حدث خطأ في تحميل البيانات', 'error');
+            }
+        }
+
+        // ============================================
+        // LOAD USERS
+        // ============================================
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/admin/users', { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to load users');
+                const users = await response.json();
+
+                const usersBody = document.getElementById('usersTableBody');
+                if (!usersBody) return;
+                if (!Array.isArray(users) || users.length === 0) {
+                    usersBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">لا يوجد مستخدمين</td></tr>`;
+                } else {
+                    usersBody.innerHTML = users.map(user => `
+                        <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
+                            <td class="py-3 px-4 text-gray-300 text-sm">${(user.id || '').substring(0, 8)}...</td>
+                            <td class="py-3 px-4 text-gray-300">${user.fullName || '-'}</td>
+                            <td class="py-3 px-4 text-gray-300">${user.email || '-'}</td>
+                            <td class="py-3 px-4 text-gray-300">${user.phone || '-'}</td>
+                            <td class="py-3 px-4">
+                                <span class="user-status-badge ${user.isAdmin ? 'admin' : 'user'}">
+                                    ${user.isAdmin ? 'مدير' : 'مستخدم'}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4">
+                                ${!user.isAdmin ? `
+                                    <button onclick="editUser('${user.id}', '${user.fullName || ''}', '${user.email || ''}', '${user.phone || ''}')" class="text-indigo-400 hover:text-indigo-300 transition ml-2 action-btn"><i class="fas fa-edit"></i></button>
+                                    <button onclick="deleteUser('${user.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
+                                ` : `
+                                    <span class="text-gray-500 text-sm">لا يمكن التعديل</span>
+                                `}
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                const usersBody = document.getElementById('usersTableBody');
+                if (usersBody) {
+                    usersBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">حدث خطأ في تحميل المستخدمين</td></tr>`;
+                }
+            }
+        }
+
+        // ============================================
+        // SALE CRUD
+        // ============================================
+        document.getElementById('addSaleForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const customer = document.getElementById('saleCustomer').value.trim();
+            const amount = document.getElementById('saleAmount').value;
+            if (!customer || !amount) { showToast('جميع الحقول مطلوبة', 'error'); return; }
+            try {
+                const response = await fetch('/api/admin/sales', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customer, amount: parseFloat(amount) })
+                });
+                if (response.ok) {
+                    showToast('تم تسجيل البيع بنجاح', 'success');
+                    document.getElementById('addSaleForm').reset();
+                    loadDashboard();
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'حدث خطأ', 'error');
+                }
+            } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
+        });
+
+        window.editSale = function(id, customer, amount) {
+            document.getElementById('editSaleId').value = id;
+            document.getElementById('editSaleCustomer').value = customer;
+            document.getElementById('editSaleAmount').value = amount;
+            openModal('editSaleModal');
+        };
+
+        document.getElementById('editSaleForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editSaleId').value;
+            const customer = document.getElementById('editSaleCustomer').value.trim();
+            const amount = document.getElementById('editSaleAmount').value;
+            if (!customer || !amount) { showToast('جميع الحقول مطلوبة', 'error'); return; }
+            try {
+                const response = await fetch(`/api/admin/sales/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customer, amount: parseFloat(amount) })
+                });
+                if (response.ok) {
+                    showToast('تم تحديث البيع بنجاح', 'success');
+                    closeModal('editSaleModal');
+                    loadDashboard();
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'حدث خطأ', 'error');
+                }
+            } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
+        });
+
+        window.deleteSale = async (id) => {
+            if (!confirm('هل أنت متأكد من حذف هذه العملية؟')) return;
+            try {
+                const response = await fetch(`/api/admin/sales/${id}`, { method: 'DELETE' });
+                if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
+            } catch (error) { showToast('حدث خطأ', 'error'); }
+        };
+
+        // ============================================
+        // BOOKING CRUD
+        // ============================================
+        window.deleteBooking = async (id) => {
+            if (!confirm('هل أنت متأكد من حذف هذا الحجز؟')) return;
+            try {
+                const response = await fetch(`/api/admin/bookings/${id}`, { method: 'DELETE' });
+                if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
+            } catch (error) { showToast('حدث خطأ', 'error'); }
+        };
+
+        // ============================================
+        // CONTACT CRUD
+        // ============================================
+        window.deleteContact = async (id) => {
+            if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
+            try {
+                const response = await fetch(`/api/admin/contacts/${id}`, { method: 'DELETE' });
+                if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
+            } catch (error) { showToast('حدث خطأ', 'error'); }
+        };
+
+        // ============================================
+        // RESULT CRUD
+        // ============================================
+        document.getElementById('uploadResultForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!selectedFile) { showToast('يرجى اختيار ملف للرفع', 'error'); return; }
+            const phone = document.getElementById('resultPhoneUpload').value.trim();
+            if (!phone) { showToast('رقم الهاتف مطلوب', 'error'); return; }
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('phone', phone);
+            try {
+                const response = await fetch('/api/admin/results/upload', { method: 'POST', body: formData });
+                if (response.ok) {
+                    showToast('تم رفع النتيجة بنجاح', 'success');
+                    document.getElementById('uploadResultForm').reset();
                     selectedFile = null;
                     filePreview.classList.remove('show');
                     fileUploadArea.style.display = 'block';
                     fileInput.value = '';
-                    fileUploadError.classList.add('hidden');
-                });
-
-                // Edit file upload handlers
-                const editFileUploadArea = document.getElementById('editFileUploadArea');
-                const editFileInput = document.getElementById('editResultFile');
-                const editFilePreview = document.getElementById('editFilePreview');
-                const editFileName = document.getElementById('editFileName');
-                const editFileSize = document.getElementById('editFileSize');
-                const editRemoveFile = document.getElementById('editRemoveFile');
-                const editFileUploadError = document.getElementById('editFileUploadError');
-                let editSelectedFile = null;
-
-                editFileUploadArea?.addEventListener('click', () => editFileInput?.click());
-                editFileUploadArea?.addEventListener('dragover', (e) => { e.preventDefault(); editFileUploadArea.classList.add('dragover'); });
-                editFileUploadArea?.addEventListener('dragleave', () => editFileUploadArea.classList.remove('dragover'));
-                editFileUploadArea?.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    editFileUploadArea.classList.remove('dragover');
-                    if (e.dataTransfer.files.length > 0) handleEditFile(e.dataTransfer.files[0]);
-                });
-                editFileInput?.addEventListener('change', (e) => { if (e.target.files.length > 0) handleEditFile(e.target.files[0]); });
-
-                function handleEditFile(file) {
-                    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
-                    const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.gif'];
-                    const ext = '.' + file.name.split('.').pop().toLowerCase();
-                    if (!validTypes.includes(file.type) && !validExtensions.includes(ext)) {
-                        editFileUploadError.textContent = 'نوع الملف غير مدعوم. يرجى رفع PDF أو JPG أو PNG أو GIF';
-                        editFileUploadError.classList.remove('hidden'); return;
-                    }
-                    if (file.size > 10 * 1024 * 1024) {
-                        editFileUploadError.textContent = 'حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت';
-                        editFileUploadError.classList.remove('hidden'); return;
-                    }
-                    editFileUploadError.classList.add('hidden');
-                    editSelectedFile = file;
-                    editFileName.textContent = file.name;
-                    editFileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' ميجابايت';
-                    editFilePreview.classList.add('show');
-                    editFileUploadArea.style.display = 'none';
+                    loadDashboard();
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'حدث خطأ', 'error');
                 }
+            } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
+        });
 
-                editRemoveFile?.addEventListener('click', () => {
-                    editSelectedFile = null;
-                    editFilePreview.classList.remove('show');
-                    editFileUploadArea.style.display = 'block';
-                    editFileInput.value = '';
-                    editFileUploadError.classList.add('hidden');
+        window.editResult = function(id, phone) {
+            document.getElementById('editResultId').value = id;
+            document.getElementById('editResultPhone').value = phone;
+            editSelectedFile = null;
+            editFilePreview.classList.remove('show');
+            editFileUploadArea.style.display = 'block';
+            editFileInput.value = '';
+            editFileUploadError.classList.add('hidden');
+            openModal('editResultModal');
+        };
+
+        document.getElementById('editResultForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editResultId').value;
+            const phone = document.getElementById('editResultPhone').value.trim();
+            if (!phone) { showToast('رقم الهاتف مطلوب', 'error'); return; }
+            const formData = new FormData();
+            formData.append('phone', phone);
+            if (editSelectedFile) {
+                formData.append('file', editSelectedFile);
+            }
+            try {
+                const response = await fetch(`/api/admin/results/${id}`, {
+                    method: 'PUT',
+                    body: formData
                 });
-
-                // Chart - Enhanced
-                let salesChart = null;
-                const ctx = document.getElementById('salesChart');
-                if (ctx) {
-                    salesChart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: [],
-                            datasets: [{
-                                label: 'المبيعات (جنيه)',
-                                data: [],
-                                borderColor: '#818cf8',
-                                backgroundColor: 'rgba(79,70,229,0.1)',
-                                borderWidth: 3,
-                                tension: 0.4,
-                                fill: true,
-                                pointBackgroundColor: '#4f46e5',
-                                pointBorderColor: '#818cf8',
-                                pointBorderWidth: 2,
-                                pointRadius: 4,
-                                pointHoverRadius: 6
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    labels: {
-                                        color: '#94a3b8',
-                                        font: { family: 'Cairo', size: 12 },
-                                        boxWidth: 12,
-                                        padding: 16
-                                    }
-                                },
-                                tooltip: {
-                                    backgroundColor: 'rgba(15,23,42,0.9)',
-                                    borderColor: 'rgba(79,70,229,0.2)',
-                                    borderWidth: 1,
-                                    titleColor: '#e2e8f0',
-                                    bodyColor: '#94a3b8',
-                                    cornerRadius: 8,
-                                    padding: 12,
-                                    callbacks: {
-                                        label: function(context) {
-                                            return context.parsed.y + ' جنيه';
-                                        }
-                                    }
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    grid: {
-                                        color: 'rgba(255,255,255,0.04)',
-                                        drawBorder: false
-                                    },
-                                    ticks: {
-                                        color: '#94a3b8',
-                                        font: { family: 'Cairo', size: 11 },
-                                        callback: function(value) {
-                                            return value + ' ج';
-                                        }
-                                    }
-                                },
-                                x: {
-                                    grid: { display: false },
-                                    ticks: {
-                                        color: '#94a3b8',
-                                        font: { family: 'Cairo', size: 11 }
-                                    }
-                                }
-                            },
-                            interaction: {
-                                intersect: false,
-                                mode: 'index'
-                            }
-                        }
-                    });
+                if (response.ok) {
+                    showToast('تم تحديث النتيجة بنجاح', 'success');
+                    closeModal('editResultModal');
+                    loadDashboard();
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'حدث خطأ', 'error');
                 }
+            } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
+        });
 
-                // ============================================
-                // LOAD DASHBOARD DATA
-                // ============================================
-                async function loadDashboard() {
-                    try {
-                        const [statsRes, salesChartRes, salesRes, bookingsRes, contactsRes, resultsRes, messagesRes] = await Promise.all([
-                            fetch('/api/admin/stats'),
-                            fetch('/api/admin/sales-chart'),
-                            fetch('/api/admin/sales'),
-                            fetch('/api/admin/bookings'),
-                            fetch('/api/admin/contacts'),
-                            fetch('/api/admin/results'),
-                            fetch('/api/admin/messages')
-                        ]);
+        window.deleteResult = async (id) => {
+            if (!confirm('هل أنت متأكد من حذف هذه النتيجة؟')) return;
+            try {
+                const response = await fetch(`/api/admin/results/${id}`, { method: 'DELETE' });
+                if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
+            } catch (error) { showToast('حدث خطأ', 'error'); }
+        };
 
-                        if (statsRes.status === 401 || statsRes.status === 403) {
-                            window.location.href = '/login-dashboard';
-                            return;
-                        }
-
-                        const stats = await statsRes.json();
-                        const salesChartData = await salesChartRes.json();
-                        const sales = await salesRes.json();
-                        const bookings = await bookingsRes.json();
-                        const contacts = await contactsRes.json();
-                        const results = await resultsRes.json();
-                        const messages = await messagesRes.json();
-
-                        // Update stats
-                        document.getElementById('todaySales').textContent = stats.todaySales || 0;
-                        document.getElementById('totalBookings').textContent = stats.totalBookings || 0;
-                        document.getElementById('totalMessages').textContent = stats.totalMessages || 0;
-
-                        // Update chart
-                        if (salesChart && salesChartData.length > 0) {
-                            const labels = salesChartData.map(d => d.date);
-                            const data = salesChartData.map(d => d.amount);
-                            if (labels.length > 0) {
-                                salesChart.data.labels = labels;
-                                salesChart.data.datasets[0].data = data;
-                                salesChart.update();
-                            }
-                        }
-
-                        // Render Sales table
-                        const salesBody = document.getElementById('salesTableBody');
-                        if (sales.length === 0) {
-                            salesBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد مبيعات مسجلة</td></tr>`;
-                        } else {
-                            salesBody.innerHTML = sales.map(sale => `
-                                <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
-                                    <td class="py-3 px-4 text-gray-300">${sale.customer}</td>
-                                    <td class="py-3 px-4 text-gray-300">${sale.amount} جنيه</td>
-                                    <td class="py-3 px-4 text-gray-300">${sale.date}</td>
-                                    <td class="py-3 px-4">
-                                        <button onclick="editSale('${sale.id}', '${sale.customer}', '${sale.amount}')" class="text-indigo-400 hover:text-indigo-300 transition ml-2 action-btn"><i class="fas fa-edit"></i></button>
-                                        <button onclick="deleteSale('${sale.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
-                                    </td>
-                                </tr>
-                            `).join('');
-                        }
-
-                        // Render Bookings table
-                        const bookingsBody = document.getElementById('bookingsTableBody');
-                        if (bookings.length === 0) {
-                            bookingsBody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500">لا توجد حجوزات</td></tr>`;
-                        } else {
-                            bookingsBody.innerHTML = bookings.map(booking => `
-                                <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
-                                    <td class="py-3 px-4 text-gray-300">${booking.fullName}</td>
-                                    <td class="py-3 px-4 text-gray-300">${booking.phone}</td>
-                                    <td class="py-3 px-4 text-gray-300">${booking.date}</td>
-                                    <td class="py-3 px-4 text-gray-300">${booking.time}</td>
-                                    <td class="py-3 px-4">
-                                        <button onclick="deleteBooking('${booking.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
-                                    </td>
-                                </tr>
-                            `).join('');
-                        }
-
-                        // Render Contacts table
-                        const contactsBody = document.getElementById('contactsTableBody');
-                        if (contacts.length === 0) {
-                            contactsBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">لا توجد رسائل</td></tr>`;
-                        } else {
-                            contactsBody.innerHTML = contacts.map(contact => `
-                                <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
-                                    <td class="py-3 px-4 text-gray-300">${contact.name}</td>
-                                    <td class="py-3 px-4 text-gray-300">${contact.email}</td>
-                                    <td class="py-3 px-4 text-gray-300">${contact.phone}</td>
-                                    <td class="py-3 px-4 text-gray-300 max-w-xs truncate" title="${contact.message}">${contact.message.substring(0, 50)}${contact.message.length > 50 ? '...' : ''}</td>
-                                    <td class="py-3 px-4 text-gray-300">${new Date(contact.sentAt).toLocaleDateString('ar')}</td>
-                                    <td class="py-3 px-4">
-                                        <button onclick="deleteContact('${contact.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
-                                    </td>
-                                </tr>
-                            `).join('');
-                        }
-
-                        // Render Results table with View and Download buttons
-                        const resultsBody = document.getElementById('resultsTableBody');
-                        if (results.length === 0) {
-                            resultsBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد نتائج</td></tr>`;
-                        } else {
-                            resultsBody.innerHTML = results.map(result => `
-                                <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
-                                    <td class="py-3 px-4 text-gray-300">${result.phone}</td>
-                                    <td class="py-3 px-4">
-                                        <div class="flex items-center gap-2 flex-wrap">
-                                            <a href="${result.url}" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition action-btn bg-indigo-500/20 px-3 py-1 rounded-lg text-sm flex items-center gap-1">
-                                                <i class="fas fa-eye"></i> عرض
-                                            </a>
-                                            <a href="${result.url}" download class="text-emerald-400 hover:text-emerald-300 transition action-btn bg-emerald-500/20 px-3 py-1 rounded-lg text-sm flex items-center gap-1">
-                                                <i class="fas fa-download"></i> تحميل
-                                            </a>
-                                        </div>
-                                    </td>
-                                    <td class="py-3 px-4 text-gray-300">${result.createdAt ? new Date(result.createdAt).toLocaleDateString('ar') : '-'}</td>
-                                    <td class="py-3 px-4">
-                                        <button onclick="editResult('${result.id}', '${result.phone}')" class="text-indigo-400 hover:text-indigo-300 transition ml-2 action-btn"><i class="fas fa-edit"></i></button>
-                                        <button onclick="deleteResult('${result.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
-                                    </td>
-                                </tr>
-                            `).join('');
-                        }
-
-                        // Render Messages table
-                        const messagesBody = document.getElementById('messagesTableBody');
-                        if (messages.length === 0) {
-                            messagesBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد رسائل مرسلة</td></tr>`;
-                        } else {
-                            messagesBody.innerHTML = messages.map(msg => `
-                                <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
-                                    <td class="py-3 px-4 text-gray-300">${msg.email}</td>
-                                    <td class="py-3 px-4 text-gray-300 max-w-xs truncate" title="${msg.message}">${msg.message.substring(0, 50)}${msg.message.length > 50 ? '...' : ''}</td>
-                                    <td class="py-3 px-4 text-gray-300">${new Date(msg.sentAt).toLocaleDateString('ar')}</td>
-                                    <td class="py-3 px-4">
-                                        <button onclick="deleteMessage('${msg.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
-                                    </td>
-                                </tr>
-                            `).join('');
-                        }
-
-                        // Load users for the new section
-                        loadUsers();
-
-                    } catch (error) {
-                        console.error('Error loading dashboard:', error);
-                        showToast('حدث خطأ في تحميل البيانات', 'error');
-                    }
+        // ============================================
+        // MESSAGE CRUD
+        // ============================================
+        document.getElementById('sendEmailForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('emailRecipient').value.trim();
+            const message = document.getElementById('emailMessage').value.trim();
+            if (!email || !message) { showToast('جميع الحقول مطلوبة', 'error'); return; }
+            try {
+                const response = await fetch('/api/admin/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, message })
+                });
+                if (response.ok) {
+                    showToast('تم إرسال الرسالة بنجاح', 'success');
+                    document.getElementById('sendEmailForm').reset();
+                    loadDashboard();
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'حدث خطأ', 'error');
                 }
+            } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
+        });
 
-                // ============================================
-                // LOAD USERS (NEW)
-                // ============================================
-                async function loadUsers() {
-                    try {
-                        const response = await fetch('/api/admin/users', { credentials: 'include' });
-                        if (!response.ok) throw new Error('Failed to load users');
-                        const users = await response.json();
+        window.deleteMessage = async (id) => {
+            if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
+            try {
+                const response = await fetch(`/api/admin/messages/${id}`, { method: 'DELETE' });
+                if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
+            } catch (error) { showToast('حدث خطأ', 'error'); }
+        };
 
-                        const usersBody = document.getElementById('usersTableBody');
-                        if (users.length === 0) {
-                            usersBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">لا يوجد مستخدمين</td></tr>`;
-                        } else {
-                            usersBody.innerHTML = users.map(user => `
-                                <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
-                                    <td class="py-3 px-4 text-gray-300 text-sm">${user.id.substring(0, 8)}...</td>
-                                    <td class="py-3 px-4 text-gray-300">${user.fullName || '-'}</td>
-                                    <td class="py-3 px-4 text-gray-300">${user.email || '-'}</td>
-                                    <td class="py-3 px-4 text-gray-300">${user.phone || '-'}</td>
-                                    <td class="py-3 px-4">
-                                        <span class="user-status-badge ${user.isAdmin ? 'admin' : 'user'}">
-                                            ${user.isAdmin ? 'مدير' : 'مستخدم'}
-                                        </span>
-                                    </td>
-                                    <td class="py-3 px-4">
-                                        ${!user.isAdmin ? `
-                                            <button onclick="editUser('${user.id}', '${user.fullName || ''}', '${user.email || ''}', '${user.phone || ''}')" class="text-indigo-400 hover:text-indigo-300 transition ml-2 action-btn"><i class="fas fa-edit"></i></button>
-                                            <button onclick="deleteUser('${user.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
-                                        ` : `
-                                            <span class="text-gray-500 text-sm">لا يمكن التعديل</span>
-                                        `}
-                                    </td>
-                                </tr>
-                            `).join('');
-                        }
-                    } catch (error) {
-                        console.error('Error loading users:', error);
-                        document.getElementById('usersTableBody').innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">حدث خطأ في تحميل المستخدمين</td></tr>`;
-                    }
+        // ============================================
+        // USER MANAGEMENT
+        // ============================================
+        window.editUser = function(id, fullName, email, phone) {
+            document.getElementById('editUserId').value = id;
+            document.getElementById('editUserFullName').value = fullName || '';
+            document.getElementById('editUserEmail').value = email || '';
+            document.getElementById('editUserPhone').value = phone || '';
+            document.getElementById('editUserPassword').value = '';
+            document.getElementById('editUserError').classList.add('hidden');
+            openModal('editUserModal');
+        };
+
+        document.getElementById('editUserForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editUserId').value;
+            const fullName = document.getElementById('editUserFullName').value.trim();
+            const email = document.getElementById('editUserEmail').value.trim();
+            const phone = document.getElementById('editUserPhone').value.trim();
+            const password = document.getElementById('editUserPassword').value;
+            const errorDiv = document.getElementById('editUserError');
+            const errorMessage = document.getElementById('editUserErrorMessage');
+
+            errorDiv.classList.add('hidden');
+
+            if (!fullName) {
+                errorMessage.textContent = 'الاسم مطلوب';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            if (!email || !email.includes('@')) {
+                errorMessage.textContent = 'بريد إلكتروني غير صحيح';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            if (password && password.length < 6) {
+                errorMessage.textContent = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const body = { fullName, email, phone };
+                if (password) body.password = password;
+
+                const response = await fetch(`/api/admin/users/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (response.ok) {
+                    showToast('تم تحديث بيانات المستخدم بنجاح', 'success');
+                    closeModal('editUserModal');
+                    loadUsers();
+                } else {
+                    const data = await response.json();
+                    errorMessage.textContent = data.error || 'حدث خطأ';
+                    errorDiv.classList.remove('hidden');
                 }
-
-                // ============================================
-                // SALE CRUD
-                // ============================================
-                document.getElementById('addSaleForm')?.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const customer = document.getElementById('saleCustomer').value.trim();
-                    const amount = document.getElementById('saleAmount').value;
-                    if (!customer || !amount) { showToast('جميع الحقول مطلوبة', 'error'); return; }
-                    try {
-                        const response = await fetch('/api/admin/sales', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ customer, amount: parseFloat(amount) })
-                        });
-                        if (response.ok) {
-                            showToast('تم تسجيل البيع بنجاح', 'success');
-                            document.getElementById('addSaleForm').reset();
-                            loadDashboard();
-                        } else {
-                            const data = await response.json();
-                            showToast(data.error || 'حدث خطأ', 'error');
-                        }
-                    } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
-                });
-
-                window.editSale = function(id, customer, amount) {
-                    document.getElementById('editSaleId').value = id;
-                    document.getElementById('editSaleCustomer').value = customer;
-                    document.getElementById('editSaleAmount').value = amount;
-                    openModal('editSaleModal');
-                };
-
-                document.getElementById('editSaleForm')?.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const id = document.getElementById('editSaleId').value;
-                    const customer = document.getElementById('editSaleCustomer').value.trim();
-                    const amount = document.getElementById('editSaleAmount').value;
-                    if (!customer || !amount) { showToast('جميع الحقول مطلوبة', 'error'); return; }
-                    try {
-                        const response = await fetch(`/api/admin/sales/${id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ customer, amount: parseFloat(amount) })
-                        });
-                        if (response.ok) {
-                            showToast('تم تحديث البيع بنجاح', 'success');
-                            closeModal('editSaleModal');
-                            loadDashboard();
-                        } else {
-                            const data = await response.json();
-                            showToast(data.error || 'حدث خطأ', 'error');
-                        }
-                    } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
-                });
-
-                window.deleteSale = async (id) => {
-                    if (!confirm('هل أنت متأكد من حذف هذه العملية؟')) return;
-                    try {
-                        const response = await fetch(`/api/admin/sales/${id}`, { method: 'DELETE' });
-                        if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
-                    } catch (error) { showToast('حدث خطأ', 'error'); }
-                };
-
-                // ============================================
-                // BOOKING CRUD
-                // ============================================
-                window.deleteBooking = async (id) => {
-                    if (!confirm('هل أنت متأكد من حذف هذا الحجز؟')) return;
-                    try {
-                        const response = await fetch(`/api/admin/bookings/${id}`, { method: 'DELETE' });
-                        if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
-                    } catch (error) { showToast('حدث خطأ', 'error'); }
-                };
-
-                // ============================================
-                // CONTACT CRUD
-                // ============================================
-                window.deleteContact = async (id) => {
-                    if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
-                    try {
-                        const response = await fetch(`/api/admin/contacts/${id}`, { method: 'DELETE' });
-                        if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
-                    } catch (error) { showToast('حدث خطأ', 'error'); }
-                };
-
-                // ============================================
-                // RESULT CRUD
-                // ============================================
-                document.getElementById('uploadResultForm')?.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    if (!selectedFile) { showToast('يرجى اختيار ملف للرفع', 'error'); return; }
-                    const phone = document.getElementById('resultPhoneUpload').value.trim();
-                    if (!phone) { showToast('رقم الهاتف مطلوب', 'error'); return; }
-                    const formData = new FormData();
-                    formData.append('file', selectedFile);
-                    formData.append('phone', phone);
-                    try {
-                        const response = await fetch('/api/admin/results/upload', { method: 'POST', body: formData });
-                        if (response.ok) {
-                            showToast('تم رفع النتيجة بنجاح', 'success');
-                            document.getElementById('uploadResultForm').reset();
-                            selectedFile = null;
-                            filePreview.classList.remove('show');
-                            fileUploadArea.style.display = 'block';
-                            fileInput.value = '';
-                            loadDashboard();
-                        } else {
-                            const data = await response.json();
-                            showToast(data.error || 'حدث خطأ', 'error');
-                        }
-                    } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
-                });
-
-                window.editResult = function(id, phone) {
-                    document.getElementById('editResultId').value = id;
-                    document.getElementById('editResultPhone').value = phone;
-                    editSelectedFile = null;
-                    editFilePreview.classList.remove('show');
-                    editFileUploadArea.style.display = 'block';
-                    editFileInput.value = '';
-                    editFileUploadError.classList.add('hidden');
-                    openModal('editResultModal');
-                };
-
-                document.getElementById('editResultForm')?.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const id = document.getElementById('editResultId').value;
-                    const phone = document.getElementById('editResultPhone').value.trim();
-                    if (!phone) { showToast('رقم الهاتف مطلوب', 'error'); return; }
-                    const formData = new FormData();
-                    formData.append('phone', phone);
-                    if (editSelectedFile) {
-                        formData.append('file', editSelectedFile);
-                    }
-                    try {
-                        const response = await fetch(`/api/admin/results/${id}`, {
-                            method: 'PUT',
-                            body: formData
-                        });
-                        if (response.ok) {
-                            showToast('تم تحديث النتيجة بنجاح', 'success');
-                            closeModal('editResultModal');
-                            loadDashboard();
-                        } else {
-                            const data = await response.json();
-                            showToast(data.error || 'حدث خطأ', 'error');
-                        }
-                    } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
-                });
-
-                window.deleteResult = async (id) => {
-                    if (!confirm('هل أنت متأكد من حذف هذه النتيجة؟')) return;
-                    try {
-                        const response = await fetch(`/api/admin/results/${id}`, { method: 'DELETE' });
-                        if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
-                    } catch (error) { showToast('حدث خطأ', 'error'); }
-                };
-
-                // ============================================
-                // MESSAGE CRUD
-                // ============================================
-                document.getElementById('sendEmailForm')?.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const email = document.getElementById('emailRecipient').value.trim();
-                    const message = document.getElementById('emailMessage').value.trim();
-                    if (!email || !message) { showToast('جميع الحقول مطلوبة', 'error'); return; }
-                    try {
-                        const response = await fetch('/api/admin/send-email', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email, message })
-                        });
-                        if (response.ok) {
-                            showToast('تم إرسال الرسالة بنجاح', 'success');
-                            document.getElementById('sendEmailForm').reset();
-                            loadDashboard();
-                        } else {
-                            const data = await response.json();
-                            showToast(data.error || 'حدث خطأ', 'error');
-                        }
-                    } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
-                });
-
-                window.deleteMessage = async (id) => {
-                    if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
-                    try {
-                        const response = await fetch(`/api/admin/messages/${id}`, { method: 'DELETE' });
-                        if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
-                    } catch (error) { showToast('حدث خطأ', 'error'); }
-                };
-
-                // ============================================
-                // USER MANAGEMENT (NEW)
-                // ============================================
-                window.editUser = function(id, fullName, email, phone) {
-                    document.getElementById('editUserId').value = id;
-                    document.getElementById('editUserFullName').value = fullName || '';
-                    document.getElementById('editUserEmail').value = email || '';
-                    document.getElementById('editUserPhone').value = phone || '';
-                    document.getElementById('editUserPassword').value = '';
-                    document.getElementById('editUserError').classList.add('hidden');
-                    openModal('editUserModal');
-                };
-
-                document.getElementById('editUserForm')?.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const id = document.getElementById('editUserId').value;
-                    const fullName = document.getElementById('editUserFullName').value.trim();
-                    const email = document.getElementById('editUserEmail').value.trim();
-                    const phone = document.getElementById('editUserPhone').value.trim();
-                    const password = document.getElementById('editUserPassword').value;
-                    const errorDiv = document.getElementById('editUserError');
-                    const errorMessage = document.getElementById('editUserErrorMessage');
-
-                    errorDiv.classList.add('hidden');
-
-                    if (!fullName) {
-                        errorMessage.textContent = 'الاسم مطلوب';
-                        errorDiv.classList.remove('hidden');
-                        return;
-                    }
-                    if (!email || !email.includes('@')) {
-                        errorMessage.textContent = 'بريد إلكتروني غير صحيح';
-                        errorDiv.classList.remove('hidden');
-                        return;
-                    }
-                    if (password && password.length < 6) {
-                        errorMessage.textContent = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
-                        errorDiv.classList.remove('hidden');
-                        return;
-                    }
-
-                    try {
-                        const body = { fullName, email, phone };
-                        if (password) body.password = password;
-
-                        const response = await fetch(`/api/admin/users/${id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(body)
-                        });
-
-                        if (response.ok) {
-                            showToast('تم تحديث بيانات المستخدم بنجاح', 'success');
-                            closeModal('editUserModal');
-                            loadUsers();
-                        } else {
-                            const data = await response.json();
-                            errorMessage.textContent = data.error || 'حدث خطأ';
-                            errorDiv.classList.remove('hidden');
-                        }
-                    } catch (error) {
-                        errorMessage.textContent = 'حدث خطأ في التواصل مع الخادم';
-                        errorDiv.classList.remove('hidden');
-                    }
-                });
-
-                window.deleteUser = async (id) => {
-                    if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) return;
-                    try {
-                        const response = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
-                        if (response.ok) {
-                            showToast('تم حذف المستخدم بنجاح', 'success');
-                            loadUsers();
-                        } else {
-                            const data = await response.json();
-                            showToast(data.error || 'حدث خطأ', 'error');
-                        }
-                    } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
-                };
-
-                // Initial load and auto-refresh
-                loadDashboard();
-                setInterval(loadDashboard, 30000);
+            } catch (error) {
+                errorMessage.textContent = 'حدث خطأ في التواصل مع الخادم';
+                errorDiv.classList.remove('hidden');
             }
         });
-    </script>
+
+        window.deleteUser = async (id) => {
+            if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) return;
+            try {
+                const response = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    showToast('تم حذف المستخدم بنجاح', 'success');
+                    loadUsers();
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'حدث خطأ', 'error');
+                }
+            } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
+        };
+
+        // Initial load and auto-refresh
+        loadDashboard();
+        setInterval(loadDashboard, 30000);
+    }
+});
+</script>
 </body>
 </html>
