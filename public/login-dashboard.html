@@ -99,7 +99,7 @@
                     <label class="block text-gray-300 text-sm font-bold mb-2">كلمة المرور</label>
                     <div class="relative">
                         <i class="fas fa-lock absolute right-3 top-3 text-gray-500"></i>
-                        <input type="password" id="password" name="password" required placeholder="كلمة المور"
+                        <input type="password" id="password" name="password" required placeholder="كلمة المرور"
                             class="w-full pr-10 pl-3 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                         <span class="error-message hidden" id="passwordError"></span>
                     </div>
@@ -129,10 +129,10 @@
             const errorMessage = document.getElementById('errorMessage');
             const toast = document.getElementById('toast');
 
-            fetch('/api/auth/verify')
-                .then(res => res.json())
-                .then(data => {
-                    if (data.authenticated && data.user.isAdmin) {
+            // Check if already logged in
+            fetch('/api/auth/verify-admin', { credentials: 'include' })
+                .then(res => {
+                    if (res.ok) {
                         window.location.href = '/dashboard';
                     }
                 })
