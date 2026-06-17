@@ -8,30 +8,127 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { font-family: 'Cairo', sans-serif; }
-        html { scroll-behavior: smooth; }
-        body { direction: rtl; background: #0f172a; }
-        .glass-card { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); }
-        .glass-card-light { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.06); }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #4f46e5, #7c3aed); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: linear-gradient(to bottom, #4338ca, #6d28d9); }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        .fade-up { opacity: 0; animation: fadeUp 0.8s ease forwards; }
-        .fade-up:nth-child(2) { animation-delay: 0.2s; }
-        .fade-up:nth-child(3) { animation-delay: 0.4s; }
-        .hover-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        .hover-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px -12px rgba(79,70,229,0.3); }
-        input:focus, textarea:focus { outline: none; }
-        input:focus-visible, textarea:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
-        @media (max-width: 768px) { table { font-size: 0.875rem; } table th, table td { padding: 0.5rem 0.25rem; } }
-        .error-message { color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; }
-        .nav-blur { background: rgba(15,23,42,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.06); }
-        .section-title { background: linear-gradient(to right, #818cf8, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .hero-gradient { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 25%, #4c1d95 50%, #5b21b6 75%, #1e1b4b 100%); }
-        .service-icon { background: linear-gradient(135deg, rgba(79,70,229,0.2), rgba(124,58,237,0.2)); border: 1px solid rgba(79,70,229,0.2); }
-        .auth-required-badge { display: inline-block; background: rgba(239,68,68,0.15); color: #f87171; font-size: 0.7rem; padding: 2px 10px; border-radius: 20px; border: 1px solid rgba(239,68,68,0.2); margin-right: 8px; }
+        * {
+            font-family: 'Cairo', sans-serif;
+        }
+        html {
+            scroll-behavior: smooth;
+        }
+        body {
+            direction: rtl;
+            background: #0f172a;
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card-light {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, #4f46e5, #7c3aed);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, #4338ca, #6d28d9);
+        }
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .fade-up {
+            opacity: 0;
+            animation: fadeUp 0.8s ease forwards;
+        }
+        .fade-up:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .fade-up:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        .hover-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .hover-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px -12px rgba(79, 70, 229, 0.3);
+        }
+        input:focus,
+        textarea:focus {
+            outline: none;
+        }
+        input:focus-visible,
+        textarea:focus-visible {
+            outline: 2px solid #4f46e5;
+            outline-offset: 2px;
+        }
+        @media (max-width: 768px) {
+            table {
+                font-size: 0.875rem;
+            }
+            table th,
+            table td {
+                padding: 0.5rem 0.25rem;
+            }
+        }
+        .error-message {
+            color: #ef4444;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        .nav-blur {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .section-title {
+            background: linear-gradient(to right, #818cf8, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero-gradient {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 25%, #4c1d95 50%, #5b21b6 75%, #1e1b4b 100%);
+        }
+        .service-icon {
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(124, 58, 237, 0.2));
+            border: 1px solid rgba(79, 70, 229, 0.2);
+        }
     </style>
 </head>
 <body class="font-cairo bg-gray-900 transition-colors duration-300">
@@ -130,19 +227,27 @@
                     </p>
                     <div class="grid grid-cols-2 gap-4 mt-8">
                         <div class="glass-card p-4 rounded-xl text-center hover-card">
-                            <div class="text-3xl text-indigo-400 mb-2"><i class="fas fa-comment-medical"></i></div>
+                            <div class="text-3xl text-indigo-400 mb-2">
+                                <i class="fas fa-comment-medical"></i>
+                            </div>
                             <h3 class="font-bold text-white">تخاطب وتنمية مهارات</h3>
                         </div>
                         <div class="glass-card p-4 rounded-xl text-center hover-card">
-                            <div class="text-3xl text-purple-400 mb-2"><i class="fas fa-brain"></i></div>
+                            <div class="text-3xl text-purple-400 mb-2">
+                                <i class="fas fa-brain"></i>
+                            </div>
                             <h3 class="font-bold text-white">تعديل سلوك</h3>
                         </div>
                         <div class="glass-card p-4 rounded-xl text-center hover-card">
-                            <div class="text-3xl text-emerald-400 mb-2"><i class="fas fa-book-open"></i></div>
+                            <div class="text-3xl text-emerald-400 mb-2">
+                                <i class="fas fa-book-open"></i>
+                            </div>
                             <h3 class="font-bold text-white">صعوبات تعلم</h3>
                         </div>
                         <div class="glass-card p-4 rounded-xl text-center hover-card">
-                            <div class="text-3xl text-pink-400 mb-2"><i class="fas fa-hand-holding-heart"></i></div>
+                            <div class="text-3xl text-pink-400 mb-2">
+                                <i class="fas fa-hand-holding-heart"></i>
+                            </div>
                             <h3 class="font-bold text-white">إرشاد نفسي</h3>
                         </div>
                     </div>
@@ -166,32 +271,44 @@
             </div>
             <div class="grid md:grid-cols-3 gap-6">
                 <div class="glass-card p-6 rounded-2xl hover-card fade-up">
-                    <div class="service-icon inline-block p-4 rounded-xl text-4xl text-indigo-400 mb-4"><i class="fas fa-microphone-alt"></i></div>
+                    <div class="service-icon inline-block p-4 rounded-xl text-4xl text-indigo-400 mb-4">
+                        <i class="fas fa-microphone-alt"></i>
+                    </div>
                     <h3 class="text-xl font-bold text-white mb-2">التخاطب</h3>
                     <p class="text-gray-400">برامج متخصصة لعلاج اضطرابات النطق والكلام وتطوير مهارات التواصل</p>
                 </div>
                 <div class="glass-card p-6 rounded-2xl hover-card fade-up">
-                    <div class="service-icon inline-block p-4 rounded-xl text-4xl text-purple-400 mb-4"><i class="fas fa-child"></i></div>
+                    <div class="service-icon inline-block p-4 rounded-xl text-4xl text-purple-400 mb-4">
+                        <i class="fas fa-child"></i>
+                    </div>
                     <h3 class="text-xl font-bold text-white mb-2">تنمية المهارات</h3>
                     <p class="text-gray-400">تنمية المهارات المعرفية والحركية والاجتماعية للأطفال</p>
                 </div>
                 <div class="glass-card p-6 rounded-2xl hover-card fade-up">
-                    <div class="service-icon inline-block p-4 rounded-xl text-4xl text-emerald-400 mb-4"><i class="fas fa-hand-fist"></i></div>
+                    <div class="service-icon inline-block p-4 rounded-xl text-4xl text-emerald-400 mb-4">
+                        <i class="fas fa-hand-fist"></i>
+                    </div>
                     <h3 class="text-xl font-bold text-white mb-2">تعديل السلوك</h3>
                     <p class="text-gray-400">برامج تعديل السلوك للأطفال ذوي الاحتياجات الخاصة</p>
                 </div>
                 <div class="glass-card p-6 rounded-2xl hover-card fade-up">
-                    <div class="service-icon inline-block p-4 rounded-xl text-4xl text-pink-400 mb-4"><i class="fas fa-graduation-cap"></i></div>
+                    <div class="service-icon inline-block p-4 rounded-xl text-4xl text-pink-400 mb-4">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
                     <h3 class="text-xl font-bold text-white mb-2">صعوبات التعلم</h3>
                     <p class="text-gray-400">تشخيص وعلاج صعوبات التعلم الأكاديمية والنمائية</p>
                 </div>
                 <div class="glass-card p-6 rounded-2xl hover-card fade-up">
-                    <div class="service-icon inline-block p-4 rounded-xl text-4xl text-orange-400 mb-4"><i class="fas fa-heart"></i></div>
+                    <div class="service-icon inline-block p-4 rounded-xl text-4xl text-orange-400 mb-4">
+                        <i class="fas fa-heart"></i>
+                    </div>
                     <h3 class="text-xl font-bold text-white mb-2">إرشاد نفسي</h3>
                     <p class="text-gray-400">جلسات إرشاد نفسي للأطفال والأسر لتحسين الصحة النفسية</p>
                 </div>
                 <div class="glass-card p-6 rounded-2xl hover-card fade-up">
-                    <div class="service-icon inline-block p-4 rounded-xl text-4xl text-blue-400 mb-4"><i class="fas fa-clipboard-list"></i></div>
+                    <div class="service-icon inline-block p-4 rounded-xl text-4xl text-blue-400 mb-4">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
                     <h3 class="text-xl font-bold text-white mb-2">اختبارات نفسية</h3>
                     <p class="text-gray-400">تطبيق المقاييس والاختبارات النفسية المتخصصة</p>
                 </div>
@@ -206,50 +323,35 @@
                 <span class="text-indigo-400 font-bold text-sm tracking-wider uppercase">احجز الآن</span>
                 <h2 class="text-4xl md:text-5xl font-bold mt-2 text-white">احجز موعدك</h2>
                 <div class="h-1 w-20 bg-gradient-to-r from-indigo-500 to-purple-600 mx-auto mt-4 rounded-full"></div>
-                <p class="text-gray-400 mt-3">
-                    <i class="fas fa-lock text-indigo-400 ml-1"></i>
-                    يتطلب تسجيل الدخول
-                    <span class="auth-required-badge">مطلوب تسجيل دخول</span>
-                </p>
             </div>
             <div class="max-w-2xl mx-auto">
                 <div class="glass-card p-8 rounded-2xl shadow-2xl border border-indigo-500/20">
-                    <div id="bookingAuthRequired" class="text-center py-8">
-                        <div class="text-6xl text-indigo-400 mb-4"><i class="fas fa-lock"></i></div>
-                        <h3 class="text-2xl font-bold text-white mb-2">يجب تسجيل الدخول</h3>
-                        <p class="text-gray-400 mb-6">لإتمام عملية الحجز، يرجى تسجيل الدخول إلى حسابك</p>
-                        <div class="flex flex-wrap gap-4 justify-center">
-                            <a href="/login" class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition">
-                                <i class="fas fa-sign-in-alt ml-2"></i>
-                                تسجيل الدخول
-                            </a>
-                            <a href="/signup" class="px-6 py-3 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition">
-                                <i class="fas fa-user-plus ml-2"></i>
-                                إنشاء حساب
-                            </a>
-                        </div>
-                    </div>
-                    <form id="bookingForm" class="space-y-4 hidden">
+                    <form id="bookingForm" class="space-y-4">
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">الاسم بالكامل</label>
-                            <input type="text" id="bookingName" required placeholder="الاسم بالكامل" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            <input type="text" id="bookingName" required placeholder="الاسم بالكامل"
+                                class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                         </div>
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">رقم التليفون</label>
-                            <input type="tel" id="bookingPhone" required placeholder="رقم التليفون" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            <input type="tel" id="bookingPhone" required placeholder="رقم التليفون"
+                                class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                         </div>
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">اختر التاريخ</label>
-                            <input type="date" id="bookingDate" required class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            <input type="date" id="bookingDate" required
+                                class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                         </div>
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">اختر الوقت</label>
-                            <input type="time" id="bookingTime" required class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            <input type="time" id="bookingTime" required
+                                class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                         </div>
                         <div id="bookingError" class="hidden bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded relative" role="alert">
                             <span id="bookingErrorMessage"></span>
                         </div>
-                        <button type="submit" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 shadow-lg shadow-indigo-500/25">
+                        <button type="submit" 
+                            class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 shadow-lg shadow-indigo-500/25">
                             <i class="fas fa-check-circle ml-2"></i>
                             احجز الآن
                         </button>
@@ -266,33 +368,14 @@
                 <span class="text-indigo-400 font-bold text-sm tracking-wider uppercase">استعلم عن نتيجتك</span>
                 <h2 class="text-4xl md:text-5xl font-bold mt-2 text-white">النتائج</h2>
                 <div class="h-1 w-20 bg-gradient-to-r from-indigo-500 to-purple-600 mx-auto mt-4 rounded-full"></div>
-                <p class="text-gray-400 mt-3">
-                    <i class="fas fa-lock text-indigo-400 ml-1"></i>
-                    يتطلب تسجيل الدخول
-                    <span class="auth-required-badge">مطلوب تسجيل دخول</span>
-                </p>
             </div>
             <div class="max-w-md mx-auto">
                 <div class="glass-card p-8 rounded-2xl shadow-2xl border border-indigo-500/20">
-                    <div id="resultsAuthRequired" class="text-center py-8">
-                        <div class="text-6xl text-indigo-400 mb-4"><i class="fas fa-lock"></i></div>
-                        <h3 class="text-2xl font-bold text-white mb-2">يجب تسجيل الدخول</h3>
-                        <p class="text-gray-400 mb-6">للاطلاع على النتائج، يرجى تسجيل الدخول إلى حسابك</p>
-                        <div class="flex flex-wrap gap-4 justify-center">
-                            <a href="/login" class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition">
-                                <i class="fas fa-sign-in-alt ml-2"></i>
-                                تسجيل الدخول
-                            </a>
-                            <a href="/signup" class="px-6 py-3 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition">
-                                <i class="fas fa-user-plus ml-2"></i>
-                                إنشاء حساب
-                            </a>
-                        </div>
-                    </div>
-                    <form id="resultsForm" class="space-y-4 hidden">
+                    <form id="resultsForm" class="space-y-4">
                         <div>
                             <label class="block text-gray-300 text-sm font-bold mb-2">أدخل رقم التليفون</label>
-                            <input type="tel" id="resultPhone" required placeholder="ادخل رقم التليفون" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            <input type="tel" id="resultPhone" required placeholder="ادخل رقم التليفون"
+                                class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                         </div>
                         <div id="resultError" class="hidden bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded relative" role="alert">
                             <span id="resultErrorMessage"></span>
@@ -300,7 +383,8 @@
                         <div id="resultSuccess" class="hidden bg-green-500/20 border border-green-500 text-green-200 px-4 py-3 rounded relative" role="alert">
                             <span id="resultSuccessMessage"></span>
                         </div>
-                        <button type="submit" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 shadow-lg shadow-indigo-500/25">
+                        <button type="submit" 
+                            class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 shadow-lg shadow-indigo-500/25">
                             <i class="fas fa-search ml-2"></i>
                             ابحث
                         </button>
@@ -323,11 +407,6 @@
                 <span class="text-indigo-400 font-bold text-sm tracking-wider uppercase">لديك سؤال؟</span>
                 <h2 class="text-4xl md:text-5xl font-bold mt-2 text-white">تواصل معنا</h2>
                 <div class="h-1 w-20 bg-gradient-to-r from-indigo-500 to-purple-600 mx-auto mt-4 rounded-full"></div>
-                <p class="text-gray-400 mt-3">
-                    <i class="fas fa-lock text-indigo-400 ml-1"></i>
-                    يتطلب تسجيل الدخول
-                    <span class="auth-required-badge">مطلوب تسجيل دخول</span>
-                </p>
             </div>
             <div class="grid md:grid-cols-2 gap-12">
                 <div class="fade-up">
@@ -336,7 +415,9 @@
                         <div class="space-y-4">
                             <div class="flex items-start space-x-3 space-x-reverse">
                                 <i class="fas fa-map-marker-alt text-indigo-400 text-xl mt-1"></i>
-                                <div><p class="text-gray-300">٢٩ شارع سلطان ابو العلا، العروبة، امبابة</p></div>
+                                <div>
+                                    <p class="text-gray-300">٢٩ شارع سلطان ابو العلا، العروبة، امبابة</p>
+                                </div>
                             </div>
                             <div>
                                 <h4 class="font-bold text-white mb-2">أوقات العمل</h4>
@@ -366,42 +447,35 @@
                 <div class="fade-up">
                     <div class="glass-card p-8 rounded-2xl shadow-2xl border border-indigo-500/20">
                         <h3 class="text-2xl font-bold text-white mb-6">تواصل معنا</h3>
-                        <div id="contactAuthRequired" class="text-center py-8">
-                            <div class="text-6xl text-indigo-400 mb-4"><i class="fas fa-lock"></i></div>
-                            <h3 class="text-2xl font-bold text-white mb-2">يجب تسجيل الدخول</h3>
-                            <p class="text-gray-400 mb-6">لإرسال رسالة، يرجى تسجيل الدخول إلى حسابك</p>
-                            <div class="flex flex-wrap gap-4 justify-center">
-                                <a href="/login" class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition">
-                                    <i class="fas fa-sign-in-alt ml-2"></i>
-                                    تسجيل الدخول
-                                </a>
-                                <a href="/signup" class="px-6 py-3 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition">
-                                    <i class="fas fa-user-plus ml-2"></i>
-                                    إنشاء حساب
-                                </a>
-                            </div>
-                        </div>
-                        <form id="contactForm" class="space-y-4 hidden">
+                        <form id="contactForm" class="space-y-4">
                             <div>
                                 <label class="block text-gray-300 text-sm font-bold mb-2">الاسم</label>
-                                <input type="text" id="contactName" required placeholder="الاسم" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                                <input type="text" id="contactName" required placeholder="الاسم"
+                                    class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                             </div>
                             <div>
                                 <label class="block text-gray-300 text-sm font-bold mb-2">البريد الإلكتروني</label>
-                                <input type="email" id="contactEmail" required placeholder="البريد الإلكتروني" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                                <input type="text" id="contactName" required placeholder="البريد الالكتروني"
+                                <input type="email" id="contactEmail" required 
+                                    class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                             </div>
                             <div>
                                 <label class="block text-gray-300 text-sm font-bold mb-2">رقم التليفون</label>
-                                <input type="tel" id="contactPhone" required placeholder="رقم التليفون" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                                <input type="text" id="contactName" required placeholder="رقم التليفون"
+                                <input type="tel" id="contactPhone" required 
+                                    class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                             </div>
                             <div>
                                 <label class="block text-gray-300 text-sm font-bold mb-2">رسالتك</label>
-                                <textarea id="contactMessage" rows="4" required placeholder="رسالتك" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition"></textarea>
+                                <input type="text" id="contactName" required placeholder="رسالتك"
+                                <textarea id="contactMessage" rows="4" required 
+                                    class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition"></textarea>
                             </div>
                             <div id="contactError" class="hidden bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded relative" role="alert">
                                 <span id="contactErrorMessage"></span>
                             </div>
-                            <button type="submit" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 shadow-lg shadow-indigo-500/25">
+                            <button type="submit" 
+                                class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 shadow-lg shadow-indigo-500/25">
                                 <i class="fas fa-paper-plane ml-2"></i>
                                 إرسال
                             </button>
@@ -460,258 +534,218 @@
     <div id="toast" class="fixed top-4 right-4 p-4 rounded-lg shadow-lg transform translate-x-full opacity-0 transition-all duration-300 z-50"></div>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // Mobile Menu
-        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-        const mobileMenu = document.getElementById('mobileMenu');
-        if (mobileMenuBtn && mobileMenu) {
-            mobileMenuBtn.addEventListener('click', () => {
-                mobileMenu.classList.toggle('hidden');
-            });
-        }
-
-        // Auth Check
-        let isAuthenticated = false;
-        let userData = null;
-
-        function updateAuthUI() {
-            const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-            const authButtons = document.getElementById('authButtons');
-            const userProfile = document.getElementById('userProfile');
-            const userName = document.getElementById('userName');
-
-            // Update booking, results, contact sections based on auth
-            const bookingAuthRequired = document.getElementById('bookingAuthRequired');
-            const bookingForm = document.getElementById('bookingForm');
-            const resultsAuthRequired = document.getElementById('resultsAuthRequired');
-            const resultsForm = document.getElementById('resultsForm');
-            const contactAuthRequired = document.getElementById('contactAuthRequired');
-            const contactForm = document.getElementById('contactForm');
-
-            if (token) {
-                try {
-                    const payload = JSON.parse(atob(token.split('.')[1]));
-                    if (payload.exp * 1000 > Date.now()) {
-                        isAuthenticated = true;
-                        userData = payload;
-                        if (authButtons) authButtons.classList.add('hidden');
-                        if (userProfile) {
-                            userProfile.classList.remove('hidden');
-                            if (userName) userName.textContent = payload.username || 'مستخدم';
-                        }
-                        // Show forms, hide auth required
-                        if (bookingAuthRequired) bookingAuthRequired.classList.add('hidden');
-                        if (bookingForm) bookingForm.classList.remove('hidden');
-                        if (resultsAuthRequired) resultsAuthRequired.classList.add('hidden');
-                        if (resultsForm) resultsForm.classList.remove('hidden');
-                        if (contactAuthRequired) contactAuthRequired.classList.add('hidden');
-                        if (contactForm) contactForm.classList.remove('hidden');
-                        return;
-                    }
-                } catch {}
+        document.addEventListener('DOMContentLoaded', () => {
+            // Mobile Menu
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileMenu = document.getElementById('mobileMenu');
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('hidden');
+                });
             }
 
-            isAuthenticated = false;
-            userData = null;
-            if (authButtons) authButtons.classList.remove('hidden');
-            if (userProfile) userProfile.classList.add('hidden');
-            // Show auth required, hide forms
-            if (bookingAuthRequired) bookingAuthRequired.classList.remove('hidden');
-            if (bookingForm) bookingForm.classList.add('hidden');
-            if (resultsAuthRequired) resultsAuthRequired.classList.remove('hidden');
-            if (resultsForm) resultsForm.classList.add('hidden');
-            if (contactAuthRequired) contactAuthRequired.classList.remove('hidden');
-            if (contactForm) contactForm.classList.add('hidden');
-        }
+            // Auth Check
+            function updateAuthUI() {
+                const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+                const authButtons = document.getElementById('authButtons');
+                const userProfile = document.getElementById('userProfile');
+                const userName = document.getElementById('userName');
 
-        // Logout
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', async () => {
-                await fetch('/api/auth/logout', { method: 'POST' });
-                window.location.href = '/';
-            });
-        }
-
-        // Toast
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = 'fixed top-4 right-4 p-4 rounded-lg shadow-lg transform translate-x-0 opacity-100 transition-all duration-300 z-50';
-            toast.classList.add(type === 'success' ? 'bg-green-600' : 'bg-red-600', 'text-white');
-            setTimeout(() => {
-                toast.classList.add('translate-x-full', 'opacity-0');
-            }, 3000);
-        }
-
-        // Booking Form
-        const bookingForm = document.getElementById('bookingForm');
-        if (bookingForm) {
-            bookingForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const name = document.getElementById('bookingName').value.trim();
-                const phone = document.getElementById('bookingPhone').value.trim();
-                const date = document.getElementById('bookingDate').value;
-                const time = document.getElementById('bookingTime').value;
-                const errorDiv = document.getElementById('bookingError');
-                const errorMessage = document.getElementById('bookingErrorMessage');
-
-                errorDiv.classList.add('hidden');
-
-                if (!name || !phone || !date || !time) {
-                    errorMessage.textContent = 'جميع الحقول مطلوبة';
-                    errorDiv.classList.remove('hidden');
-                    return;
+                if (token) {
+                    try {
+                        const payload = JSON.parse(atob(token.split('.')[1]));
+                        if (payload.exp * 1000 > Date.now()) {
+                            if (authButtons) authButtons.classList.add('hidden');
+                            if (userProfile) {
+                                userProfile.classList.remove('hidden');
+                                if (userName) userName.textContent = payload.username || 'مستخدم';
+                            }
+                            return;
+                        }
+                    } catch {}
                 }
 
-                try {
-                    const response = await fetch('/api/bookings', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ fullName: name, phone, date, time })
-                    });
+                if (authButtons) authButtons.classList.remove('hidden');
+                if (userProfile) userProfile.classList.add('hidden');
+            }
 
-                    const data = await response.json();
+            // Logout
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async () => {
+                    await fetch('/api/auth/logout', { method: 'POST' });
+                    window.location.href = '/';
+                });
+            }
 
-                    if (response.ok) {
-                        showToast('تم الحجز بنجاح! سيتم التواصل معك قريباً', 'success');
-                        bookingForm.reset();
-                    } else {
-                        if (response.status === 401) {
-                            errorMessage.textContent = 'يرجى تسجيل الدخول أولاً';
-                            window.location.href = '/login';
+            // Toast
+            function showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.className = 'fixed top-4 right-4 p-4 rounded-lg shadow-lg transform translate-x-0 opacity-100 transition-all duration-300 z-50';
+                if (type === 'success') {
+                    toast.classList.add('bg-green-600', 'text-white');
+                } else {
+                    toast.classList.add('bg-red-600', 'text-white');
+                }
+                setTimeout(() => {
+                    toast.classList.add('translate-x-full', 'opacity-0');
+                }, 3000);
+            }
+
+            // Booking Form
+            const bookingForm = document.getElementById('bookingForm');
+            if (bookingForm) {
+                bookingForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const name = document.getElementById('bookingName').value.trim();
+                    const phone = document.getElementById('bookingPhone').value.trim();
+                    const date = document.getElementById('bookingDate').value;
+                    const time = document.getElementById('bookingTime').value;
+                    const errorDiv = document.getElementById('bookingError');
+                    const errorMessage = document.getElementById('bookingErrorMessage');
+
+                    errorDiv.classList.add('hidden');
+
+                    if (!name || !phone || !date || !time) {
+                        errorMessage.textContent = 'جميع الحقول مطلوبة';
+                        errorDiv.classList.remove('hidden');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/api/bookings', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ fullName: name, phone, date, time })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            showToast('تم الحجز بنجاح! سيتم التواصل معك قريباً', 'success');
+                            bookingForm.reset();
                         } else {
                             errorMessage.textContent = data.error || 'حدث خطأ أثناء الحجز';
+                            errorDiv.classList.remove('hidden');
                         }
+                    } catch (error) {
+                        errorMessage.textContent = 'حدث خطأ أثناء التواصل مع الخادم';
                         errorDiv.classList.remove('hidden');
-                    }
-                } catch (error) {
-                    errorMessage.textContent = 'حدث خطأ أثناء التواصل مع الخادم';
-                    errorDiv.classList.remove('hidden');
-                }
-            });
-        }
-
-        // Results Form
-        const resultsForm = document.getElementById('resultsForm');
-        if (resultsForm) {
-            resultsForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const phone = document.getElementById('resultPhone').value.trim();
-                const errorDiv = document.getElementById('resultError');
-                const errorMessage = document.getElementById('resultErrorMessage');
-                const successDiv = document.getElementById('resultSuccess');
-                const successMessage = document.getElementById('resultSuccessMessage');
-                const resultLink = document.getElementById('resultLink');
-                const downloadLink = document.getElementById('resultDownloadLink');
-
-                errorDiv.classList.add('hidden');
-                successDiv.classList.add('hidden');
-                resultLink.classList.add('hidden');
-
-                if (!phone) {
-                    errorMessage.textContent = 'رقم التليفون مطلوب';
-                    errorDiv.classList.remove('hidden');
-                    return;
-                }
-
-                try {
-                    const response = await fetch('/api/results/check', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ phone })
-                    });
-
-                    if (response.status === 401) {
-                        window.location.href = '/login';
-                        return;
-                    }
-
-                    const data = await response.json();
-
-                    if (data.exists) {
-                        successMessage.textContent = 'تم العثور على النتيجة';
-                        successDiv.classList.remove('hidden');
-                        downloadLink.href = data.result.url;
-                        resultLink.classList.remove('hidden');
-                    } else {
-                        errorMessage.textContent = 'لا توجد نتيجة لهذا الرقم';
-                        errorDiv.classList.remove('hidden');
-                    }
-                } catch (error) {
-                    errorMessage.textContent = 'حدث خطأ أثناء البحث';
-                    errorDiv.classList.remove('hidden');
-                }
-            });
-        }
-
-        // Contact Form
-        const contactForm = document.getElementById('contactForm');
-        if (contactForm) {
-            contactForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const name = document.getElementById('contactName').value.trim();
-                const email = document.getElementById('contactEmail').value.trim();
-                const phone = document.getElementById('contactPhone').value.trim();
-                const message = document.getElementById('contactMessage').value.trim();
-                const errorDiv = document.getElementById('contactError');
-                const errorMessage = document.getElementById('contactErrorMessage');
-
-                errorDiv.classList.add('hidden');
-
-                if (!name || !email || !phone || !message) {
-                    errorMessage.textContent = 'جميع الحقول مطلوبة';
-                    errorDiv.classList.remove('hidden');
-                    return;
-                }
-
-                try {
-                    const response = await fetch('/api/contact', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, email, phone, message })
-                    });
-
-                    if (response.status === 401) {
-                        window.location.href = '/login';
-                        return;
-                    }
-
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        showToast('تم إرسال الرسالة بنجاح', 'success');
-                        contactForm.reset();
-                    } else {
-                        errorMessage.textContent = data.error || 'حدث خطأ أثناء الإرسال';
-                        errorDiv.classList.remove('hidden');
-                    }
-                } catch (error) {
-                    errorMessage.textContent = 'حدث خطأ أثناء التواصل مع الخادم';
-                    errorDiv.classList.remove('hidden');
-                }
-            });
-        }
-
-        // Fade Up Animations
-        if ('IntersectionObserver' in window) {
-            const fadeElements = document.querySelectorAll('.fade-up');
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.style.animationPlayState = 'running';
                     }
                 });
-            }, { threshold: 0.1 });
+            }
 
-            fadeElements.forEach(el => {
-                el.style.animationPlayState = 'paused';
-                observer.observe(el);
-            });
-        }
+            // Results Form
+            const resultsForm = document.getElementById('resultsForm');
+            if (resultsForm) {
+                resultsForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const phone = document.getElementById('resultPhone').value.trim();
+                    const errorDiv = document.getElementById('resultError');
+                    const errorMessage = document.getElementById('resultErrorMessage');
+                    const successDiv = document.getElementById('resultSuccess');
+                    const successMessage = document.getElementById('resultSuccessMessage');
+                    const resultLink = document.getElementById('resultLink');
+                    const downloadLink = document.getElementById('resultDownloadLink');
 
-        updateAuthUI();
-    });
+                    errorDiv.classList.add('hidden');
+                    successDiv.classList.add('hidden');
+                    resultLink.classList.add('hidden');
+
+                    if (!phone) {
+                        errorMessage.textContent = 'رقم التليفون مطلوب';
+                        errorDiv.classList.remove('hidden');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/api/results/check', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ phone })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.exists) {
+                            successMessage.textContent = 'تم العثور على النتيجة';
+                            successDiv.classList.remove('hidden');
+                            downloadLink.href = data.result.url;
+                            resultLink.classList.remove('hidden');
+                        } else {
+                            errorMessage.textContent = 'لا توجد نتيجة لهذا الرقم';
+                            errorDiv.classList.remove('hidden');
+                        }
+                    } catch (error) {
+                        errorMessage.textContent = 'حدث خطأ أثناء البحث';
+                        errorDiv.classList.remove('hidden');
+                    }
+                });
+            }
+
+            // Contact Form
+            const contactForm = document.getElementById('contactForm');
+            if (contactForm) {
+                contactForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const name = document.getElementById('contactName').value.trim();
+                    const email = document.getElementById('contactEmail').value.trim();
+                    const phone = document.getElementById('contactPhone').value.trim();
+                    const message = document.getElementById('contactMessage').value.trim();
+                    const errorDiv = document.getElementById('contactError');
+                    const errorMessage = document.getElementById('contactErrorMessage');
+
+                    errorDiv.classList.add('hidden');
+
+                    if (!name || !email || !phone || !message) {
+                        errorMessage.textContent = 'جميع الحقول مطلوبة';
+                        errorDiv.classList.remove('hidden');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/api/contact', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name, email, phone, message })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            showToast('تم إرسال الرسالة بنجاح', 'success');
+                            contactForm.reset();
+                        } else {
+                            errorMessage.textContent = data.error || 'حدث خطأ أثناء الإرسال';
+                            errorDiv.classList.remove('hidden');
+                        }
+                    } catch (error) {
+                        errorMessage.textContent = 'حدث خطأ أثناء التواصل مع الخادم';
+                        errorDiv.classList.remove('hidden');
+                    }
+                });
+            }
+
+            // Fade Up Animations
+            if ('IntersectionObserver' in window) {
+                const fadeElements = document.querySelectorAll('.fade-up');
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.style.animationPlayState = 'running';
+                        }
+                    });
+                }, { threshold: 0.1 });
+
+                fadeElements.forEach(el => {
+                    el.style.animationPlayState = 'paused';
+                    observer.observe(el);
+                });
+            }
+
+            updateAuthUI();
+        });
     </script>
 </body>
 </html>
