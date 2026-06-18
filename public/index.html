@@ -555,7 +555,7 @@
         </div>
     </section>
 
-    <!-- Results Section - Protected (تم الإصلاح) -->
+    <!-- Results Section - Protected with Fixed Download Button -->
     <section id="results" class="py-20 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
         <div class="container mx-auto px-4">
             <div class="text-center mb-12 fade-up">
@@ -919,7 +919,7 @@
             }
 
             // ============================================
-            // RESULTS FORM - إصلاح التحميل
+            // RESULTS FORM - Fixed to handle multiple results and download
             // ============================================
             function initResultsForm() {
                 const form = $('resultsForm');
@@ -958,17 +958,13 @@
                             body: JSON.stringify({ phone })
                         });
                         const data = await res.json();
-                        if (data.exists) {
-                            successMsg.textContent = 'تم العثور على النتيجة';
+                        if (data.exists && data.results && data.results.length > 0) {
+                            // Show the first result with download link
+                            const firstResult = data.results[0];
+                            successMsg.textContent = `تم العثور على ${data.results.length} نتيجة`;
                             successDiv.classList.remove('hidden');
-                            
-                            // إصلاح: استخدام الرابط الصحيح مع إضافة timestamp لمنع التخزين المؤقت
-                            const fileUrl = data.result.url;
-                            const timestamp = new Date().getTime();
-                            const downloadUrl = fileUrl + (fileUrl.includes('?') ? '&' : '?') + 't=' + timestamp;
-                            
-                            viewLink.href = fileUrl;
-                            downloadLink.href = downloadUrl;
+                            viewLink.href = firstResult.url;
+                            downloadLink.href = firstResult.url;
                             linkDiv.classList.remove('hidden');
                         } else {
                             errorMsg.textContent = 'لا توجد نتيجة لهذا الرقم';
