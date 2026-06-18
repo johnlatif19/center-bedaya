@@ -380,7 +380,7 @@ app.post('/api/auth/signup', [
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    // Send welcome email
+    // Send welcome email (async, don't wait for result)
     const welcomeHtml = `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
