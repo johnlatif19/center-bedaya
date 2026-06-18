@@ -433,7 +433,7 @@
             </section>
 
             <!-- ============================================ -->
-            <!-- SECTION 4: النتائج (Results) -->
+            <!-- SECTION 4: النتائج (Results) - تم الإصلاح -->
             <!-- ============================================ -->
             <section id="section-results" class="dashboard-section">
                 <div class="flex items-center gap-3 mb-6">
@@ -453,8 +453,8 @@
                             <label class="block text-gray-300 text-sm font-bold mb-2">رفع ملف النتيجة</label>
                             <div class="file-upload-area" id="fileUploadArea">
                                 <div class="file-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-                                <div class="file-text"><strong>اختر ملف</strong> أو اسحبه هنا<br><span class="text-xs text-gray-500">PDF, JPG, PNG, GIF (الحد الأقصى 10 ميجابايت)</span></div>
-                                <input type="file" id="resultFile" accept=".pdf,.jpg,.jpeg,.png,.gif" class="hidden">
+                                <div class="file-text"><strong>اختر ملف</strong> أو اسحبه هنا<br><span class="text-xs text-gray-500">جميع أنواع الملفات مدعومة (الحد الأقصى 10 ميجابايت)</span></div>
+                                <input type="file" id="resultFile" accept="*/*" class="hidden">
                             </div>
                             <div class="file-preview" id="filePreview">
                                 <div class="file-info"><div class="file-name" id="fileName">اسم الملف</div><div class="file-size" id="fileSize">حجم الملف</div></div>
@@ -573,8 +573,8 @@
                     <label class="block text-gray-300 text-sm font-bold mb-2">رفع ملف جديد (اختياري)</label>
                     <div class="file-upload-area" id="editFileUploadArea" style="padding:1rem;">
                         <div class="file-icon" style="font-size:2rem;"><i class="fas fa-cloud-upload-alt"></i></div>
-                        <div class="file-text"><strong>اختر ملف</strong> أو اسحبه هنا<br><span class="text-xs text-gray-500">PDF, JPG, PNG, GIF (الحد الأقصى 10 ميجابايت)</span></div>
-                        <input type="file" id="editResultFile" accept=".pdf,.jpg,.jpeg,.png,.gif" class="hidden">
+                        <div class="file-text"><strong>اختر ملف</strong> أو اسحبه هنا<br><span class="text-xs text-gray-500">جميع أنواع الملفات مدعومة (الحد الأقصى 10 ميجابايت)</span></div>
+                        <input type="file" id="editResultFile" accept="*/*" class="hidden">
                     </div>
                     <div class="file-preview" id="editFilePreview">
                         <div class="file-info"><div class="file-name" id="editFileName">اسم الملف</div><div class="file-size" id="editFileSize">حجم الملف</div></div>
@@ -609,16 +609,13 @@
                 const toastMessage = document.getElementById('toastMessage');
                 const icon = toast.querySelector('.toast-icon i');
 
-                // Clear any existing timeout
                 if (toastTimeout) {
                     clearTimeout(toastTimeout);
                     toastTimeout = null;
                 }
 
-                // Remove previous classes
                 toast.classList.remove('success', 'error', 'show');
 
-                // Set message and icon
                 toastMessage.textContent = message;
                 if (type === 'success') {
                     toast.classList.add('success');
@@ -628,12 +625,9 @@
                     icon.className = 'fas fa-exclamation-circle';
                 }
 
-                // Show toast
-                // Force reflow for animation
                 void toast.offsetWidth;
                 toast.classList.add('show');
 
-                // Auto hide after 3 seconds
                 toastTimeout = setTimeout(() => {
                     toast.classList.remove('show');
                     toastTimeout = null;
@@ -674,7 +668,6 @@
                 });
             });
 
-            // Default: show sales
             showSection('section-sales');
 
             // ============================================
@@ -710,7 +703,7 @@
             // DASHBOARD LOGIC
             // ============================================
             function initializeDashboard() {
-                // Logout - redirect to login-dashboard
+                // Logout
                 document.getElementById('dashboardLogout')?.addEventListener('click', async () => {
                     await fetch('/api/auth/logout', { method: 'POST' });
                     window.location.href = '/login-dashboard';
@@ -729,7 +722,9 @@
                     });
                 });
 
-                // File upload handlers for main upload
+                // ============================================
+                // FILE UPLOAD HANDLERS - دعم جميع أنواع الملفات
+                // ============================================
                 const fileUploadArea = document.getElementById('fileUploadArea');
                 const fileInput = document.getElementById('resultFile');
                 const filePreview = document.getElementById('filePreview');
@@ -750,13 +745,7 @@
                 fileInput?.addEventListener('change', (e) => { if (e.target.files.length > 0) handleFile(e.target.files[0]); });
 
                 function handleFile(file) {
-                    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
-                    const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.gif'];
-                    const ext = '.' + file.name.split('.').pop().toLowerCase();
-                    if (!validTypes.includes(file.type) && !validExtensions.includes(ext)) {
-                        fileUploadError.textContent = 'نوع الملف غير مدعوم. يرجى رفع PDF أو JPG أو PNG أو GIF';
-                        fileUploadError.classList.remove('hidden'); return;
-                    }
+                    // قبول جميع أنواع الملفات - فقط التحقق من الحجم
                     if (file.size > 10 * 1024 * 1024) {
                         fileUploadError.textContent = 'حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت';
                         fileUploadError.classList.remove('hidden'); return;
@@ -798,13 +787,6 @@
                 editFileInput?.addEventListener('change', (e) => { if (e.target.files.length > 0) handleEditFile(e.target.files[0]); });
 
                 function handleEditFile(file) {
-                    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
-                    const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.gif'];
-                    const ext = '.' + file.name.split('.').pop().toLowerCase();
-                    if (!validTypes.includes(file.type) && !validExtensions.includes(ext)) {
-                        editFileUploadError.textContent = 'نوع الملف غير مدعوم. يرجى رفع PDF أو JPG أو PNG أو GIF';
-                        editFileUploadError.classList.remove('hidden'); return;
-                    }
                     if (file.size > 10 * 1024 * 1024) {
                         editFileUploadError.textContent = 'حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت';
                         editFileUploadError.classList.remove('hidden'); return;
@@ -825,7 +807,9 @@
                     editFileUploadError.classList.add('hidden');
                 });
 
-                // Chart - Enhanced
+                // ============================================
+                // CHART
+                // ============================================
                 let salesChart = null;
                 const ctx = document.getElementById('salesChart');
                 if (ctx) {
@@ -906,7 +890,9 @@
                     });
                 }
 
-                // Load Dashboard Data
+                // ============================================
+                // LOAD DASHBOARD DATA
+                // ============================================
                 async function loadDashboard() {
                     try {
                         const [statsRes, salesChartRes, salesRes, bookingsRes, contactsRes, resultsRes, messagesRes] = await Promise.all([
@@ -1146,19 +1132,45 @@
                 };
 
                 // ============================================
-                // RESULT CRUD
+                // RESULT CRUD - مع منع التكرار ودعم جميع الملفات
                 // ============================================
-                // Upload Result
+                
+                // دالة مساعدة للتحقق من وجود نتيجة لنفس الرقم
+                async function checkExistingResult(phone) {
+                    try {
+                        const response = await fetch(`/api/admin/results/check-phone?phone=${encodeURIComponent(phone)}`, {
+                            method: 'GET',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        const data = await response.json();
+                        return data.exists;
+                    } catch (error) {
+                        return false;
+                    }
+                }
+
+                // Upload Result - مع التحقق من عدم التكرار
                 document.getElementById('uploadResultForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     if (!selectedFile) { showToast('يرجى اختيار ملف للرفع', 'error'); return; }
                     const phone = document.getElementById('resultPhoneUpload').value.trim();
                     if (!phone) { showToast('رقم الهاتف مطلوب', 'error'); return; }
+                    
+                    // التحقق من وجود نتيجة لهذا الرقم
+                    const exists = await checkExistingResult(phone);
+                    if (exists) {
+                        showToast('يوجد بالفعل نتيجة لهذا الرقم. قم بتعديل النتيجة الموجودة بدلاً من ذلك.', 'error');
+                        return;
+                    }
+                    
                     const formData = new FormData();
                     formData.append('file', selectedFile);
                     formData.append('phone', phone);
                     try {
-                        const response = await fetch('/api/admin/results/upload', { method: 'POST', body: formData });
+                        const response = await fetch('/api/admin/results/upload', { 
+                            method: 'POST', 
+                            body: formData 
+                        });
                         if (response.ok) {
                             showToast('تم رفع النتيجة بنجاح', 'success');
                             document.getElementById('uploadResultForm').reset();
@@ -1174,11 +1186,10 @@
                     } catch (error) { showToast('حدث خطأ في التواصل مع الخادم', 'error'); }
                 });
 
-                // Edit Result - now with file upload
+                // Edit Result
                 window.editResult = function(id, phone) {
                     document.getElementById('editResultId').value = id;
                     document.getElementById('editResultPhone').value = phone;
-                    // Reset file input
                     editSelectedFile = null;
                     editFilePreview.classList.remove('show');
                     editFileUploadArea.style.display = 'block';
@@ -1197,7 +1208,6 @@
                     const formData = new FormData();
                     formData.append('phone', phone);
                     
-                    // Only append file if a new one was selected
                     if (editSelectedFile) {
                         formData.append('file', editSelectedFile);
                     }
