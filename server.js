@@ -73,6 +73,7 @@ const isTokenBlacklisted = async (token) => {
   }
 };
 
+// Clean up expired tokens every hour
 setInterval(async () => {
   try {
     const now = new Date().toISOString();
@@ -94,7 +95,13 @@ setInterval(async () => {
 }, 60 * 60 * 1000);
 
 // ============================================
-// Middleware
+// CONCURRENCY THROTTLING
+// ============================================
+let activeRequests = 0;
+const MAX_CONCURRENT_REQUESTS = 20;
+
+// ============================================
+// MIDDLEWARE
 // ============================================
 app.use(helmet());
 app.use(cors({
@@ -106,8 +113,47 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 app.use(express.static('public'));
 
+// Concurrency throttling middleware
+app.use((req, res, next) => {
+  if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf)$/)) {
+    return next();
+  }
+
+  if (activeRequests >= MAX_CONCURRENT_REQUESTS) {
+    return res.status(503).json({
+      error: 'الخادم مشغول حالياً، يرجى المحاولة بعد قليل',
+      retryAfter: 5
+    });
+  }
+
+  activeRequests++;
+
+  res.on('finish', () => {
+    activeRequests--;
+  });
+  res.on('close', () => {
+    activeRequests--;
+  });
+
+  next();
+});
+
+// Request timeout
+app.use((req, res, next) => {
+  req.setTimeout(30000, () => {
+    res.status(504).json({ error: 'انتهت مهلة الطلب، يرجى المحاولة مرة أخرى' });
+  });
+  next();
+});
+
+// Configure Multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
+
 // ============================================
-// Rate Limiting
+// RATE LIMITING
 // ============================================
 const blockedIPs = new Map();
 
@@ -120,6 +166,7 @@ const limiter = rateLimit({
     const blockDuration = 30 * 1000;
     const unlockTime = now + blockDuration;
     blockedIPs.set(ip, unlockTime);
+
     const remainingSeconds = Math.ceil(blockDuration / 1000);
     
     res.status(429).json({
@@ -134,6 +181,7 @@ const limiter = rateLimit({
   keyGenerator: (req) => req.ip
 });
 
+// IP block check middleware
 app.use((req, res, next) => {
   if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf)$/)) {
     return next();
@@ -159,6 +207,7 @@ app.use((req, res, next) => {
 
 app.use('/api/', limiter);
 
+// Clean up blocked IPs every minute
 setInterval(() => {
   const now = Date.now();
   for (const [ip, unlockTime] of blockedIPs) {
@@ -169,7 +218,7 @@ setInterval(() => {
 }, 60000);
 
 // ============================================
-// JWT Middleware
+// JWT AUTHENTICATION MIDDLEWARE
 // ============================================
 const authenticateToken = async (req, res, next) => {
   const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
@@ -227,7 +276,7 @@ const authenticateAdmin = async (req, res, next) => {
 };
 
 // ============================================
-// Helper Functions
+// HELPER FUNCTIONS
 // ============================================
 const generateToken = (user, isAdmin = false, adminData = null) => {
   return jwt.sign(
@@ -267,7 +316,7 @@ const sendTelegramNotification = async (message, type) => {
 const sendEmail = async (to, subject, html) => {
   try {
     await transporter.sendMail({
-      from: `"Bedaya Center" <${process.env.SMTP_USER}>`,
+      from: process.env.SMTP_USER,
       to,
       subject,
       html
@@ -279,16 +328,11 @@ const sendEmail = async (to, subject, html) => {
   }
 };
 
-// Configure Multer for file uploads - REMOVED file type restrictions
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 } // Increased to 50MB for all file types
-});
-
 // ============================================
-// Auth Routes
+// AUTH ROUTES
 // ============================================
 
+// Signup
 app.post('/api/auth/signup', [
   body('fullName').notEmpty().withMessage('الاسم مطلوب'),
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
@@ -336,10 +380,11 @@ app.post('/api/auth/signup', [
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
+    // Send welcome email
     const welcomeHtml = `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
-      <head><meta charset="UTF-8"><title>مرحباً بك في Bedaya Center</title></head>
+      <head><meta charset="UTF-8"><title>مرحباً بك في مركز بداية</title></head>
       <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
@@ -355,7 +400,7 @@ app.post('/api/auth/signup', [
             </div>
             <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
               <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
-                نشكرك على التسجيل في <strong style="color: #818cf8;">Bedaya Center للتدخل المبكر والتأهيل</strong>.
+                نشكرك على التسجيل في <strong style="color: #818cf8;">مركز بداية للتدخل المبكر والتأهيل</strong>.
               </p>
               <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
                 نحن سعداء بانضمامك إلينا! يمكنك الآن:
@@ -382,13 +427,13 @@ app.post('/api/auth/signup', [
             </div>
           </div>
           <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
-            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 Bedaya Center للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
+            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
           </div>
         </div>
       </body>
       </html>
     `;
-    sendEmail(email, 'مرحباً بك في Bedaya Center للتدخل المبكر والتأهيل', welcomeHtml).catch(console.error);
+    sendEmail(email, 'مرحباً بك في مركز بداية للتدخل المبكر والتأهيل', welcomeHtml).catch(console.error);
 
     res.status(201).json({
       success: true,
@@ -400,6 +445,7 @@ app.post('/api/auth/signup', [
   }
 });
 
+// Login
 app.post('/api/auth/login', [
   body('email').notEmpty().withMessage('البريد الإلكتروني مطلوب'),
   body('password').notEmpty().withMessage('كلمة المرور مطلوبة')
@@ -447,6 +493,7 @@ app.post('/api/auth/login', [
   }
 });
 
+// Admin Login
 app.post('/api/auth/admin-login', [
   body('username').notEmpty().withMessage('اسم المستخدم مطلوب'),
   body('password').notEmpty().withMessage('كلمة المرور مطلوبة')
@@ -530,6 +577,7 @@ app.post('/api/auth/admin-login', [
   }
 });
 
+// Logout
 app.post('/api/auth/logout', async (req, res) => {
   const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
   if (token) {
@@ -539,6 +587,7 @@ app.post('/api/auth/logout', async (req, res) => {
   res.json({ success: true });
 });
 
+// Logout All
 app.post('/api/auth/logout-all', async (req, res) => {
   const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
   
@@ -558,6 +607,30 @@ app.post('/api/auth/logout-all', async (req, res) => {
   res.json({ success: true });
 });
 
+// Revoke user tokens (admin only)
+app.post('/api/admin/revoke-user-tokens', authenticateAdmin, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+    
+    const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+    if (token) {
+      await blacklistToken(token);
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'تم إبطال جميع توكنات المستخدم بنجاح' 
+    });
+  } catch (error) {
+    console.error('Revoke tokens error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء إبطال التوكنات' });
+  }
+});
+
+// Verify Token
 app.get('/api/auth/verify', authenticateToken, async (req, res) => {
   try {
     const doc = await db.collection('users').doc(req.user.id).get();
@@ -580,6 +653,7 @@ app.get('/api/auth/verify', authenticateToken, async (req, res) => {
   }
 });
 
+// Verify Admin
 app.get('/api/auth/verify-admin', authenticateToken, async (req, res) => {
   try {
     if (!req.user.isAdmin) {
@@ -608,6 +682,7 @@ app.get('/api/auth/verify-admin', authenticateToken, async (req, res) => {
   }
 });
 
+// Forgot Password
 app.post('/api/auth/forgot-password', [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح')
 ], async (req, res) => {
@@ -644,7 +719,7 @@ app.post('/api/auth/forgot-password', [
     const mailHtml = `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
-      <head><meta charset="UTF-8"><title>إعادة تعيين كلمة المرور - Bedaya Center</title></head>
+      <head><meta charset="UTF-8"><title>إعادة تعيين كلمة المرور</title></head>
       <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
@@ -660,7 +735,7 @@ app.post('/api/auth/forgot-password', [
             </div>
             <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
               <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8;">
-                لقد تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في <strong style="color: #818cf8;">Bedaya Center</strong>.
+                لقد تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في <strong style="color: #818cf8;">مركز بداية</strong>.
               </p>
               <div style="background: rgba(79,70,229,0.15); border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
                 <p style="color: #94a3b8; font-size: 14px; margin-bottom: 8px;">رمز التحقق (OTP):</p>
@@ -677,14 +752,14 @@ app.post('/api/auth/forgot-password', [
             </div>
           </div>
           <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
-            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 Bedaya Center للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
+            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
           </div>
         </div>
       </body>
       </html>
     `;
 
-    await sendEmail(email, 'إعادة تعيين كلمة المرور - Bedaya Center', mailHtml);
+    await sendEmail(email, 'إعادة تعيين كلمة المرور - مركز بداية', mailHtml);
 
     res.json({
       success: true,
@@ -696,6 +771,7 @@ app.post('/api/auth/forgot-password', [
   }
 });
 
+// Verify OTP
 app.post('/api/auth/verify-otp', [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
   body('otp').notEmpty().withMessage('رمز التحقق مطلوب')
@@ -732,6 +808,7 @@ app.post('/api/auth/verify-otp', [
   }
 });
 
+// Reset Password
 app.post('/api/auth/reset-password', [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
   body('otp').notEmpty().withMessage('رمز التحقق مطلوب'),
@@ -775,7 +852,7 @@ app.post('/api/auth/reset-password', [
     const confirmHtml = `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
-      <head><meta charset="UTF-8"><title>تم تغيير كلمة المرور - Bedaya Center</title></head>
+      <head><meta charset="UTF-8"><title>تم تغيير كلمة المرور</title></head>
       <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
@@ -791,7 +868,7 @@ app.post('/api/auth/reset-password', [
             </div>
             <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
               <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8;">
-                تم تغيير كلمة المرور الخاصة بحسابك في <strong style="color: #818cf8;">Bedaya Center للتدخل المبكر والتأهيل</strong> بنجاح.
+                تم تغيير كلمة المرور الخاصة بحسابك في <strong style="color: #818cf8;">مركز بداية للتدخل المبكر والتأهيل</strong> بنجاح.
               </p>
               <p style="color: #94a3b8; font-size: 14px; line-height: 1.8; margin-top: 10px;">
                 إذا لم تكن أنت من قام بهذا التغيير، يرجى التواصل معنا فوراً عبر البريد الإلكتروني أو الهاتف.
@@ -804,14 +881,14 @@ app.post('/api/auth/reset-password', [
             </div>
           </div>
           <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
-            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 Bedaya Center للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
+            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
           </div>
         </div>
       </body>
       </html>
     `;
 
-    await sendEmail(email, 'تم تغيير كلمة المرور - Bedaya Center', confirmHtml);
+    await sendEmail(email, 'تم تغيير كلمة المرور - مركز بداية', confirmHtml);
 
     res.json({
       success: true,
@@ -824,7 +901,107 @@ app.post('/api/auth/reset-password', [
 });
 
 // ============================================
-// Booking Routes
+// USER MANAGEMENT (Admin Only)
+// ============================================
+app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
+  try {
+    const usersSnapshot = await db.collection('users')
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    const users = [];
+    usersSnapshot.forEach(doc => {
+      const data = doc.data();
+      delete data.password;
+      users.push({ id: doc.id, ...data });
+    });
+
+    res.json(users);
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({ error: 'Error fetching users' });
+  }
+});
+
+app.put('/api/admin/users/:id', authenticateAdmin, [
+  body('fullName').optional().notEmpty().withMessage('الاسم مطلوب'),
+  body('email').optional().isEmail().withMessage('بريد إلكتروني غير صحيح'),
+  body('phone').optional(),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { fullName, email, phone } = req.body;
+    const userId = req.params.id;
+
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (userDoc.data().isAdmin) {
+      return res.status(403).json({ error: 'لا يمكن تعديل حساب المدير' });
+    }
+
+    const updateData = {};
+    if (fullName) updateData.fullName = fullName;
+    if (email) {
+      const existingSnapshot = await db.collection('users')
+        .where('email', '==', email)
+        .get();
+      if (!existingSnapshot.empty) {
+        const existingDoc = existingSnapshot.docs[0];
+        if (existingDoc.id !== userId) {
+          return res.status(400).json({ error: 'البريد الإلكتروني مستخدم بالفعل' });
+        }
+      }
+      updateData.email = email;
+    }
+    if (phone !== undefined) updateData.phone = phone;
+    updateData.updatedAt = new Date().toISOString();
+
+    await userRef.update(updateData);
+
+    const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+    if (token) {
+      await blacklistToken(token);
+    }
+
+    res.json({
+      success: true,
+      message: 'تم تحديث بيانات المستخدم بنجاح'
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء تحديث المستخدم' });
+  }
+});
+
+app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    if (userDoc.data().isAdmin) {
+      return res.status(403).json({ error: 'لا يمكن حذف حساب المدير' });
+    }
+    await db.collection('users').doc(userId).delete();
+    res.json({ success: true, message: 'تم حذف المستخدم بنجاح' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء حذف المستخدم' });
+  }
+});
+
+// ============================================
+// BOOKING ROUTES
 // ============================================
 app.post('/api/bookings', [
   body('fullName').notEmpty().withMessage('الاسم الكامل مطلوب'),
@@ -851,7 +1028,7 @@ app.post('/api/bookings', [
     const docRef = await db.collection('bookings').add(booking);
 
     sendTelegramNotification(
-      `📅 <b>حجز جديد - Bedaya Center</b>\n\n` +
+      `📅 <b>حجز جديد</b>\n\n` +
       `👤 الاسم: ${fullName}\n` +
       `📱 التليفون: ${phone}\n` +
       `📆 التاريخ: ${date}\n` +
@@ -870,7 +1047,7 @@ app.post('/api/bookings', [
 });
 
 // ============================================
-// Contact Routes
+// CONTACT ROUTES
 // ============================================
 app.post('/api/contact', [
   body('name').notEmpty().withMessage('الاسم مطلوب'),
@@ -898,7 +1075,7 @@ app.post('/api/contact', [
     const adminHtml = `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
-      <head><meta charset="UTF-8"><title>رسالة جديدة - Bedaya Center</title></head>
+      <head><meta charset="UTF-8"><title>رسالة جديدة</title></head>
       <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
@@ -910,7 +1087,7 @@ app.post('/api/contact', [
           </div>
           <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
             <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
-              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">📩 رسالة جديدة من موقع Bedaya Center</h2>
+              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">📩 رسالة جديدة من موقع مركز بداية</h2>
             </div>
             <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
               <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
@@ -932,17 +1109,17 @@ app.post('/api/contact', [
             </div>
           </div>
           <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
-            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 Bedaya Center للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
+            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
           </div>
         </div>
       </body>
       </html>
     `;
     
-    sendEmail(process.env.ADMIN_EMAIL, 'رسالة جديدة من Bedaya Center', adminHtml).catch(console.error);
+    sendEmail(process.env.ADMIN_EMAIL, 'رسالة جديدة من مركز بداية', adminHtml).catch(console.error);
     
     sendTelegramNotification(
-      `📧 <b>رسالة جديدة - Bedaya Center</b>\n\n` +
+      `📧 <b>رسالة جديدة</b>\n\n` +
       `👤 الاسم: ${name}\n` +
       `📧 البريد: ${email}\n` +
       `📱 التليفون: ${phone}\n` +
@@ -961,7 +1138,7 @@ app.post('/api/contact', [
 });
 
 // ============================================
-// Results Routes - MODIFIED for multiple files per phone
+// RESULTS ROUTES (Public facing)
 // ============================================
 app.post('/api/results/check', [
   body('phone').notEmpty().withMessage('رقم التليفون مطلوب')
@@ -976,15 +1153,17 @@ app.post('/api/results/check', [
       return res.json({ exists: false });
     }
 
-    // Get all results for this phone number
-    const results = [];
-    resultsSnapshot.forEach(doc => {
-      results.push({ id: doc.id, ...doc.data() });
-    });
+    const doc = resultsSnapshot.docs[0];
+    const result = { id: doc.id, ...doc.data() };
 
     res.json({
       exists: true,
-      results: results // Return all results, not just one
+      result: {
+        id: result.id,
+        phone: result.phone,
+        url: result.url,
+        createdAt: result.createdAt
+      }
     });
   } catch (error) {
     console.error('Result check error:', error);
@@ -993,14 +1172,17 @@ app.post('/api/results/check', [
 });
 
 // ============================================
-// Admin Dashboard Routes
+// ADMIN DASHBOARD ROUTES
 // ============================================
+
+// --- Stats ---
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
     const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
     
+    // Only sales are filtered by admin
     let salesSnapshot = await db.collection('sales')
       .where('date', '==', today)
       .where('adminName', '==', adminName)
@@ -1012,24 +1194,24 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
       todaySales += doc.data().amount || 0;
     });
 
+    // Shared collections (not filtered by admin)
     let bookingsSnapshot = await db.collection('bookings').get();
     let messagesSnapshot = await db.collection('messages').get();
-    let contactsSnapshot = await db.collection('contacts').get();
 
     res.json({
       todaySales,
       totalBookings: bookingsSnapshot.size || 0,
       totalMessages: messagesSnapshot.size || 0,
-      totalContacts: contactsSnapshot.size || 0,
       adminName,
       adminUsername
     });
   } catch (error) {
     console.error('Stats error:', error);
-    res.json({ todaySales: 0, totalBookings: 0, totalMessages: 0, totalContacts: 0 });
+    res.json({ todaySales: 0, totalBookings: 0, totalMessages: 0 });
   }
 });
 
+// --- Sales Chart (Filtered by Admin) ---
 app.get('/api/admin/sales-chart', authenticateAdmin, async (req, res) => {
   try {
     const adminName = req.user.adminName || 'Admin';
@@ -1058,6 +1240,7 @@ app.get('/api/admin/sales-chart', authenticateAdmin, async (req, res) => {
   }
 });
 
+// --- Sales CRUD (Filtered by Admin) ---
 app.post('/api/admin/sales', authenticateAdmin, [
   body('customer').notEmpty().withMessage('اسم العميل مطلوب'),
   body('amount').isNumeric().withMessage('المبلغ يجب أن يكون رقماً')
@@ -1101,11 +1284,21 @@ app.put('/api/admin/sales/:id', authenticateAdmin, [
     }
 
     const { customer, amount } = req.body;
-    const saleRef = db.collection('sales').doc(req.params.id);
+    const saleId = req.params.id;
+    const adminName = req.user.adminName || 'Admin';
+    const adminUsername = req.user.adminUsername || 'admin';
+
+    const saleRef = db.collection('sales').doc(saleId);
     const saleDoc = await saleRef.get();
 
     if (!saleDoc.exists) {
       return res.status(404).json({ error: 'Sale not found' });
+    }
+
+    // Verify this sale belongs to the current admin
+    const saleData = saleDoc.data();
+    if (saleData.adminName !== adminName || saleData.adminUsername !== adminUsername) {
+      return res.status(403).json({ error: 'You do not have permission to update this sale' });
     }
 
     await saleRef.update({
@@ -1146,7 +1339,24 @@ app.get('/api/admin/sales', authenticateAdmin, async (req, res) => {
 
 app.delete('/api/admin/sales/:id', authenticateAdmin, async (req, res) => {
   try {
-    await db.collection('sales').doc(req.params.id).delete();
+    const saleId = req.params.id;
+    const adminName = req.user.adminName || 'Admin';
+    const adminUsername = req.user.adminUsername || 'admin';
+
+    const saleRef = db.collection('sales').doc(saleId);
+    const saleDoc = await saleRef.get();
+
+    if (!saleDoc.exists) {
+      return res.status(404).json({ error: 'Sale not found' });
+    }
+
+    // Verify this sale belongs to the current admin
+    const saleData = saleDoc.data();
+    if (saleData.adminName !== adminName || saleData.adminUsername !== adminUsername) {
+      return res.status(403).json({ error: 'You do not have permission to delete this sale' });
+    }
+
+    await saleRef.delete();
     res.json({ success: true });
   } catch (error) {
     console.error('Delete sale error:', error);
@@ -1154,6 +1364,7 @@ app.delete('/api/admin/sales/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
+// --- Bookings (Shared - All admins see all) ---
 app.get('/api/admin/bookings', authenticateAdmin, async (req, res) => {
   try {
     const bookingsSnapshot = await db.collection('bookings')
@@ -1182,9 +1393,7 @@ app.delete('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// ============================================
-// Results Routes - MODIFIED to allow ALL file types
-// ============================================
+// --- Results (Shared - All admins see all) ---
 app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), async (req, res) => {
   try {
     const { phone } = req.body;
@@ -1193,11 +1402,10 @@ app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), 
     if (!file) return res.status(400).json({ error: 'الملف مطلوب' });
     if (!phone) return res.status(400).json({ error: 'رقم الهاتف مطلوب' });
 
-    // Upload to Cloudinary with auto resource type (ALLOWS ALL FILE TYPES)
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream({
         folder: 'results',
-        resource_type: 'auto' // This allows ALL file types
+        resource_type: 'auto'
       }, (error, result) => {
         if (error) reject(error);
         else resolve(result);
@@ -1206,27 +1414,29 @@ app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), 
     });
 
     const url = result.secure_url;
-    const fileType = file.mimetype || 'unknown';
-    const fileName = file.originalname || 'file';
 
-    // ALWAYS CREATE A NEW RESULT - allow multiple files per phone number
-    const newDoc = await db.collection('results').add({
-      phone,
-      url,
-      fileName: fileName,
-      fileType: fileType,
-      fileSize: file.size,
-      createdAt: new Date().toISOString()
-    });
+    const existingSnapshot = await db.collection('results')
+      .where('phone', '==', phone)
+      .get();
 
-    res.json({ 
-      success: true, 
-      url, 
-      id: newDoc.id, 
-      message: 'تم رفع النتيجة بنجاح',
-      fileName: fileName,
-      fileType: fileType
-    });
+    let resultId;
+    if (!existingSnapshot.empty) {
+      const doc = existingSnapshot.docs[0];
+      resultId = doc.id;
+      await db.collection('results').doc(doc.id).update({
+        url,
+        updatedAt: new Date().toISOString()
+      });
+    } else {
+      const newDoc = await db.collection('results').add({
+        phone,
+        url,
+        createdAt: new Date().toISOString()
+      });
+      resultId = newDoc.id;
+    }
+
+    res.json({ success: true, url, id: resultId, message: 'تم رفع النتيجة بنجاح' });
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ error: 'حدث خطأ أثناء رفع الملف' });
@@ -1248,16 +1458,13 @@ app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), asyn
       return res.status(404).json({ error: 'Result not found' });
     }
 
-    let updateData = { 
-      phone, 
-      updatedAt: new Date().toISOString() 
-    };
+    let updateData = { phone, updatedAt: new Date().toISOString() };
 
     if (file) {
       const result = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream({
           folder: 'results',
-          resource_type: 'auto' // This allows ALL file types
+          resource_type: 'auto'
         }, (error, result) => {
           if (error) reject(error);
           else resolve(result);
@@ -1265,9 +1472,6 @@ app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), asyn
         uploadStream.end(file.buffer);
       });
       updateData.url = result.secure_url;
-      updateData.fileName = file.originalname || 'file';
-      updateData.fileType = file.mimetype || 'unknown';
-      updateData.fileSize = file.size;
     }
 
     await resultRef.update(updateData);
@@ -1307,6 +1511,7 @@ app.delete('/api/admin/results/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
+// --- Messages (Shared - All admins see all) ---
 app.get('/api/admin/messages', authenticateAdmin, async (req, res) => {
   try {
     const messagesSnapshot = await db.collection('messages')
@@ -1325,6 +1530,7 @@ app.get('/api/admin/messages', authenticateAdmin, async (req, res) => {
   }
 });
 
+// --- Contacts (Shared - All admins see all) ---
 app.get('/api/admin/contacts', authenticateAdmin, async (req, res) => {
   try {
     const contactsSnapshot = await db.collection('contacts')
@@ -1353,6 +1559,7 @@ app.delete('/api/admin/contacts/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
+// --- Send Email (Shared) ---
 app.post('/api/admin/send-email', authenticateAdmin, [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
   body('message').notEmpty().withMessage('الرسالة مطلوبة')
@@ -1368,7 +1575,7 @@ app.post('/api/admin/send-email', authenticateAdmin, [
     const mailHtml = `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
-      <head><meta charset="UTF-8"><title>رسالة من Bedaya Center</title></head>
+      <head><meta charset="UTF-8"><title>رسالة من مركز بداية</title></head>
       <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
@@ -1380,21 +1587,21 @@ app.post('/api/admin/send-email', authenticateAdmin, [
           </div>
           <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
             <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
-              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">📧 رسالة من Bedaya Center</h2>
+              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">📧 رسالة من مركز بداية</h2>
             </div>
             <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
               <div style="color: #e2e8f0; line-height: 2; font-size: 16px; white-space: pre-wrap;">${message}</div>
             </div>
           </div>
           <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
-            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 Bedaya Center للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
+            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
           </div>
         </div>
       </body>
       </html>
     `;
 
-    await sendEmail(email, 'رسالة من Bedaya Center للتدخل المبكر والتأهيل', mailHtml);
+    await sendEmail(email, 'رسالة من مركز بداية للتدخل المبكر والتأهيل', mailHtml);
 
     await db.collection('messages').add({
       email,
@@ -1420,7 +1627,7 @@ app.delete('/api/admin/messages/:id', authenticateAdmin, async (req, res) => {
 });
 
 // ============================================
-// Serve HTML Pages
+// SERVE HTML PAGES
 // ============================================
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -1447,13 +1654,12 @@ app.get('/reset-password', (req, res) => {
 });
 
 // ============================================
-// Start Server
+// START SERVER
 // ============================================
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`🌐 http://localhost:${PORT}`);
-  console.log(`📊 Max concurrent requests: 20`);
+  console.log(`📊 Max concurrent requests: ${MAX_CONCURRENT_REQUESTS}`);
   console.log(`⏱️ Request timeout: 30 seconds`);
   console.log(`🔐 Token blacklist system is active`);
-  console.log(`📁 All file types are allowed for upload`);
 });
