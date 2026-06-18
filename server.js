@@ -442,7 +442,6 @@ app.post('/api/auth/signup', [
 
     const { fullName, email, password, phone } = req.body;
 
-    // استخدام Firebase Retry
     const userSnapshot = await firebaseRetry(async () => {
       return await db.collection('users')
         .where('email', '==', email)
@@ -1783,33 +1782,6 @@ app.delete('/api/admin/messages/:id', authenticateAdmin, async (req, res) => {
 });
 
 // ============================================
-// SERVE HTML PAGES
-// ============================================
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/signup', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'signup.html'));
-});
-
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-app.get('/login-dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login-dashboard.html'));
-});
-
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-});
-
-app.get('/reset-password', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
-});
-
-// ============================================
 // GLOBAL ERROR HANDLERS
 // ============================================
 
@@ -1861,16 +1833,18 @@ app.use((err, req, res, next) => {
 });
 
 // ============================================
-// START SERVER
+// START SERVER (للـ Vercel)
 // ============================================
-const server = app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`🌐 http://localhost:${PORT}`);
-  console.log(`📊 Max concurrent requests: ${MAX_CONCURRENT_REQUESTS}`);
-  console.log(`⏱️ Request timeout: ${REQUEST_TIMEOUT / 1000} seconds`);
-  console.log(`🧹 OTP cleanup interval: ${OTP_CLEANUP_INTERVAL / 1000} seconds`);
-  console.log(`🔒 Rate limit: 30 requests per minute per IP`);
-});
+if (require.main === module) {
+  const server = app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`🌐 http://localhost:${PORT}`);
+    console.log(`📊 Max concurrent requests: ${MAX_CONCURRENT_REQUESTS}`);
+    console.log(`⏱️ Request timeout: ${REQUEST_TIMEOUT / 1000} seconds`);
+    console.log(`🧹 OTP cleanup interval: ${OTP_CLEANUP_INTERVAL / 1000} seconds`);
+    console.log(`🔒 Rate limit: 30 requests per minute per IP`);
+  });
+}
 
 // ============================================
 // EXPORT FOR VERCEL
