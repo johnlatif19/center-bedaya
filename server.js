@@ -1402,10 +1402,19 @@ app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), 
     if (!file) return res.status(400).json({ error: 'الملف مطلوب' });
     if (!phone) return res.status(400).json({ error: 'رقم الهاتف مطلوب' });
 
+    // Get the original file extension
+    const originalName = file.originalname || 'file';
+    const extension = originalName.includes('.') ? originalName.split('.').pop() : '';
+    const fileName = `Result-Center-Bedaya${extension ? '.' + extension : ''}`;
+
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream({
         folder: 'results',
-        resource_type: 'auto'
+        public_id: `Result-Center-Bedaya_${Date.now()}`,
+        resource_type: 'auto',
+        use_filename: true,
+        unique_filename: false,
+        overwrite: true
       }, (error, result) => {
         if (error) reject(error);
         else resolve(result);
@@ -1425,12 +1434,14 @@ app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), 
       resultId = doc.id;
       await db.collection('results').doc(doc.id).update({
         url,
+        fileName: fileName,
         updatedAt: new Date().toISOString()
       });
     } else {
       const newDoc = await db.collection('results').add({
         phone,
         url,
+        fileName: fileName,
         createdAt: new Date().toISOString()
       });
       resultId = newDoc.id;
@@ -1461,10 +1472,19 @@ app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), asyn
     let updateData = { phone, updatedAt: new Date().toISOString() };
 
     if (file) {
+      // Get the original file extension
+      const originalName = file.originalname || 'file';
+      const extension = originalName.includes('.') ? originalName.split('.').pop() : '';
+      const fileName = `Result-Center-Bedaya${extension ? '.' + extension : ''}`;
+
       const result = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream({
           folder: 'results',
-          resource_type: 'auto'
+          public_id: `Result-Center-Bedaya_${Date.now()}`,
+          resource_type: 'auto',
+          use_filename: true,
+          unique_filename: false,
+          overwrite: true
         }, (error, result) => {
           if (error) reject(error);
           else resolve(result);
@@ -1472,6 +1492,7 @@ app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), asyn
         uploadStream.end(file.buffer);
       });
       updateData.url = result.secure_url;
+      updateData.fileName = fileName;
     }
 
     await resultRef.update(updateData);
