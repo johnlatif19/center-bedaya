@@ -555,7 +555,7 @@
         </div>
     </section>
 
-    <!-- Results Section - Protected -->
+    <!-- Results Section - Protected (تم الإصلاح) -->
     <section id="results" class="py-20 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
         <div class="container mx-auto px-4">
             <div class="text-center mb-12 fade-up">
@@ -919,7 +919,7 @@
             }
 
             // ============================================
-            // RESULTS FORM
+            // RESULTS FORM - إصلاح التحميل
             // ============================================
             function initResultsForm() {
                 const form = $('resultsForm');
@@ -961,8 +961,14 @@
                         if (data.exists) {
                             successMsg.textContent = 'تم العثور على النتيجة';
                             successDiv.classList.remove('hidden');
-                            viewLink.href = data.result.url;
-                            downloadLink.href = data.result.url;
+                            
+                            // إصلاح: استخدام الرابط الصحيح مع إضافة timestamp لمنع التخزين المؤقت
+                            const fileUrl = data.result.url;
+                            const timestamp = new Date().getTime();
+                            const downloadUrl = fileUrl + (fileUrl.includes('?') ? '&' : '?') + 't=' + timestamp;
+                            
+                            viewLink.href = fileUrl;
+                            downloadLink.href = downloadUrl;
                             linkDiv.classList.remove('hidden');
                         } else {
                             errorMsg.textContent = 'لا توجد نتيجة لهذا الرقم';
