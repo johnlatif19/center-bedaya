@@ -966,6 +966,8 @@ function initResultsForm() {
                 
                 // Store the URL for download
                 const fileUrl = data.result.url;
+                // Use the fileName from server or fallback to default
+                const fileName = data.result.fileName || 'Result-Center-Bedaya';
                 
                 // Override download button behavior
                 downloadLink.onclick = async function(event) {
@@ -993,39 +995,20 @@ function initResultsForm() {
                             'image/webp': '.webp',
                             'image/svg+xml': '.svg'
                         };
-                        const extension = extensionMap[contentType] || '.pdf';
+                        const extension = extensionMap[contentType] || '';
                         
-                        // Extract filename from URL
-                        let filename = 'result';
-                        try {
-                            const url = new URL(fileUrl);
-                            const pathParts = url.pathname.split('/');
-                            const lastPart = pathParts[pathParts.length - 1];
-                            const queryIndex = lastPart.indexOf('?');
-                            const cleanName = queryIndex > -1 ? lastPart.substring(0, queryIndex) : lastPart;
-                            if (cleanName) {
-                                filename = cleanName;
-                            }
-                        } catch (_) {
-                            const parts = fileUrl.split('/');
-                            const lastPart = parts[parts.length - 1];
-                            const queryIndex = lastPart.indexOf('?');
-                            if (queryIndex > -1) {
-                                filename = lastPart.substring(0, queryIndex);
-                            } else if (lastPart) {
-                                filename = lastPart;
-                            }
-                        }
-                        
-                        // Ensure filename has extension
-                        if (!filename.includes('.')) {
-                            filename += extension;
+                        // Use the fixed file name with extension
+                        let finalFileName = fileName;
+                        if (!finalFileName.includes('.') && extension) {
+                            finalFileName += extension;
+                        } else if (!finalFileName.includes('.')) {
+                            finalFileName += '.pdf';
                         }
                         
                         // Create and trigger download
                         const downloadLinkEl = document.createElement('a');
                         downloadLinkEl.href = URL.createObjectURL(blob);
-                        downloadLinkEl.download = filename;
+                        downloadLinkEl.download = finalFileName;
                         document.body.appendChild(downloadLinkEl);
                         downloadLinkEl.click();
                         document.body.removeChild(downloadLinkEl);
