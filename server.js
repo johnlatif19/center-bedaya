@@ -14,21 +14,37 @@ const cloudinary = require('cloudinary').v2;
 const axios = require('axios');
 const multer = require('multer');
 
+// ============================================
+// CONFIGURATION
+// ============================================
+const PORT = process.env.PORT || 3000;
+const MAX_CONCURRENT_REQUESTS = 50;
+const REQUEST_TIMEOUT = 60000; // 60 seconds
+const OTP_CLEANUP_INTERVAL = 30000; // 30 seconds
+const BLOCKED_IP_CLEANUP_INTERVAL = 30000; // 30 seconds
+const GRACEFUL_SHUTDOWN_TIMEOUT = 30000; // 30 seconds
+
+// ============================================
 // Initialize Firebase
+// ============================================
 const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
 admin.initializeApp({
   credential: admin.credential.cert(firebaseConfig)
 });
 const db = admin.firestore();
 
+// ============================================
 // Configure Cloudinary
+// ============================================
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// ============================================
 // Configure Nodemailer
+// ============================================
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT),
@@ -39,78 +55,125 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// ============================================
 // Initialize Express
+// ============================================
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // ============================================
-// 1. منع التزاحم (Concurrency Throttling)
+// STATE MANAGEMENT (محسّن)
 // ============================================
-let activeRequests = 0;
-const MAX_CONCURRENT_REQUESTS = 20;
+
+// 1. استخدام Map بدلاً من متغير بسيط لـ activeRequests
+const activeRequests = new Map();
+
+// 2. OTP Store مع Map
+const otpStore = new Map();
+
+// 3. Blocked IPs
+const blockedIPs = new Map();
+
+// 4. حالة الإغلاق
+let isShuttingDown = false;
 
 // ============================================
-// Middleware
+// MIDDLEWARE
 // ============================================
-app.use(helmet());
+
+// Security
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// CORS
 app.use(cors({
   origin: true,
   credentials: true
 }));
+
+// Body parsers
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
+
+// Static files
 app.use(express.static('public'));
 
 // ============================================
-// 2. Middleware لحصر الطلبات المتزامنة
+// CONCURRENCY THROTTLING (محسّن)
 // ============================================
 app.use((req, res, next) => {
+  // تجاهل الملفات الثابتة
   if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf)$/)) {
     return next();
   }
 
-  if (activeRequests >= MAX_CONCURRENT_REQUESTS) {
+  // التحقق من حالة الإغلاق
+  if (isShuttingDown) {
+    return res.status(503).json({ error: 'الخادم قيد الإغلاق، حاول مرة أخرى' });
+  }
+
+  // توليد معرف فريد للطلب
+  const requestId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+  
+  // التحقق من العدد الحالي للطلبات
+  if (activeRequests.size >= MAX_CONCURRENT_REQUESTS) {
     return res.status(503).json({
       error: 'الخادم مشغول حالياً، يرجى المحاولة بعد قليل',
-      retryAfter: 5
+      retryAfter: 3,
+      activeRequests: activeRequests.size,
+      maxConcurrent: MAX_CONCURRENT_REQUESTS
     });
   }
 
-  activeRequests++;
-
-  res.on('finish', () => {
-    activeRequests--;
+  // إضافة الطلب إلى القائمة النشطة
+  activeRequests.set(requestId, {
+    startTime: Date.now(),
+    path: req.path,
+    method: req.method,
+    ip: req.ip
   });
-  res.on('close', () => {
-    activeRequests--;
-  });
 
+  // دالة التنظيف (تضمن عدم تسرب الذاكرة)
+  const cleanup = () => {
+    activeRequests.delete(requestId);
+  };
+
+  // استخدام جميع الأحداث الممكنة للتأكد من التنظيف
+  res.on('finish', cleanup);
+  res.on('close', cleanup);
+  res.on('error', cleanup);
+  
+  // تنفيذ الطلب
   next();
+
+  // حماية إضافية: تنظيف تلقائي بعد timeout
+  setTimeout(() => {
+    if (activeRequests.has(requestId)) {
+      activeRequests.delete(requestId);
+      console.warn(`⚠️ Request ${requestId} cleaned up by timeout`);
+    }
+  }, REQUEST_TIMEOUT + 5000);
 });
 
 // ============================================
-// 3. Timeout للطلبات (يمنع تجميد السيرفر)
+// REQUEST TIMEOUT (محسّن)
 // ============================================
 app.use((req, res, next) => {
-  req.setTimeout(30000, () => {
-    res.status(504).json({ error: 'انتهت مهلة الطلب، يرجى المحاولة مرة أخرى' });
+  req.setTimeout(REQUEST_TIMEOUT, () => {
+    if (!res.headersSent) {
+      res.status(504).json({ 
+        error: 'انتهت مهلة الطلب، يرجى المحاولة مرة أخرى',
+        timeout: REQUEST_TIMEOUT / 1000 + ' seconds'
+      });
+    }
   });
   next();
 });
 
-// Configure Multer for file uploads
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }
-});
-
 // ============================================
-// 4. Rate Limiting محسّن مع عداد تنازلي
+// RATE LIMITING (محسّن)
 // ============================================
-// تخزين وقت الحظر لكل IP
-const blockedIPs = new Map();
-
 const limiter = rateLimit({
   windowMs: 60 * 1000, // دقيقة واحدة
   max: 30, // 30 طلب فقط في الدقيقة لكل IP
@@ -121,7 +184,6 @@ const limiter = rateLimit({
     const unlockTime = now + blockDuration;
     blockedIPs.set(ip, unlockTime);
 
-    // إرجاع وقت الحظر المتبقي بالثواني
     const remainingSeconds = Math.ceil(blockDuration / 1000);
     
     res.status(429).json({
@@ -133,11 +195,10 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf)$/),
-  // التحقق من IP المحظور
   keyGenerator: (req) => req.ip
 });
 
-// Middleware للتحقق من الحظر قبل تطبيق Rate Limiter
+// Middleware للتحقق من الحظر
 app.use((req, res, next) => {
   if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf)$/)) {
     return next();
@@ -164,18 +225,50 @@ app.use((req, res, next) => {
 // تطبيق Rate Limiter على مسارات API فقط
 app.use('/api/', limiter);
 
-// تنظيف الـ Map بشكل دوري (كل دقيقة)
+// ============================================
+// CLEANUP INTERVALS (محسّن)
+// ============================================
+
+// تنظيف OTP منتهي الصلاحية
 setInterval(() => {
   const now = Date.now();
+  let cleaned = 0;
+  for (const [email, data] of otpStore) {
+    if (now > data.expiresAt) {
+      otpStore.delete(email);
+      cleaned++;
+    }
+  }
+  if (cleaned > 0) {
+    console.log(`🧹 Cleaned ${cleaned} expired OTPs`);
+  }
+}, OTP_CLEANUP_INTERVAL);
+
+// تنظيف IPs المحظورة
+setInterval(() => {
+  const now = Date.now();
+  let cleaned = 0;
   for (const [ip, unlockTime] of blockedIPs) {
     if (now >= unlockTime) {
       blockedIPs.delete(ip);
+      cleaned++;
     }
   }
-}, 60000);
+  if (cleaned > 0) {
+    console.log(`🧹 Cleaned ${cleaned} expired blocked IPs`);
+  }
+}, BLOCKED_IP_CLEANUP_INTERVAL);
 
 // ============================================
-// JWT Middleware
+// Configure Multer
+// ============================================
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
+
+// ============================================
+// JWT MIDDLEWARE
 // ============================================
 const authenticateToken = (req, res, next) => {
   const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
@@ -209,8 +302,9 @@ const authenticateAdmin = (req, res, next) => {
 };
 
 // ============================================
-// Helper Functions
+// HELPER FUNCTIONS
 // ============================================
+
 const generateToken = (user, isAdmin = false, adminData = null) => {
   return jwt.sign(
     {
@@ -230,11 +324,25 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// OTP Store - OTP expires in 5 minutes
-const otpStore = {};
+// Firebase Retry Logic
+const firebaseRetry = async (fn, retries = 3, delay = 1000) => {
+  let lastError;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      console.warn(`⚠️ Firebase retry ${i + 1}/${retries} after error:`, error.message);
+      if (i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+      }
+    }
+  }
+  throw lastError;
+};
 
 // ============================================
-// Telegram Notification (Only for Bookings & Contact)
+// TELEGRAM NOTIFICATION
 // ============================================
 const sendTelegramNotification = async (message, type) => {
   if (type !== 'booking' && type !== 'contact') return;
@@ -251,7 +359,7 @@ const sendTelegramNotification = async (message, type) => {
 };
 
 // ============================================
-// Send Email Helper
+// SEND EMAIL HELPER
 // ============================================
 const sendEmail = async (to, subject, html) => {
   try {
@@ -269,7 +377,49 @@ const sendEmail = async (to, subject, html) => {
 };
 
 // ============================================
-// Auth Routes
+// HEALTH CHECK ENDPOINT
+// ============================================
+app.get('/api/health', (req, res) => {
+  const health = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    activeRequests: activeRequests.size,
+    maxConcurrentRequests: MAX_CONCURRENT_REQUESTS,
+    blockedIPs: blockedIPs.size,
+    otpStoreSize: otpStore.size,
+    isShuttingDown: isShuttingDown
+  };
+  
+  if (activeRequests.size > MAX_CONCURRENT_REQUESTS * 0.8) {
+    health.warning = 'اقتراب من الحد الأقصى للطلبات المتزامنة';
+  }
+  
+  res.json(health);
+});
+
+// ============================================
+// METRICS ENDPOINT (للإدارة فقط)
+// ============================================
+app.get('/api/metrics', authenticateAdmin, (req, res) => {
+  res.json({
+    activeRequests: activeRequests.size,
+    maxConcurrent: MAX_CONCURRENT_REQUESTS,
+    blockedIPs: blockedIPs.size,
+    otpStore: otpStore.size,
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    activeRequestsList: Array.from(activeRequests.entries()).map(([id, data]) => ({
+      id,
+      ...data,
+      duration: Date.now() - data.startTime
+    }))
+  });
+});
+
+// ============================================
+// AUTH ROUTES
 // ============================================
 
 // Signup
@@ -292,9 +442,12 @@ app.post('/api/auth/signup', [
 
     const { fullName, email, password, phone } = req.body;
 
-    const userSnapshot = await db.collection('users')
-      .where('email', '==', email)
-      .get();
+    // استخدام Firebase Retry
+    const userSnapshot = await firebaseRetry(async () => {
+      return await db.collection('users')
+        .where('email', '==', email)
+        .get();
+    });
 
     if (!userSnapshot.empty) {
       return res.status(400).json({ error: 'البريد الإلكتروني مستخدم بالفعل' });
@@ -309,7 +462,10 @@ app.post('/api/auth/signup', [
       createdAt: new Date().toISOString()
     };
 
-    const docRef = await db.collection('users').add(userData);
+    const docRef = await firebaseRetry(async () => {
+      return await db.collection('users').add(userData);
+    });
+    
     const user = { id: docRef.id, ...userData };
     const token = generateToken(user);
 
@@ -320,7 +476,7 @@ app.post('/api/auth/signup', [
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    // Send welcome email (async, لا ننتظر النتيجة)
+    // Send welcome email (async)
     const welcomeHtml = `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
@@ -398,9 +554,11 @@ app.post('/api/auth/login', [
 
     const { email, password } = req.body;
 
-    const userSnapshot = await db.collection('users')
-      .where('email', '==', email)
-      .get();
+    const userSnapshot = await firebaseRetry(async () => {
+      return await db.collection('users')
+        .where('email', '==', email)
+        .get();
+    });
 
     if (userSnapshot.empty) {
       return res.status(401).json({ error: 'بيانات الدخول غير صحيحة' });
@@ -459,9 +617,11 @@ app.post('/api/auth/admin-login', [
       return res.status(401).json({ error: 'بيانات الدخول غير صحيحة' });
     }
 
-    let adminSnapshot = await db.collection('users')
-      .where('email', '==', process.env.ADMIN_EMAIL)
-      .get();
+    let adminSnapshot = await firebaseRetry(async () => {
+      return await db.collection('users')
+        .where('email', '==', process.env.ADMIN_EMAIL)
+        .get();
+    });
 
     let adminUser;
     if (adminSnapshot.empty) {
@@ -475,16 +635,20 @@ app.post('/api/auth/admin-login', [
         adminUsername: adminUsername,
         createdAt: new Date().toISOString()
       };
-      const docRef = await db.collection('users').add(adminData);
+      const docRef = await firebaseRetry(async () => {
+        return await db.collection('users').add(adminData);
+      });
       adminUser = { id: docRef.id, ...adminData };
     } else {
       const doc = adminSnapshot.docs[0];
       const docData = doc.data();
       if (docData.adminName !== adminName || docData.adminUsername !== adminUsername) {
-        await db.collection('users').doc(doc.id).update({
-          adminName: adminName,
-          adminUsername: adminUsername,
-          fullName: adminName
+        await firebaseRetry(async () => {
+          await db.collection('users').doc(doc.id).update({
+            adminName: adminName,
+            adminUsername: adminUsername,
+            fullName: adminName
+          });
         });
         docData.adminName = adminName;
         docData.adminUsername = adminUsername;
@@ -523,11 +687,8 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ success: true });
 });
 
-// Logout All (تسجيل الخروج من جميع الأجهزة)
+// Logout All
 app.post('/api/auth/logout-all', (req, res) => {
-  // تغيير مفتاح JWT ليبطل صلاحية جميع التوكنات
-  // في هذا التطبيق، نستخدم نهج بسيط: مسح الكوكي
-  // لكن يمكن تحسينه بتغيير مفتاح التوقيع أو استخدام قائمة سوداء
   res.clearCookie('token');
   res.json({ success: true });
 });
@@ -535,7 +696,9 @@ app.post('/api/auth/logout-all', (req, res) => {
 // Verify Token
 app.get('/api/auth/verify', authenticateToken, async (req, res) => {
   try {
-    const doc = await db.collection('users').doc(req.user.id).get();
+    const doc = await firebaseRetry(async () => {
+      return await db.collection('users').doc(req.user.id).get();
+    });
     if (!doc.exists) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -551,6 +714,7 @@ app.get('/api/auth/verify', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Verify token error:', error);
     res.status(500).json({ error: 'Error verifying token' });
   }
 });
@@ -561,7 +725,9 @@ app.get('/api/auth/verify-admin', authenticateToken, async (req, res) => {
     if (!req.user.isAdmin) {
       return res.status(403).json({ error: 'Admin access required' });
     }
-    const doc = await db.collection('users').doc(req.user.id).get();
+    const doc = await firebaseRetry(async () => {
+      return await db.collection('users').doc(req.user.id).get();
+    });
     if (!doc.exists) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -585,7 +751,7 @@ app.get('/api/auth/verify-admin', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// Forgot Password - OTP expires in 5 minutes
+// FORGOT PASSWORD - OTP
 // ============================================
 app.post('/api/auth/forgot-password', [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح')
@@ -598,9 +764,11 @@ app.post('/api/auth/forgot-password', [
 
     const { email } = req.body;
 
-    const userSnapshot = await db.collection('users')
-      .where('email', '==', email)
-      .get();
+    const userSnapshot = await firebaseRetry(async () => {
+      return await db.collection('users')
+        .where('email', '==', email)
+        .get();
+    });
 
     if (userSnapshot.empty) {
       return res.status(404).json({ error: 'لا يوجد حساب بهذا البريد الإلكتروني' });
@@ -612,11 +780,11 @@ app.post('/api/auth/forgot-password', [
     const otp = generateOTP();
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
 
-    otpStore[email] = {
+    otpStore.set(email, {
       otp,
       expiresAt,
       userId: user.id
-    };
+    });
 
     const resetLink = `${req.protocol}://${req.get('host')}/reset-password`;
 
@@ -675,9 +843,7 @@ app.post('/api/auth/forgot-password', [
   }
 });
 
-// ============================================
-// Verify OTP - التحقق من صحة الكود
-// ============================================
+// Verify OTP
 app.post('/api/auth/verify-otp', [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
   body('otp').notEmpty().withMessage('رمز التحقق مطلوب')
@@ -690,7 +856,7 @@ app.post('/api/auth/verify-otp', [
 
     const { email, otp } = req.body;
 
-    const storedOTP = otpStore[email];
+    const storedOTP = otpStore.get(email);
     if (!storedOTP) {
       return res.status(400).json({ error: 'رمز التحقق غير صحيح أو منتهي الصلاحية' });
     }
@@ -700,7 +866,7 @@ app.post('/api/auth/verify-otp', [
     }
 
     if (Date.now() > storedOTP.expiresAt) {
-      delete otpStore[email];
+      otpStore.delete(email);
       return res.status(400).json({ error: 'انتهت صلاحية رمز التحقق (5 دقائق)' });
     }
 
@@ -714,9 +880,7 @@ app.post('/api/auth/verify-otp', [
   }
 });
 
-// ============================================
-// Reset Password - مع إرسال إيميل تأكيد
-// ============================================
+// Reset Password
 app.post('/api/auth/reset-password', [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
   body('otp').notEmpty().withMessage('رمز التحقق مطلوب'),
@@ -730,7 +894,7 @@ app.post('/api/auth/reset-password', [
 
     const { email, otp, password } = req.body;
 
-    const storedOTP = otpStore[email];
+    const storedOTP = otpStore.get(email);
     if (!storedOTP) {
       return res.status(400).json({ error: 'رمز التحقق غير صحيح أو منتهي الصلاحية' });
     }
@@ -740,17 +904,19 @@ app.post('/api/auth/reset-password', [
     }
 
     if (Date.now() > storedOTP.expiresAt) {
-      delete otpStore[email];
+      otpStore.delete(email);
       return res.status(400).json({ error: 'انتهت صلاحية رمز التحقق (5 دقائق)' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    await db.collection('users').doc(storedOTP.userId).update({
-      password: hashedPassword,
-      updatedAt: new Date().toISOString()
+    await firebaseRetry(async () => {
+      await db.collection('users').doc(storedOTP.userId).update({
+        password: hashedPassword,
+        updatedAt: new Date().toISOString()
+      });
     });
 
-    delete otpStore[email];
+    otpStore.delete(email);
 
     const confirmHtml = `
       <!DOCTYPE html>
@@ -804,13 +970,15 @@ app.post('/api/auth/reset-password', [
 });
 
 // ============================================
-// User Profile Management
+// USER PROFILE MANAGEMENT
 // ============================================
 app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
   try {
-    const usersSnapshot = await db.collection('users')
-      .orderBy('createdAt', 'desc')
-      .get();
+    const usersSnapshot = await firebaseRetry(async () => {
+      return await db.collection('users')
+        .orderBy('createdAt', 'desc')
+        .get();
+    });
 
     const users = [];
     usersSnapshot.forEach(doc => {
@@ -829,8 +997,7 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
 app.put('/api/admin/users/:id', authenticateAdmin, [
   body('fullName').optional().notEmpty().withMessage('الاسم مطلوب'),
   body('email').optional().isEmail().withMessage('بريد إلكتروني غير صحيح'),
-  body('phone').optional(),
-  // تم إزالة التحقق من كلمة المرور لأننا لن نسمح بتغييرها من هنا
+  body('phone').optional()
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -842,13 +1009,14 @@ app.put('/api/admin/users/:id', authenticateAdmin, [
     const userId = req.params.id;
 
     const userRef = db.collection('users').doc(userId);
-    const userDoc = await userRef.get();
+    const userDoc = await firebaseRetry(async () => {
+      return await userRef.get();
+    });
 
     if (!userDoc.exists) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // منع تعديل المدير
     if (userDoc.data().isAdmin) {
       return res.status(403).json({ error: 'لا يمكن تعديل حساب المدير' });
     }
@@ -856,9 +1024,11 @@ app.put('/api/admin/users/:id', authenticateAdmin, [
     const updateData = {};
     if (fullName) updateData.fullName = fullName;
     if (email) {
-      const existingSnapshot = await db.collection('users')
-        .where('email', '==', email)
-        .get();
+      const existingSnapshot = await firebaseRetry(async () => {
+        return await db.collection('users')
+          .where('email', '==', email)
+          .get();
+      });
       if (!existingSnapshot.empty) {
         const existingDoc = existingSnapshot.docs[0];
         if (existingDoc.id !== userId) {
@@ -870,10 +1040,9 @@ app.put('/api/admin/users/:id', authenticateAdmin, [
     if (phone !== undefined) updateData.phone = phone;
     updateData.updatedAt = new Date().toISOString();
 
-    await userRef.update(updateData);
-
-    // تسجيل الخروج من جميع الأجهزة بعد تعديل المستخدم
-    // عن طريق تغيير مفتاح JWT (نحن نستخدم طريقة مسح الكوكي من العميل)
+    await firebaseRetry(async () => {
+      await userRef.update(updateData);
+    });
 
     res.json({
       success: true,
@@ -888,14 +1057,18 @@ app.put('/api/admin/users/:id', authenticateAdmin, [
 app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
   try {
     const userId = req.params.id;
-    const userDoc = await db.collection('users').doc(userId).get();
+    const userDoc = await firebaseRetry(async () => {
+      return await db.collection('users').doc(userId).get();
+    });
     if (!userDoc.exists) {
       return res.status(404).json({ error: 'User not found' });
     }
     if (userDoc.data().isAdmin) {
       return res.status(403).json({ error: 'لا يمكن حذف حساب المدير' });
     }
-    await db.collection('users').doc(userId).delete();
+    await firebaseRetry(async () => {
+      await db.collection('users').doc(userId).delete();
+    });
     res.json({ success: true, message: 'تم حذف المستخدم بنجاح' });
   } catch (error) {
     console.error('Delete user error:', error);
@@ -919,7 +1092,9 @@ app.put('/api/profile', authenticateToken, [
     const userId = req.user.id;
 
     const userRef = db.collection('users').doc(userId);
-    const userDoc = await userRef.get();
+    const userDoc = await firebaseRetry(async () => {
+      return await userRef.get();
+    });
 
     if (!userDoc.exists) {
       return res.status(404).json({ error: 'User not found' });
@@ -928,9 +1103,11 @@ app.put('/api/profile', authenticateToken, [
     const updateData = {};
     if (fullName) updateData.fullName = fullName;
     if (email) {
-      const existingSnapshot = await db.collection('users')
-        .where('email', '==', email)
-        .get();
+      const existingSnapshot = await firebaseRetry(async () => {
+        return await db.collection('users')
+          .where('email', '==', email)
+          .get();
+      });
       if (!existingSnapshot.empty) {
         const existingDoc = existingSnapshot.docs[0];
         if (existingDoc.id !== userId) {
@@ -945,7 +1122,9 @@ app.put('/api/profile', authenticateToken, [
     }
     updateData.updatedAt = new Date().toISOString();
 
-    await userRef.update(updateData);
+    await firebaseRetry(async () => {
+      await userRef.update(updateData);
+    });
 
     res.json({
       success: true,
@@ -958,7 +1137,7 @@ app.put('/api/profile', authenticateToken, [
 });
 
 // ============================================
-// Booking Routes
+// BOOKING ROUTES
 // ============================================
 app.post('/api/bookings', [
   body('fullName').notEmpty().withMessage('الاسم الكامل مطلوب'),
@@ -982,7 +1161,9 @@ app.post('/api/bookings', [
       createdAt: new Date().toISOString()
     };
 
-    const docRef = await db.collection('bookings').add(booking);
+    const docRef = await firebaseRetry(async () => {
+      return await db.collection('bookings').add(booking);
+    });
 
     sendTelegramNotification(
       `📅 <b>حجز جديد</b>\n\n` +
@@ -1004,7 +1185,7 @@ app.post('/api/bookings', [
 });
 
 // ============================================
-// Contact Routes
+// CONTACT ROUTES
 // ============================================
 app.post('/api/contact', [
   body('name').notEmpty().withMessage('الاسم مطلوب'),
@@ -1027,7 +1208,9 @@ app.post('/api/contact', [
       message,
       sentAt: new Date().toISOString()
     };
-    await db.collection('contacts').add(contactData);
+    await firebaseRetry(async () => {
+      await db.collection('contacts').add(contactData);
+    });
 
     const adminHtml = `
       <!DOCTYPE html>
@@ -1095,16 +1278,18 @@ app.post('/api/contact', [
 });
 
 // ============================================
-// Results Routes
+// RESULTS ROUTES
 // ============================================
 app.post('/api/results/check', [
   body('phone').notEmpty().withMessage('رقم التليفون مطلوب')
 ], authenticateToken, async (req, res) => {
   try {
     const { phone } = req.body;
-    const resultsSnapshot = await db.collection('results')
-      .where('phone', '==', phone)
-      .get();
+    const resultsSnapshot = await firebaseRetry(async () => {
+      return await db.collection('results')
+        .where('phone', '==', phone)
+        .get();
+    });
 
     if (resultsSnapshot.empty) {
       return res.json({ exists: false });
@@ -1129,7 +1314,7 @@ app.post('/api/results/check', [
 });
 
 // ============================================
-// Admin Dashboard Routes
+// ADMIN DASHBOARD ROUTES
 // ============================================
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
   try {
@@ -1137,20 +1322,28 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
     
-    let salesSnapshot = await db.collection('sales')
-      .where('date', '==', today)
-      .where('adminName', '==', adminName)
-      .where('adminUsername', '==', adminUsername)
-      .get();
+    let salesSnapshot = await firebaseRetry(async () => {
+      return await db.collection('sales')
+        .where('date', '==', today)
+        .where('adminName', '==', adminName)
+        .where('adminUsername', '==', adminUsername)
+        .get();
+    });
     
     let todaySales = 0;
     salesSnapshot.forEach(doc => {
       todaySales += doc.data().amount || 0;
     });
 
-    let bookingsSnapshot = await db.collection('bookings').get();
-    let messagesSnapshot = await db.collection('messages').get();
-    let contactsSnapshot = await db.collection('contacts').get();
+    let bookingsSnapshot = await firebaseRetry(async () => {
+      return await db.collection('bookings').get();
+    });
+    let messagesSnapshot = await firebaseRetry(async () => {
+      return await db.collection('messages').get();
+    });
+    let contactsSnapshot = await firebaseRetry(async () => {
+      return await db.collection('contacts').get();
+    });
 
     res.json({
       todaySales,
@@ -1171,12 +1364,14 @@ app.get('/api/admin/sales-chart', authenticateAdmin, async (req, res) => {
     const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
     
-    let salesSnapshot = await db.collection('sales')
-      .where('adminName', '==', adminName)
-      .where('adminUsername', '==', adminUsername)
-      .orderBy('date', 'desc')
-      .limit(30)
-      .get();
+    let salesSnapshot = await firebaseRetry(async () => {
+      return await db.collection('sales')
+        .where('adminName', '==', adminName)
+        .where('adminUsername', '==', adminUsername)
+        .orderBy('date', 'desc')
+        .limit(30)
+        .get();
+    });
 
     const salesData = [];
     salesSnapshot.forEach(doc => {
@@ -1218,7 +1413,9 @@ app.post('/api/admin/sales', authenticateAdmin, [
       createdAt: new Date().toISOString()
     };
 
-    const docRef = await db.collection('sales').add(sale);
+    const docRef = await firebaseRetry(async () => {
+      return await db.collection('sales').add(sale);
+    });
     res.status(201).json({ success: true, sale: { id: docRef.id, ...sale } });
   } catch (error) {
     console.error('Add sale error:', error);
@@ -1238,16 +1435,20 @@ app.put('/api/admin/sales/:id', authenticateAdmin, [
 
     const { customer, amount } = req.body;
     const saleRef = db.collection('sales').doc(req.params.id);
-    const saleDoc = await saleRef.get();
+    const saleDoc = await firebaseRetry(async () => {
+      return await saleRef.get();
+    });
 
     if (!saleDoc.exists) {
       return res.status(404).json({ error: 'Sale not found' });
     }
 
-    await saleRef.update({
-      customer,
-      amount: parseFloat(amount),
-      updatedAt: new Date().toISOString()
+    await firebaseRetry(async () => {
+      await saleRef.update({
+        customer,
+        amount: parseFloat(amount),
+        updatedAt: new Date().toISOString()
+      });
     });
 
     res.json({ success: true, message: 'تم تحديث البيع بنجاح' });
@@ -1262,11 +1463,13 @@ app.get('/api/admin/sales', authenticateAdmin, async (req, res) => {
     const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
     
-    let salesSnapshot = await db.collection('sales')
-      .where('adminName', '==', adminName)
-      .where('adminUsername', '==', adminUsername)
-      .orderBy('createdAt', 'desc')
-      .get();
+    let salesSnapshot = await firebaseRetry(async () => {
+      return await db.collection('sales')
+        .where('adminName', '==', adminName)
+        .where('adminUsername', '==', adminUsername)
+        .orderBy('createdAt', 'desc')
+        .get();
+    });
 
     const sales = [];
     salesSnapshot.forEach(doc => {
@@ -1282,7 +1485,9 @@ app.get('/api/admin/sales', authenticateAdmin, async (req, res) => {
 
 app.delete('/api/admin/sales/:id', authenticateAdmin, async (req, res) => {
   try {
-    await db.collection('sales').doc(req.params.id).delete();
+    await firebaseRetry(async () => {
+      await db.collection('sales').doc(req.params.id).delete();
+    });
     res.json({ success: true });
   } catch (error) {
     console.error('Delete sale error:', error);
@@ -1292,9 +1497,11 @@ app.delete('/api/admin/sales/:id', authenticateAdmin, async (req, res) => {
 
 app.get('/api/admin/bookings', authenticateAdmin, async (req, res) => {
   try {
-    const bookingsSnapshot = await db.collection('bookings')
-      .orderBy('createdAt', 'desc')
-      .get();
+    const bookingsSnapshot = await firebaseRetry(async () => {
+      return await db.collection('bookings')
+        .orderBy('createdAt', 'desc')
+        .get();
+    });
 
     const bookings = [];
     bookingsSnapshot.forEach(doc => {
@@ -1310,7 +1517,9 @@ app.get('/api/admin/bookings', authenticateAdmin, async (req, res) => {
 
 app.delete('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
   try {
-    await db.collection('bookings').doc(req.params.id).delete();
+    await firebaseRetry(async () => {
+      await db.collection('bookings').doc(req.params.id).delete();
+    });
     res.json({ success: true });
   } catch (error) {
     console.error('Delete booking error:', error);
@@ -1329,7 +1538,8 @@ app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), 
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream({
         folder: 'results',
-        resource_type: 'auto'
+        resource_type: 'auto',
+        timeout: 60000
       }, (error, result) => {
         if (error) reject(error);
         else resolve(result);
@@ -1339,23 +1549,29 @@ app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), 
 
     const url = result.secure_url;
 
-    const existingSnapshot = await db.collection('results')
-      .where('phone', '==', phone)
-      .get();
+    const existingSnapshot = await firebaseRetry(async () => {
+      return await db.collection('results')
+        .where('phone', '==', phone)
+        .get();
+    });
 
     let resultId;
     if (!existingSnapshot.empty) {
       const doc = existingSnapshot.docs[0];
       resultId = doc.id;
-      await db.collection('results').doc(doc.id).update({
-        url,
-        updatedAt: new Date().toISOString()
+      await firebaseRetry(async () => {
+        await db.collection('results').doc(doc.id).update({
+          url,
+          updatedAt: new Date().toISOString()
+        });
       });
     } else {
-      const newDoc = await db.collection('results').add({
-        phone,
-        url,
-        createdAt: new Date().toISOString()
+      const newDoc = await firebaseRetry(async () => {
+        return await db.collection('results').add({
+          phone,
+          url,
+          createdAt: new Date().toISOString()
+        });
       });
       resultId = newDoc.id;
     }
@@ -1376,7 +1592,9 @@ app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), asyn
     if (!phone) return res.status(400).json({ error: 'رقم الهاتف مطلوب' });
 
     const resultRef = db.collection('results').doc(resultId);
-    const resultDoc = await resultRef.get();
+    const resultDoc = await firebaseRetry(async () => {
+      return await resultRef.get();
+    });
 
     if (!resultDoc.exists) {
       return res.status(404).json({ error: 'Result not found' });
@@ -1388,7 +1606,8 @@ app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), asyn
       const result = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream({
           folder: 'results',
-          resource_type: 'auto'
+          resource_type: 'auto',
+          timeout: 60000
         }, (error, result) => {
           if (error) reject(error);
           else resolve(result);
@@ -1398,7 +1617,9 @@ app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), asyn
       updateData.url = result.secure_url;
     }
 
-    await resultRef.update(updateData);
+    await firebaseRetry(async () => {
+      await resultRef.update(updateData);
+    });
 
     res.json({ success: true, message: 'تم تحديث النتيجة بنجاح' });
   } catch (error) {
@@ -1409,9 +1630,11 @@ app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), asyn
 
 app.get('/api/admin/results', authenticateAdmin, async (req, res) => {
   try {
-    const resultsSnapshot = await db.collection('results')
-      .orderBy('createdAt', 'desc')
-      .get();
+    const resultsSnapshot = await firebaseRetry(async () => {
+      return await db.collection('results')
+        .orderBy('createdAt', 'desc')
+        .get();
+    });
 
     const results = [];
     resultsSnapshot.forEach(doc => {
@@ -1427,7 +1650,9 @@ app.get('/api/admin/results', authenticateAdmin, async (req, res) => {
 
 app.delete('/api/admin/results/:id', authenticateAdmin, async (req, res) => {
   try {
-    await db.collection('results').doc(req.params.id).delete();
+    await firebaseRetry(async () => {
+      await db.collection('results').doc(req.params.id).delete();
+    });
     res.json({ success: true });
   } catch (error) {
     console.error('Delete result error:', error);
@@ -1437,9 +1662,11 @@ app.delete('/api/admin/results/:id', authenticateAdmin, async (req, res) => {
 
 app.get('/api/admin/messages', authenticateAdmin, async (req, res) => {
   try {
-    const messagesSnapshot = await db.collection('messages')
-      .orderBy('sentAt', 'desc')
-      .get();
+    const messagesSnapshot = await firebaseRetry(async () => {
+      return await db.collection('messages')
+        .orderBy('sentAt', 'desc')
+        .get();
+    });
 
     const messages = [];
     messagesSnapshot.forEach(doc => {
@@ -1455,9 +1682,11 @@ app.get('/api/admin/messages', authenticateAdmin, async (req, res) => {
 
 app.get('/api/admin/contacts', authenticateAdmin, async (req, res) => {
   try {
-    const contactsSnapshot = await db.collection('contacts')
-      .orderBy('sentAt', 'desc')
-      .get();
+    const contactsSnapshot = await firebaseRetry(async () => {
+      return await db.collection('contacts')
+        .orderBy('sentAt', 'desc')
+        .get();
+    });
 
     const contacts = [];
     contactsSnapshot.forEach(doc => {
@@ -1473,7 +1702,9 @@ app.get('/api/admin/contacts', authenticateAdmin, async (req, res) => {
 
 app.delete('/api/admin/contacts/:id', authenticateAdmin, async (req, res) => {
   try {
-    await db.collection('contacts').doc(req.params.id).delete();
+    await firebaseRetry(async () => {
+      await db.collection('contacts').doc(req.params.id).delete();
+    });
     res.json({ success: true });
   } catch (error) {
     console.error('Delete contact error:', error);
@@ -1524,10 +1755,12 @@ app.post('/api/admin/send-email', authenticateAdmin, [
 
     await sendEmail(email, 'رسالة من مركز بداية للتدخل المبكر والتأهيل', mailHtml);
 
-    await db.collection('messages').add({
-      email,
-      message,
-      sentAt: new Date().toISOString()
+    await firebaseRetry(async () => {
+      await db.collection('messages').add({
+        email,
+        message,
+        sentAt: new Date().toISOString()
+      });
     });
 
     res.json({ success: true, message: 'تم إرسال الرسالة بنجاح' });
@@ -1539,7 +1772,9 @@ app.post('/api/admin/send-email', authenticateAdmin, [
 
 app.delete('/api/admin/messages/:id', authenticateAdmin, async (req, res) => {
   try {
-    await db.collection('messages').doc(req.params.id).delete();
+    await firebaseRetry(async () => {
+      await db.collection('messages').doc(req.params.id).delete();
+    });
     res.json({ success: true });
   } catch (error) {
     console.error('Delete message error:', error);
@@ -1548,7 +1783,7 @@ app.delete('/api/admin/messages/:id', authenticateAdmin, async (req, res) => {
 });
 
 // ============================================
-// Serve HTML Pages
+// SERVE HTML PAGES
 // ============================================
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -1575,11 +1810,69 @@ app.get('/reset-password', (req, res) => {
 });
 
 // ============================================
-// Start Server
+// GLOBAL ERROR HANDLERS
 // ============================================
-app.listen(PORT, () => {
+
+// Uncaught Exception
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  // لا نوقف السيرفر، نسجل الخطأ فقط
+});
+
+// Unhandled Rejection
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // لا نوقف السيرفر، نسجل الخطأ فقط
+});
+
+// ============================================
+// GRACEFUL SHUTDOWN
+// ============================================
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received - shutting down gracefully...');
+  isShuttingDown = true;
+  
+  setTimeout(() => {
+    console.log('⚠️ Forcefully shutting down after timeout...');
+    process.exit(0);
+  }, GRACEFUL_SHUTDOWN_TIMEOUT);
+});
+
+process.on('SIGINT', () => {
+  console.log('🛑 SIGINT received - shutting down...');
+  isShuttingDown = true;
+  process.exit(0);
+});
+
+// ============================================
+// EXPRESS ERROR HANDLER
+// ============================================
+app.use((err, req, res, next) => {
+  console.error('❌ Server Error:', err);
+  
+  if (err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT') {
+    return res.status(504).json({ error: 'انتهت مهلة الاتصال، حاول مرة أخرى' });
+  }
+  
+  res.status(500).json({
+    error: 'حدث خطأ داخلي في الخادم',
+    ...(process.env.NODE_ENV === 'development' && { details: err.message })
+  });
+});
+
+// ============================================
+// START SERVER
+// ============================================
+const server = app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`🌐 http://localhost:${PORT}`);
   console.log(`📊 Max concurrent requests: ${MAX_CONCURRENT_REQUESTS}`);
-  console.log(`⏱️ Request timeout: 30 seconds`);
+  console.log(`⏱️ Request timeout: ${REQUEST_TIMEOUT / 1000} seconds`);
+  console.log(`🧹 OTP cleanup interval: ${OTP_CLEANUP_INTERVAL / 1000} seconds`);
+  console.log(`🔒 Rate limit: 30 requests per minute per IP`);
 });
+
+// ============================================
+// EXPORT FOR VERCEL
+// ============================================
+module.exports = app;
