@@ -46,10 +46,8 @@ const PORT = process.env.PORT || 3000;
 // ============================================
 // TOKEN BLACKLIST SYSTEM
 // ============================================
-// إنشاء Collection للتوكنات المحظورة
 const blacklistedTokens = db.collection('blacklisted_tokens');
 
-// دالة لإضافة توكن للقائمة السوداء
 const blacklistToken = async (token) => {
   if (!token) return;
   try {
@@ -64,7 +62,6 @@ const blacklistToken = async (token) => {
   }
 };
 
-// دالة للتحقق من أن التوكن ليس محظوراً
 const isTokenBlacklisted = async (token) => {
   if (!token) return false;
   try {
@@ -76,7 +73,7 @@ const isTokenBlacklisted = async (token) => {
   }
 };
 
-// تنظيف التوكنات منتهية الصلاحية من القائمة السوداء (كل ساعة)
+// Clean expired tokens every hour
 setInterval(async () => {
   try {
     const now = new Date().toISOString();
@@ -95,16 +92,16 @@ setInterval(async () => {
   } catch (error) {
     console.error('Error cleaning up blacklisted tokens:', error);
   }
-}, 60 * 60 * 1000); // كل ساعة
+}, 60 * 60 * 1000);
 
 // ============================================
-// 1. منع التزاحم (Concurrency Throttling)
+// CONCURRENCY THROTTLING
 // ============================================
 let activeRequests = 0;
 const MAX_CONCURRENT_REQUESTS = 20;
 
 // ============================================
-// Middleware
+// MIDDLEWARE
 // ============================================
 app.use(helmet());
 app.use(cors({
@@ -116,9 +113,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 app.use(express.static('public'));
 
-// ============================================
-// 2. Middleware لحصر الطلبات المتزامنة
-// ============================================
+// Concurrency middleware
 app.use((req, res, next) => {
   if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf)$/)) {
     return next();
@@ -143,9 +138,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ============================================
-// 3. Timeout للطلبات (يمنع تجميد السيرفر)
-// ============================================
+// Timeout middleware
 app.use((req, res, next) => {
   req.setTimeout(30000, () => {
     res.status(504).json({ error: 'انتهت مهلة الطلب، يرجى المحاولة مرة أخرى' });
@@ -160,22 +153,20 @@ const upload = multer({
 });
 
 // ============================================
-// 4. Rate Limiting محسّن مع عداد تنازلي
+// RATE LIMITING
 // ============================================
-// تخزين وقت الحظر لكل IP
 const blockedIPs = new Map();
 
 const limiter = rateLimit({
-  windowMs: 60 * 1000, // دقيقة واحدة
-  max: 30, // 30 طلب فقط في الدقيقة لكل IP
+  windowMs: 60 * 1000,
+  max: 30,
   handler: (req, res) => {
     const ip = req.ip;
     const now = Date.now();
-    const blockDuration = 30 * 1000; // 30 ثانية حظر
+    const blockDuration = 30 * 1000;
     const unlockTime = now + blockDuration;
     blockedIPs.set(ip, unlockTime);
 
-    // إرجاع وقت الحظر المتبقي بالثواني
     const remainingSeconds = Math.ceil(blockDuration / 1000);
     
     res.status(429).json({
@@ -187,11 +178,9 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf)$/),
-  // التحقق من IP المحظور
   keyGenerator: (req) => req.ip
 });
 
-// Middleware للتحقق من الحظر قبل تطبيق Rate Limiter
 app.use((req, res, next) => {
   if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf)$/)) {
     return next();
@@ -215,10 +204,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// تطبيق Rate Limiter على مسارات API فقط
 app.use('/api/', limiter);
 
-// تنظيف الـ Map بشكل دوري (كل دقيقة)
 setInterval(() => {
   const now = Date.now();
   for (const [ip, unlockTime] of blockedIPs) {
@@ -229,7 +216,7 @@ setInterval(() => {
 }, 60000);
 
 // ============================================
-// JWT Middleware مع دعم Blacklist
+// JWT MIDDLEWARE
 // ============================================
 const authenticateToken = async (req, res, next) => {
   const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
@@ -238,7 +225,6 @@ const authenticateToken = async (req, res, next) => {
   }
   
   try {
-    // التحقق من أن التوكن ليس محظوراً
     if (await isTokenBlacklisted(token)) {
       res.clearCookie('token');
       return res.status(401).json({ 
@@ -252,7 +238,6 @@ const authenticateToken = async (req, res, next) => {
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
-      // حذف التوكن من القائمة السوداء تلقائياً
       await blacklistedTokens.doc(token).delete().catch(() => {});
     }
     return res.status(403).json({ error: 'Invalid token.' });
@@ -266,7 +251,6 @@ const authenticateAdmin = async (req, res, next) => {
   }
   
   try {
-    // التحقق من أن التوكن ليس محظوراً
     if (await isTokenBlacklisted(token)) {
       res.clearCookie('token');
       return res.status(401).json({ 
@@ -290,7 +274,7 @@ const authenticateAdmin = async (req, res, next) => {
 };
 
 // ============================================
-// Helper Functions
+// HELPER FUNCTIONS
 // ============================================
 const generateToken = (user, isAdmin = false, adminData = null) => {
   return jwt.sign(
@@ -311,11 +295,34 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// OTP Store - OTP expires in 5 minutes
 const otpStore = {};
 
 // ============================================
-// Telegram Notification (Only for Bookings & Contact)
+// BEDAYA SIGNATURE FOR EMAILS
+// ============================================
+function getBedayaSignature() {
+  return `
+  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(79,70,229,0.1);">
+    <div style="display: flex; align-items: center; gap: 12px; justify-content: center;">
+      <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 8px 16px; border-radius: 8px;">
+        <span style="font-size: 18px; font-weight: 800; color: #ffffff;">مركز بداية</span>
+      </div>
+      <span style="color: #94a3b8; font-size: 14px;">للتدخل المبكر والتأهيل</span>
+    </div>
+    <p style="color: #64748b; font-size: 12px; text-align: center; margin-top: 10px;">
+      © 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة
+    </p>
+    <div style="display: flex; gap: 16px; justify-content: center; margin-top: 8px; font-size: 12px; color: #64748b;">
+      <span>📱 01278127159</span>
+      <span>📍 امبابة، القاهرة</span>
+      <span>📧 ${process.env.SMTP_USER || 'info@bedaya-center.com'}</span>
+    </div>
+  </div>
+  `;
+}
+
+// ============================================
+// TELEGRAM NOTIFICATION
 // ============================================
 const sendTelegramNotification = async (message, type) => {
   if (type !== 'booking' && type !== 'contact') return;
@@ -332,7 +339,7 @@ const sendTelegramNotification = async (message, type) => {
 };
 
 // ============================================
-// Send Email Helper
+// SEND EMAIL HELPER
 // ============================================
 const sendEmail = async (to, subject, html) => {
   try {
@@ -350,7 +357,7 @@ const sendEmail = async (to, subject, html) => {
 };
 
 // ============================================
-// Auth Routes
+// AUTH ROUTES
 // ============================================
 
 // Signup
@@ -401,58 +408,55 @@ app.post('/api/auth/signup', [
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    // Send welcome email (async, لا ننتظر النتيجة)
+    // Welcome email with Bedaya branding
     const welcomeHtml = `
-      <!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-      <head><meta charset="UTF-8"><title>مرحباً بك في مركز بداية</title></head>
-      <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
-        <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
-          <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
-            <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
-              <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
-            </div>
-            <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head><meta charset="UTF-8"><title>مرحباً بك في مركز بداية</title></head>
+    <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
+      <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
+        <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
+          <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
+            <span style="font-size: 28px; font-weight: 800; color: #ffffff;">مركز بداية</span>
           </div>
-          <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
-            <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
-              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">🎉 مرحباً ${fullName}!</h2>
-            </div>
-            <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
-              <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
-                نشكرك على التسجيل في <strong style="color: #818cf8;">مركز بداية للتدخل المبكر والتأهيل</strong>.
-              </p>
-              <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
-                نحن سعداء بانضمامك إلينا! يمكنك الآن:
-              </p>
-              <ul style="color: #94a3b8; font-size: 15px; line-height: 2; padding-right: 20px;">
-                <li>📅 حجز موعد في المركز</li>
-                <li>📊 الاستعلام عن نتائجك</li>
-                <li>📧 التواصل مع الفريق</li>
-              </ul>
-              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(79,70,229,0.1);">
-                <div style="display: flex; padding: 8px 0;">
-                  <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">👤 الاسم:</span>
-                  <span style="color: #e2e8f0;">${fullName}</span>
-                </div>
-                <div style="display: flex; padding: 8px 0;">
-                  <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">📧 البريد الإلكتروني:</span>
-                  <span style="color: #e2e8f0;">${email}</span>
-                </div>
-                ${phone ? `<div style="display: flex; padding: 8px 0;">
-                  <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">📱 رقم الهاتف:</span>
-                  <span style="color: #e2e8f0;">${phone}</span>
-                </div>` : ''}
-              </div>
-            </div>
-          </div>
-          <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
-            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
-          </div>
+          <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
         </div>
-      </body>
-      </html>
+        <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
+          <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
+            <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">🎉 مرحباً ${fullName}!</h2>
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
+            <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+              نشكرك على التسجيل في <strong style="color: #818cf8;">مركز بداية للتدخل المبكر والتأهيل</strong>.
+            </p>
+            <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+              نحن سعداء بانضمامك إلينا! يمكنك الآن:
+            </p>
+            <ul style="color: #94a3b8; font-size: 15px; line-height: 2; padding-right: 20px;">
+              <li>📅 حجز موعد في المركز</li>
+              <li>📊 الاستعلام عن نتائجك</li>
+              <li>📧 التواصل مع الفريق</li>
+            </ul>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(79,70,229,0.1);">
+              <div style="display: flex; padding: 8px 0;">
+                <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">👤 الاسم:</span>
+                <span style="color: #e2e8f0;">${fullName}</span>
+              </div>
+              <div style="display: flex; padding: 8px 0;">
+                <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">📧 البريد الإلكتروني:</span>
+                <span style="color: #e2e8f0;">${email}</span>
+              </div>
+              ${phone ? `<div style="display: flex; padding: 8px 0;">
+                <span style="color: #94a3b8; min-width: 100px; font-weight: 600;">📱 رقم الهاتف:</span>
+                <span style="color: #e2e8f0;">${phone}</span>
+              </div>` : ''}
+            </div>
+          </div>
+          ${getBedayaSignature()}
+        </div>
+      </div>
+    </body>
+    </html>
     `;
     sendEmail(email, 'مرحباً بك في مركز بداية للتدخل المبكر والتأهيل', welcomeHtml).catch(console.error);
 
@@ -598,7 +602,7 @@ app.post('/api/auth/admin-login', [
   }
 });
 
-// Logout - تسجيل خروج الجهاز الحالي فقط
+// Logout
 app.post('/api/auth/logout', async (req, res) => {
   const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
   if (token) {
@@ -608,21 +612,15 @@ app.post('/api/auth/logout', async (req, res) => {
   res.json({ success: true });
 });
 
-// Logout All - تسجيل الخروج من جميع الأجهزة
+// Logout All
 app.post('/api/auth/logout-all', async (req, res) => {
   const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
   
   if (token) {
     try {
-      // إضافة التوكن الحالي للقائمة السوداء
       await blacklistToken(token);
-      
-      // إبطال جميع توكنات المستخدم الحالي
       const decoded = jwt.decode(token);
       if (decoded && decoded.id) {
-        // يمكننا هنا إضافة منطق لإبطال جميع توكنات المستخدم
-        // عن طريق تخزينها في Firestore مع userId
-        // أو استخدام طريقة تغيير JWT_SECRET
         console.log(`User ${decoded.id} logged out from all devices`);
       }
     } catch (error) {
@@ -634,9 +632,7 @@ app.post('/api/auth/logout-all', async (req, res) => {
   res.json({ success: true });
 });
 
-// ============================================
-// إبطال جميع توكنات مستخدم معين (للاستخدام الداخلي)
-// ============================================
+// Revoke User Tokens
 app.post('/api/admin/revoke-user-tokens', authenticateAdmin, async (req, res) => {
   try {
     const { userId } = req.body;
@@ -644,7 +640,6 @@ app.post('/api/admin/revoke-user-tokens', authenticateAdmin, async (req, res) =>
       return res.status(400).json({ error: 'User ID is required' });
     }
     
-    // طريقة بسيطة: إضافة التوكن الحالي للقائمة السوداء
     const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
     if (token) {
       await blacklistToken(token);
@@ -713,7 +708,7 @@ app.get('/api/auth/verify-admin', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// Forgot Password - OTP expires in 5 minutes
+// FORGOT PASSWORD - OTP
 // ============================================
 app.post('/api/auth/forgot-password', [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح')
@@ -738,7 +733,7 @@ app.post('/api/auth/forgot-password', [
     const user = { id: doc.id, ...doc.data() };
 
     const otp = generateOTP();
-    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+    const expiresAt = Date.now() + 5 * 60 * 1000;
 
     otpStore[email] = {
       otp,
@@ -749,46 +744,43 @@ app.post('/api/auth/forgot-password', [
     const resetLink = `${req.protocol}://${req.get('host')}/reset-password`;
 
     const mailHtml = `
-      <!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-      <head><meta charset="UTF-8"><title>إعادة تعيين كلمة المرور</title></head>
-      <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
-        <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
-          <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
-            <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
-              <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
-            </div>
-            <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head><meta charset="UTF-8"><title>إعادة تعيين كلمة المرور - مركز بداية</title></head>
+    <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
+      <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
+        <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
+          <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
+            <span style="font-size: 28px; font-weight: 800; color: #ffffff;">مركز بداية</span>
           </div>
-          <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
-            <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
-              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">🔐 إعادة تعيين كلمة المرور</h2>
-            </div>
-            <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
-              <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8;">
-                لقد تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في <strong style="color: #818cf8;">مركز بداية</strong>.
-              </p>
-              <div style="background: rgba(79,70,229,0.15); border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
-                <p style="color: #94a3b8; font-size: 14px; margin-bottom: 8px;">رمز التحقق (OTP):</p>
-                <div style="font-size: 36px; font-weight: 800; color: #818cf8; letter-spacing: 8px; background: rgba(15,23,42,0.5); padding: 10px 20px; border-radius: 8px; display: inline-block;">
-                  ${otp}
-                </div>
-                <p style="color: #ef4444; font-size: 12px; margin-top: 8px;">⚠️ هذا الرمز صالح لمدة 5 دقائق فقط</p>
-              </div>
-              <div style="text-align: center; margin-top: 20px;">
-                <a href="${resetLink}" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px;">
-                  الذهاب إلى صفحة إعادة التعيين
-                </a>
-              </div>
-            </div>
-          </div>
-          <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
-            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
-          </div>
+          <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
         </div>
-      </body>
-      </html>
+        <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
+          <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
+            <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">🔐 إعادة تعيين كلمة المرور</h2>
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
+            <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8;">
+              لقد تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في <strong style="color: #818cf8;">مركز بداية</strong>.
+            </p>
+            <div style="background: rgba(79,70,229,0.15); border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
+              <p style="color: #94a3b8; font-size: 14px; margin-bottom: 8px;">رمز التحقق (OTP):</p>
+              <div style="font-size: 36px; font-weight: 800; color: #818cf8; letter-spacing: 8px; background: rgba(15,23,42,0.5); padding: 10px 20px; border-radius: 8px; display: inline-block;">
+                ${otp}
+              </div>
+              <p style="color: #ef4444; font-size: 12px; margin-top: 8px;">⚠️ هذا الرمز صالح لمدة 5 دقائق فقط</p>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+              <a href="${resetLink}" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px;">
+                الذهاب إلى صفحة إعادة التعيين
+              </a>
+            </div>
+          </div>
+          ${getBedayaSignature()}
+        </div>
+      </div>
+    </body>
+    </html>
     `;
 
     await sendEmail(email, 'إعادة تعيين كلمة المرور - مركز بداية', mailHtml);
@@ -803,9 +795,7 @@ app.post('/api/auth/forgot-password', [
   }
 });
 
-// ============================================
-// Verify OTP - التحقق من صحة الكود
-// ============================================
+// Verify OTP
 app.post('/api/auth/verify-otp', [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
   body('otp').notEmpty().withMessage('رمز التحقق مطلوب')
@@ -842,9 +832,7 @@ app.post('/api/auth/verify-otp', [
   }
 });
 
-// ============================================
-// Reset Password - مع إرسال إيميل تأكيد وإبطال التوكنات القديمة
-// ============================================
+// Reset Password
 app.post('/api/auth/reset-password', [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
   body('otp').notEmpty().withMessage('رمز التحقق مطلوب'),
@@ -880,49 +868,45 @@ app.post('/api/auth/reset-password', [
 
     delete otpStore[email];
 
-    // إبطال التوكن الحالي إذا كان موجوداً
     const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
     if (token) {
       await blacklistToken(token);
     }
 
     const confirmHtml = `
-      <!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-      <head><meta charset="UTF-8"><title>تم تغيير كلمة المرور</title></head>
-      <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
-        <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
-          <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
-            <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
-              <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
-            </div>
-            <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head><meta charset="UTF-8"><title>تم تغيير كلمة المرور - مركز بداية</title></head>
+    <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
+      <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
+        <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
+          <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
+            <span style="font-size: 28px; font-weight: 800; color: #ffffff;">مركز بداية</span>
           </div>
-          <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
-            <div style="background: rgba(16, 185, 129, 0.15); border-right: 4px solid #10b981; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
-              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">✅ تم تغيير كلمة المرور بنجاح</h2>
-            </div>
-            <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
-              <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8;">
-                تم تغيير كلمة المرور الخاصة بحسابك في <strong style="color: #818cf8;">مركز بداية للتدخل المبكر والتأهيل</strong> بنجاح.
-              </p>
-              <p style="color: #94a3b8; font-size: 14px; line-height: 1.8; margin-top: 10px;">
-                إذا لم تكن أنت من قام بهذا التغيير، يرجى التواصل معنا فوراً عبر البريد الإلكتروني أو الهاتف.
-              </p>
-              <div style="text-align: center; margin-top: 20px;">
-                <a href="${req.protocol}://${req.get('host')}/login" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px;">
-                  الذهاب إلى صفحة تسجيل الدخول
-                </a>
-              </div>
-            </div>
-          </div>
-          <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
-            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
-          </div>
+          <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
         </div>
-      </body>
-      </html>
+        <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
+          <div style="background: rgba(16, 185, 129, 0.15); border-right: 4px solid #10b981; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
+            <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">✅ تم تغيير كلمة المرور بنجاح</h2>
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
+            <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8;">
+              تم تغيير كلمة المرور الخاصة بحسابك في <strong style="color: #818cf8;">مركز بداية للتدخل المبكر والتأهيل</strong> بنجاح.
+            </p>
+            <p style="color: #94a3b8; font-size: 14px; line-height: 1.8; margin-top: 10px;">
+              إذا لم تكن أنت من قام بهذا التغيير، يرجى التواصل معنا فوراً عبر البريد الإلكتروني أو الهاتف.
+            </p>
+            <div style="text-align: center; margin-top: 20px;">
+              <a href="${req.protocol}://${req.get('host')}/login" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px;">
+                الذهاب إلى صفحة تسجيل الدخول
+              </a>
+            </div>
+          </div>
+          ${getBedayaSignature()}
+        </div>
+      </div>
+    </body>
+    </html>
     `;
 
     await sendEmail(email, 'تم تغيير كلمة المرور - مركز بداية', confirmHtml);
@@ -938,7 +922,7 @@ app.post('/api/auth/reset-password', [
 });
 
 // ============================================
-// User Profile Management
+// USER MANAGEMENT
 // ============================================
 app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
   try {
@@ -981,7 +965,6 @@ app.put('/api/admin/users/:id', authenticateAdmin, [
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // منع تعديل المدير
     if (userDoc.data().isAdmin) {
       return res.status(403).json({ error: 'لا يمكن تعديل حساب المدير' });
     }
@@ -1005,7 +988,6 @@ app.put('/api/admin/users/:id', authenticateAdmin, [
 
     await userRef.update(updateData);
 
-    // إبطال التوكن الحالي للمستخدم الذي تم تعديله
     const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
     if (token) {
       await blacklistToken(token);
@@ -1040,7 +1022,7 @@ app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
 });
 
 // ============================================
-// Booking Routes
+// BOOKING ROUTES
 // ============================================
 app.post('/api/bookings', [
   body('fullName').notEmpty().withMessage('الاسم الكامل مطلوب'),
@@ -1067,7 +1049,7 @@ app.post('/api/bookings', [
     const docRef = await db.collection('bookings').add(booking);
 
     sendTelegramNotification(
-      `📅 <b>حجز جديد</b>\n\n` +
+      `📅 <b>حجز جديد - مركز بداية</b>\n\n` +
       `👤 الاسم: ${fullName}\n` +
       `📱 التليفون: ${phone}\n` +
       `📆 التاريخ: ${date}\n` +
@@ -1086,7 +1068,7 @@ app.post('/api/bookings', [
 });
 
 // ============================================
-// Contact Routes
+// CONTACT ROUTES
 // ============================================
 app.post('/api/contact', [
   body('name').notEmpty().withMessage('الاسم مطلوب'),
@@ -1112,53 +1094,50 @@ app.post('/api/contact', [
     await db.collection('contacts').add(contactData);
 
     const adminHtml = `
-      <!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-      <head><meta charset="UTF-8"><title>رسالة جديدة</title></head>
-      <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
-        <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
-          <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
-            <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
-              <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
-            </div>
-            <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head><meta charset="UTF-8"><title>رسالة جديدة - مركز بداية</title></head>
+    <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
+      <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
+        <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
+          <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
+            <span style="font-size: 28px; font-weight: 800; color: #ffffff;">مركز بداية</span>
           </div>
-          <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
-            <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
-              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">📩 رسالة جديدة من موقع مركز بداية</h2>
-            </div>
-            <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
-              <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
-                <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">👤 الاسم:</span>
-                <span style="color: #e2e8f0;">${name}</span>
-              </div>
-              <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
-                <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">📧 البريد الإلكتروني:</span>
-                <span style="color: #e2e8f0;">${email}</span>
-              </div>
-              <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
-                <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">📱 رقم التليفون:</span>
-                <span style="color: #e2e8f0;">${phone}</span>
-              </div>
-              <div style="display: flex; padding: 12px 0 0;">
-                <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">💬 الرسالة:</span>
-                <span style="color: #e2e8f0; flex: 1; line-height: 1.8; background: rgba(15,23,42,0.5); padding: 12px; border-radius: 8px; margin-top: 4px;">${message}</span>
-              </div>
-            </div>
-          </div>
-          <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
-            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
-          </div>
+          <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
         </div>
-      </body>
-      </html>
+        <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
+          <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
+            <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">📩 رسالة جديدة من موقع مركز بداية</h2>
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
+            <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+              <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">👤 الاسم:</span>
+              <span style="color: #e2e8f0;">${name}</span>
+            </div>
+            <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+              <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">📧 البريد الإلكتروني:</span>
+              <span style="color: #e2e8f0;">${email}</span>
+            </div>
+            <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+              <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">📱 رقم التليفون:</span>
+              <span style="color: #e2e8f0;">${phone}</span>
+            </div>
+            <div style="display: flex; padding: 12px 0 0;">
+              <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">💬 الرسالة:</span>
+              <span style="color: #e2e8f0; flex: 1; line-height: 1.8; background: rgba(15,23,42,0.5); padding: 12px; border-radius: 8px; margin-top: 4px;">${message}</span>
+            </div>
+          </div>
+          ${getBedayaSignature()}
+        </div>
+      </div>
+    </body>
+    </html>
     `;
     
     sendEmail(process.env.ADMIN_EMAIL, 'رسالة جديدة من مركز بداية', adminHtml).catch(console.error);
     
     sendTelegramNotification(
-      `📧 <b>رسالة جديدة</b>\n\n` +
+      `📧 <b>رسالة جديدة - مركز بداية</b>\n\n` +
       `👤 الاسم: ${name}\n` +
       `📧 البريد: ${email}\n` +
       `📱 التليفون: ${phone}\n` +
@@ -1177,7 +1156,7 @@ app.post('/api/contact', [
 });
 
 // ============================================
-// Results Routes
+// RESULTS ROUTES
 // ============================================
 app.post('/api/results/check', [
   body('phone').notEmpty().withMessage('رقم التليفون مطلوب')
@@ -1211,7 +1190,7 @@ app.post('/api/results/check', [
 });
 
 // ============================================
-// Admin Dashboard Routes
+// ADMIN DASHBOARD ROUTES
 // ============================================
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
   try {
@@ -1276,6 +1255,9 @@ app.get('/api/admin/sales-chart', authenticateAdmin, async (req, res) => {
   }
 });
 
+// ============================================
+// SALES CRUD - مع إصلاح تسجيل المبيعات
+// ============================================
 app.post('/api/admin/sales', authenticateAdmin, [
   body('customer').notEmpty().withMessage('اسم العميل مطلوب'),
   body('amount').isNumeric().withMessage('المبلغ يجب أن يكون رقماً')
@@ -1291,9 +1273,14 @@ app.post('/api/admin/sales', authenticateAdmin, [
     const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
 
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      return res.status(400).json({ error: 'المبلغ يجب أن يكون رقماً موجباً' });
+    }
+
     const sale = {
-      customer,
-      amount: parseFloat(amount),
+      customer: customer.trim(),
+      amount: amountNum,
       date: today,
       adminName,
       adminUsername,
@@ -1301,6 +1288,47 @@ app.post('/api/admin/sales', authenticateAdmin, [
     };
 
     const docRef = await db.collection('sales').add(sale);
+    
+    // Send sale notification email with Bedaya branding
+    const saleHtml = `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head><meta charset="UTF-8"><title>تسجيل بيع جديد - مركز بداية</title></head>
+    <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
+      <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
+        <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
+          <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
+            <span style="font-size: 28px; font-weight: 800; color: #ffffff;">مركز بداية</span>
+          </div>
+          <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
+        </div>
+        <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
+          <div style="background: rgba(16, 185, 129, 0.15); border-right: 4px solid #10b981; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
+            <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">💰 تم تسجيل عملية بيع جديدة</h2>
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
+            <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+              <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">👤 العميل:</span>
+              <span style="color: #e2e8f0;">${customer}</span>
+            </div>
+            <div style="display: flex; padding: 10px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+              <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">💰 المبلغ:</span>
+              <span style="color: #34d399; font-weight: bold;">${amountNum} جنيه</span>
+            </div>
+            <div style="display: flex; padding: 10px 0;">
+              <span style="color: #94a3b8; min-width: 120px; font-weight: 600;">📅 التاريخ:</span>
+              <span style="color: #e2e8f0;">${today}</span>
+            </div>
+          </div>
+          ${getBedayaSignature()}
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+    
+    sendEmail(process.env.ADMIN_EMAIL, '💰 تسجيل بيع جديد - مركز بداية', saleHtml).catch(console.error);
+
     res.status(201).json({ success: true, sale: { id: docRef.id, ...sale } });
   } catch (error) {
     console.error('Add sale error:', error);
@@ -1400,6 +1428,30 @@ app.delete('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
+// ============================================
+// RESULTS CRUD - مع دعم جميع الملفات ومنع التكرار
+// ============================================
+
+// Check if phone already has a result
+app.get('/api/admin/results/check-phone', authenticateAdmin, async (req, res) => {
+  try {
+    const { phone } = req.query;
+    if (!phone) {
+      return res.status(400).json({ error: 'رقم الهاتف مطلوب' });
+    }
+    
+    const resultsSnapshot = await db.collection('results')
+      .where('phone', '==', phone)
+      .get();
+    
+    res.json({ exists: !resultsSnapshot.empty });
+  } catch (error) {
+    console.error('Check phone error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء التحقق' });
+  }
+});
+
+// Upload Result - دعم جميع أنواع الملفات
 app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), async (req, res) => {
   try {
     const { phone } = req.body;
@@ -1408,10 +1460,22 @@ app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), 
     if (!file) return res.status(400).json({ error: 'الملف مطلوب' });
     if (!phone) return res.status(400).json({ error: 'رقم الهاتف مطلوب' });
 
+    // Check for existing result
+    const existingSnapshot = await db.collection('results')
+      .where('phone', '==', phone)
+      .get();
+    
+    if (!existingSnapshot.empty) {
+      return res.status(400).json({ 
+        error: 'يوجد بالفعل نتيجة لهذا الرقم. قم بتعديل النتيجة الموجودة بدلاً من ذلك.' 
+      });
+    }
+
+    // Upload file - support all file types with auto detection
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream({
         folder: 'results',
-        resource_type: 'auto'
+        resource_type: 'auto'  // auto detects all file types
       }, (error, result) => {
         if (error) reject(error);
         else resolve(result);
@@ -1420,35 +1484,30 @@ app.post('/api/admin/results/upload', authenticateAdmin, upload.single('file'), 
     });
 
     const url = result.secure_url;
+    const fileType = result.format || result.resource_type || 'file';
 
-    const existingSnapshot = await db.collection('results')
-      .where('phone', '==', phone)
-      .get();
+    const newDoc = await db.collection('results').add({
+      phone,
+      url,
+      fileType,
+      fileName: file.originalname,
+      fileSize: file.size,
+      createdAt: new Date().toISOString()
+    });
 
-    let resultId;
-    if (!existingSnapshot.empty) {
-      const doc = existingSnapshot.docs[0];
-      resultId = doc.id;
-      await db.collection('results').doc(doc.id).update({
-        url,
-        updatedAt: new Date().toISOString()
-      });
-    } else {
-      const newDoc = await db.collection('results').add({
-        phone,
-        url,
-        createdAt: new Date().toISOString()
-      });
-      resultId = newDoc.id;
-    }
-
-    res.json({ success: true, url, id: resultId, message: 'تم رفع النتيجة بنجاح' });
+    res.json({ 
+      success: true, 
+      url, 
+      id: newDoc.id, 
+      message: 'تم رفع النتيجة بنجاح' 
+    });
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ error: 'حدث خطأ أثناء رفع الملف' });
   }
 });
 
+// Update Result - دعم جميع أنواع الملفات
 app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), async (req, res) => {
   try {
     const { phone } = req.body;
@@ -1464,13 +1523,32 @@ app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), asyn
       return res.status(404).json({ error: 'Result not found' });
     }
 
-    let updateData = { phone, updatedAt: new Date().toISOString() };
+    // Check if another result has the same phone
+    if (phone !== resultDoc.data().phone) {
+      const existingSnapshot = await db.collection('results')
+        .where('phone', '==', phone)
+        .get();
+      
+      if (!existingSnapshot.empty) {
+        const existingDoc = existingSnapshot.docs[0];
+        if (existingDoc.id !== resultId) {
+          return res.status(400).json({ 
+            error: 'يوجد بالفعل نتيجة لهذا الرقم. لا يمكن تكرار نفس الرقم.' 
+          });
+        }
+      }
+    }
+
+    let updateData = { 
+      phone, 
+      updatedAt: new Date().toISOString() 
+    };
 
     if (file) {
       const result = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream({
           folder: 'results',
-          resource_type: 'auto'
+          resource_type: 'auto'  // support all file types
         }, (error, result) => {
           if (error) reject(error);
           else resolve(result);
@@ -1478,6 +1556,9 @@ app.put('/api/admin/results/:id', authenticateAdmin, upload.single('file'), asyn
         uploadStream.end(file.buffer);
       });
       updateData.url = result.secure_url;
+      updateData.fileType = result.format || result.resource_type || 'file';
+      updateData.fileName = file.originalname;
+      updateData.fileSize = file.size;
     }
 
     await resultRef.update(updateData);
@@ -1563,6 +1644,9 @@ app.delete('/api/admin/contacts/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
+// ============================================
+// SEND EMAIL - مع توقيع مركز بداية
+// ============================================
 app.post('/api/admin/send-email', authenticateAdmin, [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
   body('message').notEmpty().withMessage('الرسالة مطلوبة')
@@ -1576,32 +1660,29 @@ app.post('/api/admin/send-email', authenticateAdmin, [
     const { email, message } = req.body;
 
     const mailHtml = `
-      <!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-      <head><meta charset="UTF-8"><title>رسالة من مركز بداية</title></head>
-      <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
-        <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
-          <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
-            <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
-              <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
-            </div>
-            <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head><meta charset="UTF-8"><title>رسالة من مركز بداية</title></head>
+    <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
+      <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
+        <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
+          <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
+            <span style="font-size: 28px; font-weight: 800; color: #ffffff;">مركز بداية</span>
           </div>
-          <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
-            <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
-              <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">📧 رسالة من مركز بداية</h2>
-            </div>
-            <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
-              <div style="color: #e2e8f0; line-height: 2; font-size: 16px; white-space: pre-wrap;">${message}</div>
-            </div>
-          </div>
-          <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
-            <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل | جميع الحقوق محفوظة</p>
-          </div>
+          <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
         </div>
-      </body>
-      </html>
+        <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
+          <div style="background: rgba(79, 70, 229, 0.08); border-right: 4px solid #4f46e5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
+            <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">📧 رسالة من مركز بداية</h2>
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
+            <div style="color: #e2e8f0; line-height: 2; font-size: 16px; white-space: pre-wrap;">${message}</div>
+          </div>
+          ${getBedayaSignature()}
+        </div>
+      </div>
+    </body>
+    </html>
     `;
 
     await sendEmail(email, 'رسالة من مركز بداية للتدخل المبكر والتأهيل', mailHtml);
@@ -1630,7 +1711,7 @@ app.delete('/api/admin/messages/:id', authenticateAdmin, async (req, res) => {
 });
 
 // ============================================
-// Serve HTML Pages
+// SERVE HTML PAGES
 // ============================================
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -1657,7 +1738,7 @@ app.get('/reset-password', (req, res) => {
 });
 
 // ============================================
-// Start Server
+// START SERVER
 // ============================================
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
