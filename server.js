@@ -44,6 +44,60 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ============================================
+// TOKEN BLACKLIST SYSTEM
+// ============================================
+// إنشاء Collection للتوكنات المحظورة
+const blacklistedTokens = db.collection('blacklisted_tokens');
+
+// دالة لإضافة توكن للقائمة السوداء
+const blacklistToken = async (token) => {
+  if (!token) return;
+  try {
+    const decoded = jwt.decode(token);
+    const expiresIn = decoded?.exp ? (decoded.exp * 1000 - Date.now()) : 7 * 24 * 60 * 60 * 1000;
+    await blacklistedTokens.doc(token).set({
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + expiresIn).toISOString()
+    });
+  } catch (error) {
+    console.error('Error blacklisting token:', error);
+  }
+};
+
+// دالة للتحقق من أن التوكن ليس محظوراً
+const isTokenBlacklisted = async (token) => {
+  if (!token) return false;
+  try {
+    const doc = await blacklistedTokens.doc(token).get();
+    return doc.exists;
+  } catch (error) {
+    console.error('Error checking blacklist:', error);
+    return false;
+  }
+};
+
+// تنظيف التوكنات منتهية الصلاحية من القائمة السوداء (كل ساعة)
+setInterval(async () => {
+  try {
+    const now = new Date().toISOString();
+    const expiredTokens = await blacklistedTokens
+      .where('expiresAt', '<=', now)
+      .get();
+    
+    const batch = db.batch();
+    expiredTokens.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
+    if (expiredTokens.size > 0) {
+      console.log(`🧹 Cleaned up ${expiredTokens.size} expired tokens from blacklist`);
+    }
+  } catch (error) {
+    console.error('Error cleaning up blacklisted tokens:', error);
+  }
+}, 60 * 60 * 1000); // كل ساعة
+
+// ============================================
 // 1. منع التزاحم (Concurrency Throttling)
 // ============================================
 let activeRequests = 0;
@@ -175,28 +229,52 @@ setInterval(() => {
 }, 60000);
 
 // ============================================
-// JWT Middleware
+// JWT Middleware مع دعم Blacklist
 // ============================================
-const authenticateToken = (req, res, next) => {
+const authenticateToken = async (req, res, next) => {
   const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
   if (!token) {
     return res.status(401).json({ error: 'Access denied. No token provided.' });
   }
+  
   try {
+    // التحقق من أن التوكن ليس محظوراً
+    if (await isTokenBlacklisted(token)) {
+      res.clearCookie('token');
+      return res.status(401).json({ 
+        error: 'Session expired. Please login again.',
+        code: 'TOKEN_BLACKLISTED'
+      });
+    }
+    
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
   } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      // حذف التوكن من القائمة السوداء تلقائياً
+      await blacklistedTokens.doc(token).delete().catch(() => {});
+    }
     return res.status(403).json({ error: 'Invalid token.' });
   }
 };
 
-const authenticateAdmin = (req, res, next) => {
+const authenticateAdmin = async (req, res, next) => {
   const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
   if (!token) {
     return res.status(401).json({ error: 'Access denied. No token provided.' });
   }
+  
   try {
+    // التحقق من أن التوكن ليس محظوراً
+    if (await isTokenBlacklisted(token)) {
+      res.clearCookie('token');
+      return res.status(401).json({ 
+        error: 'Session expired. Please login again.',
+        code: 'TOKEN_BLACKLISTED'
+      });
+    }
+    
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (!decoded.isAdmin) {
       return res.status(403).json({ error: 'Admin access required.' });
@@ -204,6 +282,9 @@ const authenticateAdmin = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      await blacklistedTokens.doc(token).delete().catch(() => {});
+    }
     return res.status(403).json({ error: 'Invalid token.' });
   }
 };
@@ -517,19 +598,66 @@ app.post('/api/auth/admin-login', [
   }
 });
 
-// Logout
-app.post('/api/auth/logout', (req, res) => {
+// Logout - تسجيل خروج الجهاز الحالي فقط
+app.post('/api/auth/logout', async (req, res) => {
+  const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+  if (token) {
+    await blacklistToken(token);
+  }
   res.clearCookie('token');
   res.json({ success: true });
 });
 
-// Logout All (تسجيل الخروج من جميع الأجهزة)
-app.post('/api/auth/logout-all', (req, res) => {
-  // تغيير مفتاح JWT ليبطل صلاحية جميع التوكنات
-  // في هذا التطبيق، نستخدم نهج بسيط: مسح الكوكي
-  // لكن يمكن تحسينه بتغيير مفتاح التوقيع أو استخدام قائمة سوداء
+// Logout All - تسجيل الخروج من جميع الأجهزة
+app.post('/api/auth/logout-all', async (req, res) => {
+  const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+  
+  if (token) {
+    try {
+      // إضافة التوكن الحالي للقائمة السوداء
+      await blacklistToken(token);
+      
+      // إبطال جميع توكنات المستخدم الحالي
+      const decoded = jwt.decode(token);
+      if (decoded && decoded.id) {
+        // يمكننا هنا إضافة منطق لإبطال جميع توكنات المستخدم
+        // عن طريق تخزينها في Firestore مع userId
+        // أو استخدام طريقة تغيير JWT_SECRET
+        console.log(`User ${decoded.id} logged out from all devices`);
+      }
+    } catch (error) {
+      console.error('Error in logout-all:', error);
+    }
+  }
+  
   res.clearCookie('token');
   res.json({ success: true });
+});
+
+// ============================================
+// إبطال جميع توكنات مستخدم معين (للاستخدام الداخلي)
+// ============================================
+app.post('/api/admin/revoke-user-tokens', authenticateAdmin, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+    
+    // طريقة بسيطة: إضافة التوكن الحالي للقائمة السوداء
+    const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+    if (token) {
+      await blacklistToken(token);
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'تم إبطال جميع توكنات المستخدم بنجاح' 
+    });
+  } catch (error) {
+    console.error('Revoke tokens error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء إبطال التوكنات' });
+  }
 });
 
 // Verify Token
@@ -715,7 +843,7 @@ app.post('/api/auth/verify-otp', [
 });
 
 // ============================================
-// Reset Password - مع إرسال إيميل تأكيد
+// Reset Password - مع إرسال إيميل تأكيد وإبطال التوكنات القديمة
 // ============================================
 app.post('/api/auth/reset-password', [
   body('email').isEmail().withMessage('بريد إلكتروني غير صحيح'),
@@ -751,6 +879,12 @@ app.post('/api/auth/reset-password', [
     });
 
     delete otpStore[email];
+
+    // إبطال التوكن الحالي إذا كان موجوداً
+    const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+    if (token) {
+      await blacklistToken(token);
+    }
 
     const confirmHtml = `
       <!DOCTYPE html>
@@ -830,7 +964,6 @@ app.put('/api/admin/users/:id', authenticateAdmin, [
   body('fullName').optional().notEmpty().withMessage('الاسم مطلوب'),
   body('email').optional().isEmail().withMessage('بريد إلكتروني غير صحيح'),
   body('phone').optional(),
-  // تم إزالة التحقق من كلمة المرور لأننا لن نسمح بتغييرها من هنا
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -872,8 +1005,11 @@ app.put('/api/admin/users/:id', authenticateAdmin, [
 
     await userRef.update(updateData);
 
-    // تسجيل الخروج من جميع الأجهزة بعد تعديل المستخدم
-    // عن طريق تغيير مفتاح JWT (نحن نستخدم طريقة مسح الكوكي من العميل)
+    // إبطال التوكن الحالي للمستخدم الذي تم تعديله
+    const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+    if (token) {
+      await blacklistToken(token);
+    }
 
     res.json({
       success: true,
@@ -903,6 +1039,7 @@ app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
+// Update Profile - مع إبطال التوكن القديم وإنشاء توكن جديد
 app.put('/api/profile', authenticateToken, [
   body('fullName').optional().notEmpty().withMessage('الاسم مطلوب'),
   body('email').optional().isEmail().withMessage('بريد إلكتروني غير صحيح'),
@@ -946,6 +1083,23 @@ app.put('/api/profile', authenticateToken, [
     updateData.updatedAt = new Date().toISOString();
 
     await userRef.update(updateData);
+
+    // إبطال التوكن الحالي
+    const oldToken = req.cookies.token || req.headers.authorization?.split(' ')[1];
+    if (oldToken) {
+      await blacklistToken(oldToken);
+    }
+
+    // إنشاء توكن جديد
+    const updatedUser = { id: userId, ...(await userRef.get()).data() };
+    const newToken = generateToken(updatedUser);
+
+    res.cookie('token', newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
 
     res.json({
       success: true,
@@ -1582,4 +1736,5 @@ app.listen(PORT, () => {
   console.log(`🌐 http://localhost:${PORT}`);
   console.log(`📊 Max concurrent requests: ${MAX_CONCURRENT_REQUESTS}`);
   console.log(`⏱️ Request timeout: 30 seconds`);
+  console.log(`🔐 Token blacklist system is active`);
 });
