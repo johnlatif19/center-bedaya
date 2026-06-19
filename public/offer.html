@@ -40,6 +40,24 @@
             font-size: 0.75rem;
             font-weight: 600;
         }
+        .btn-pay {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-pay:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px -10px rgba(245, 158, 11, 0.4);
+        }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #1e293b; }
         ::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #4f46e5, #7c3aed); border-radius: 4px; }
@@ -90,9 +108,67 @@
             border: 1px solid rgba(248, 113, 113, 0.3);
         }
         #toast .toast-icon { margin-left: 10px; }
+
+        /* Auth overlay for the whole page */
+        .page-auth-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(10px);
+            z-index: 999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+        }
+        .page-auth-overlay.show {
+            display: flex;
+        }
+        .page-auth-overlay .auth-icon {
+            font-size: 4rem;
+            color: #4f46e5;
+            margin-bottom: 1.5rem;
+        }
+        .page-auth-overlay .auth-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #e2e8f0;
+            margin-bottom: 0.5rem;
+        }
+        .page-auth-overlay .auth-desc {
+            color: #94a3b8;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            max-width: 400px;
+        }
+        .page-auth-overlay .auth-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .page-auth-overlay .auth-buttons a {
+            padding: 0.75rem 2rem;
+            border-radius: 12px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
     </style>
 </head>
 <body class="font-cairo bg-gray-900">
+
+    <!-- Page Auth Overlay -->
+    <div class="page-auth-overlay" id="pageAuthOverlay">
+        <div class="auth-icon"><i class="fas fa-lock"></i></div>
+        <div class="auth-title">🔒 تسجيل الدخول مطلوب</div>
+        <div class="auth-desc">يرجى تسجيل الدخول لمشاهدة العروض الحصرية</div>
+        <div class="auth-buttons">
+            <a href="/login" class="bg-indigo-600 text-white hover:bg-indigo-700">تسجيل الدخول</a>
+            <a href="/signup" class="bg-purple-600 text-white hover:bg-purple-700">إنشاء حساب</a>
+        </div>
+    </div>
 
     <!-- Navigation -->
     <nav class="fixed top-0 right-0 left-0 z-50 nav-blur shadow-lg">
@@ -270,6 +346,19 @@
                     currentUser = null;
                 }
                 updateUI();
+                // Show/hide page overlay based on auth
+                const overlay = document.getElementById('pageAuthOverlay');
+                if (overlay) {
+                    if (isAuthenticated) {
+                        overlay.classList.remove('show');
+                    } else {
+                        overlay.classList.add('show');
+                    }
+                }
+                // If authenticated, load offers
+                if (isAuthenticated) {
+                    loadOffers();
+                }
             }
 
             function updateUI() {
@@ -291,6 +380,8 @@
                 isAuthenticated = false;
                 currentUser = null;
                 updateUI();
+                const overlay = document.getElementById('pageAuthOverlay');
+                if (overlay) overlay.classList.add('show');
                 showToast('تم تسجيل الخروج بنجاح', 'success');
             }
 
@@ -306,17 +397,16 @@
             }
 
             // ============================================
-            // LOAD OFFERS
+            // LOAD OFFERS WITH PAYMENT BUTTON
             // ============================================
             async function loadOffers() {
                 const grid = document.getElementById('offersGrid');
                 const loading = document.getElementById('loadingState');
                 const noOffers = document.getElementById('noOffersState');
 
-                // Show loading
                 if (loading) loading.classList.remove('hidden');
                 if (noOffers) noOffers.classList.add('hidden');
-                // Clear existing offers except loading and no-offers states
+                
                 const children = grid.children;
                 for (let i = children.length - 1; i >= 0; i--) {
                     if (children[i].id !== 'loadingState' && children[i].id !== 'noOffersState') {
@@ -353,6 +443,15 @@
                             ? `<span class="offer-badge">${offer.badge}</span>`
                             : '';
 
+                        // Payment button - stores offer data in sessionStorage before redirect
+                        const payBtnHtml = `
+                            <button onclick="goToPay('${offer.id}', '${offer.title.replace(/'/g, "\\'")}')" 
+                                    class="btn-pay w-full justify-center mt-3">
+                                <i class="fas fa-credit-card"></i>
+                                ادفع الآن
+                            </button>
+                        `;
+
                         card.innerHTML = `
                             ${imageHtml}
                             <div class="p-5">
@@ -362,12 +461,12 @@
                                 </div>
                                 <p class="text-gray-400 text-sm mb-3 line-clamp-3">${offer.description || ''}</p>
                                 ${offer.validUntil ? `<p class="text-xs text-gray-500"><i class="far fa-calendar-alt ml-1"></i> صالح حتى: ${new Date(offer.validUntil).toLocaleDateString('ar')}</p>` : ''}
+                                ${payBtnHtml}
                             </div>
                         `;
                         grid.appendChild(card);
                     });
 
-                    // Trigger fade animation
                     document.querySelectorAll('.offer-card.fade-up').forEach(el => {
                         el.style.opacity = '0';
                         el.style.animation = 'fadeUp 0.8s ease forwards';
@@ -383,6 +482,21 @@
             }
 
             // ============================================
+            // GO TO PAY PAGE
+            // ============================================
+            window.goToPay = function(offerId, offerTitle) {
+                if (!isAuthenticated) {
+                    showToast('يرجى تسجيل الدخول أولاً', 'error');
+                    return;
+                }
+                // Store offer data in sessionStorage to pass to pay page
+                sessionStorage.setItem('payOfferId', offerId);
+                sessionStorage.setItem('payOfferTitle', offerTitle);
+                // Navigate to pay page
+                window.location.href = '/pay';
+            };
+
+            // ============================================
             // INIT
             // ============================================
             document.addEventListener('DOMContentLoaded', () => {
@@ -391,7 +505,6 @@
 
                 initMobileMenu();
                 checkAuth();
-                loadOffers();
             });
 
         })();
