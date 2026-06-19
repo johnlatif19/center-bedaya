@@ -48,6 +48,10 @@
       "dest": "/public/package.html"
     },
     {
+      "src": "/pay-package",
+      "dest": "/public/pay-package.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/public/index.html"
     }
