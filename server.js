@@ -708,7 +708,7 @@ app.post('/api/auth/forgot-password', [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
@@ -1585,6 +1585,169 @@ app.delete('/api/admin/messages/:id', authenticateAdmin, async (req, res) => {
     console.error('Delete message error:', error);
     res.status(500).json({ error: 'Error deleting message' });
   }
+});
+
+// ============================================
+// OFFERS ROUTES (Public & Admin)
+// ============================================
+
+// Public: Get all active offers
+app.get('/api/offers', async (req, res) => {
+    try {
+        const offersSnapshot = await db.collection('offers')
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        const offers = [];
+        const now = new Date().toISOString();
+        offersSnapshot.forEach(doc => {
+            const data = doc.data();
+            // Only show offers that are not expired
+            if (data.validUntil && data.validUntil < now) {
+                return; // skip expired offers
+            }
+            offers.push({ id: doc.id, ...data });
+        });
+
+        res.json(offers);
+    } catch (error) {
+        console.error('Get offers error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء جلب العروض' });
+    }
+});
+
+// Admin: Create offer
+app.post('/api/admin/offers', authenticateAdmin, upload.single('image'), [
+    body('title').notEmpty().withMessage('عنوان العرض مطلوب'),
+    body('description').notEmpty().withMessage('وصف العرض مطلوب')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { title, description, badge, validUntil } = req.body;
+        const file = req.file;
+
+        let imageUrl = null;
+        if (file) {
+            const result = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream({
+                    folder: 'offers',
+                    resource_type: 'image',
+                    use_filename: true,
+                    unique_filename: true
+                }, (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                });
+                uploadStream.end(file.buffer);
+            });
+            imageUrl = result.secure_url;
+        }
+
+        const offerData = {
+            title,
+            description,
+            badge: badge || '',
+            validUntil: validUntil || null,
+            imageUrl,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        const docRef = await db.collection('offers').add(offerData);
+        res.status(201).json({ success: true, offer: { id: docRef.id, ...offerData } });
+    } catch (error) {
+        console.error('Create offer error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء إضافة العرض' });
+    }
+});
+
+// Admin: Get all offers
+app.get('/api/admin/offers', authenticateAdmin, async (req, res) => {
+    try {
+        const offersSnapshot = await db.collection('offers')
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        const offers = [];
+        offersSnapshot.forEach(doc => {
+            offers.push({ id: doc.id, ...doc.data() });
+        });
+
+        res.json(offers);
+    } catch (error) {
+        console.error('Get admin offers error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء جلب العروض' });
+    }
+});
+
+// Admin: Update offer
+app.put('/api/admin/offers/:id', authenticateAdmin, upload.single('image'), [
+    body('title').notEmpty().withMessage('عنوان العرض مطلوب'),
+    body('description').notEmpty().withMessage('وصف العرض مطلوب')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { title, description, badge, validUntil } = req.body;
+        const file = req.file;
+        const offerId = req.params.id;
+
+        const offerRef = db.collection('offers').doc(offerId);
+        const offerDoc = await offerRef.get();
+
+        if (!offerDoc.exists) {
+            return res.status(404).json({ error: 'العرض غير موجود' });
+        }
+
+        let updateData = {
+            title,
+            description,
+            badge: badge || '',
+            validUntil: validUntil || null,
+            updatedAt: new Date().toISOString()
+        };
+
+        if (file) {
+            const result = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream({
+                    folder: 'offers',
+                    resource_type: 'image',
+                    use_filename: true,
+                    unique_filename: true
+                }, (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                });
+                uploadStream.end(file.buffer);
+            });
+            updateData.imageUrl = result.secure_url;
+        }
+
+        await offerRef.update(updateData);
+        res.json({ success: true, message: 'تم تحديث العرض بنجاح' });
+    } catch (error) {
+        console.error('Update offer error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء تحديث العرض' });
+    }
+});
+
+// Admin: Delete offer
+app.delete('/api/admin/offers/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const offerId = req.params.id;
+        await db.collection('offers').doc(offerId).delete();
+        res.json({ success: true, message: 'تم حذف العرض بنجاح' });
+    } catch (error) {
+        console.error('Delete offer error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء حذف العرض' });
+    }
 });
 
 // ============================================
