@@ -245,7 +245,11 @@
                 <a data-section="section-offers" class="sidebar-link flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-indigo-900/30 text-gray-300 hover:text-indigo-400 transition">
                     <i class="fas fa-tags w-5"></i>
                     <span>العروض</span>
-                </a>            
+                </a>
+                <a data-section="section-payments" class="sidebar-link flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-indigo-900/30 text-gray-300 hover:text-indigo-400 transition">
+                    <i class="fas fa-credit-card w-5"></i>
+                    <span>الدفعات</span>
+                </a>
                 <a data-section="section-bookings" class="sidebar-link flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-indigo-900/30 text-gray-300 hover:text-indigo-400 transition">
                     <i class="fas fa-calendar-check w-5"></i>
                     <span>الحجوزات</span>
@@ -594,6 +598,33 @@
                 </tr></thead>
                 <tbody id="offersTableBody">
                     <tr><td colspan="6" class="text-center py-8 text-gray-500">لا توجد عروض</td></tr>
+                </tbody>
+                    </table>
+                        </div>
+                    </div>
+            </section>
+            <!-- ============================================ -->
+<!-- SECTION 7: الدفعات (Payments) -->
+<!-- ============================================ -->
+<section id="section-payments" class="dashboard-section">
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-1 h-8 bg-gradient-to-b from-amber-500 to-orange-600 rounded-full"></div>
+        <h2 class="text-2xl font-bold text-white">إدارة الدفعات</h2>
+    </div>
+    <div class="glass-card p-6 rounded-2xl shadow-lg">
+        <div class="table-scroll">
+            <table class="w-full">
+                <thead><tr class="border-b border-gray-700 sticky top-0 bg-gray-900/95">
+                    <th class="text-right py-3 px-4 text-gray-400 text-sm">العرض</th>
+                    <th class="text-right py-3 px-4 text-gray-400 text-sm">رقم المحول</th>
+                    <th class="text-right py-3 px-4 text-gray-400 text-sm">المبلغ</th>
+                    <th class="text-right py-3 px-4 text-gray-400 text-sm">إثبات الدفع</th>
+                    <th class="text-right py-3 px-4 text-gray-400 text-sm">الحالة</th>
+                    <th class="text-right py-3 px-4 text-gray-400 text-sm">التاريخ</th>
+                    <th class="text-right py-3 px-4 text-gray-400 text-sm">الإجراءات</th>
+                </tr></thead>
+                <tbody id="paymentsTableBody">
+                    <tr><td colspan="7" class="text-center py-8 text-gray-500">لا توجد طلبات دفع</td></tr>
                 </tbody>
             </table>
         </div>
@@ -1452,6 +1483,93 @@ window.deleteOffer = async (id) => {
 
 // Load offers table on dashboard init
 loadOffersTable();
+        // ============================================
+// PAYMENTS CRUD (Dashboard)
+// ============================================
+async function loadPaymentsTable() {
+    try {
+        const response = await fetch('/api/admin/payments', { credentials: 'include' });
+        if (!response.ok) throw new Error('Failed to fetch payments');
+        const payments = await response.json();
+        const tbody = document.getElementById('paymentsTableBody');
+
+        if (payments.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-gray-500">لا توجد طلبات دفع</td></tr>`;
+            return;
+        }
+
+        const statusColors = {
+            pending: 'bg-amber-500/20 text-amber-300',
+            approved: 'bg-emerald-500/20 text-emerald-300',
+            rejected: 'bg-red-500/20 text-red-300'
+        };
+        const statusLabels = {
+            pending: 'قيد المراجعة',
+            approved: 'تم الموافقة',
+            rejected: 'مرفوض'
+        };
+
+        tbody.innerHTML = payments.map(payment => `
+            <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
+                <td class="py-3 px-4 text-gray-300">${payment.offerId || '-'}</td>
+                <td class="py-3 px-4 text-gray-300">${payment.phone}</td>
+                <td class="py-3 px-4 text-amber-400 font-bold">${payment.amount} ج</td>
+                <td class="py-3 px-4">
+                    <a href="${payment.imageUrl}" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition">
+                        <i class="fas fa-image"></i> عرض
+                    </a>
+                </td>
+                <td class="py-3 px-4">
+                    <span class="px-2 py-1 rounded-full text-xs ${statusColors[payment.status] || 'bg-gray-700 text-gray-400'}">
+                        ${statusLabels[payment.status] || payment.status}
+                    </span>
+                </td>
+                <td class="py-3 px-4 text-gray-300">${payment.createdAt ? new Date(payment.createdAt).toLocaleDateString('ar') : '-'}</td>
+                <td class="py-3 px-4">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        ${payment.status === 'pending' ? `
+                            <button onclick="updatePaymentStatus('${payment.id}', 'approved')" 
+                                    class="text-emerald-400 hover:text-emerald-300 transition action-btn bg-emerald-500/20 px-3 py-1 rounded-lg text-sm">
+                                <i class="fas fa-check"></i> موافقة
+                            </button>
+                            <button onclick="updatePaymentStatus('${payment.id}', 'rejected')" 
+                                    class="text-red-400 hover:text-red-300 transition action-btn bg-red-500/20 px-3 py-1 rounded-lg text-sm">
+                                <i class="fas fa-times"></i> رفض
+                            </button>
+                        ` : `
+                            <span class="text-gray-500 text-sm">${payment.status === 'approved' ? '✅ تمت الموافقة' : '❌ مرفوض'}</span>
+                        `}
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading payments:', error);
+    }
+}
+
+window.updatePaymentStatus = async (id, status) => {
+    if (!confirm(`هل أنت متأكد من ${status === 'approved' ? 'الموافقة على' : 'رفض'} هذا الطلب؟`)) return;
+    try {
+        const response = await fetch(`/api/admin/payments/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        if (response.ok) {
+            showToast(`تم ${status === 'approved' ? 'الموافقة على' : 'رفض'} الطلب بنجاح`, 'success');
+            loadPaymentsTable();
+        } else {
+            const data = await response.json();
+            showToast(data.error || 'حدث خطأ', 'error');
+        }
+    } catch (error) {
+        showToast('حدث خطأ', 'error');
+    }
+};
+
+// Add to loadDashboard or call separately
+loadPaymentsTable();
     </script>
 </body>
 </html>
