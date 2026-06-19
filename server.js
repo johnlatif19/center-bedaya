@@ -285,7 +285,6 @@ const generateToken = (user, isAdmin = false, adminData = null) => {
       email: user.email,
       username: user.fullName || user.username,
       isAdmin,
-      adminName: adminData?.adminName || null,
       adminUsername: adminData?.adminUsername || null
     },
     process.env.JWT_SECRET,
@@ -493,7 +492,7 @@ app.post('/api/auth/login', [
   }
 });
 
-// Admin Login
+// Admin Login - MODIFIED (no adminName)
 app.post('/api/auth/admin-login', [
   body('username').notEmpty().withMessage('اسم المستخدم مطلوب'),
   body('password').notEmpty().withMessage('كلمة المرور مطلوبة')
@@ -512,6 +511,7 @@ app.post('/api/auth/admin-login', [
       .get();
 
     let adminUser;
+
     if (adminSnapshot.empty) {
       const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
       const adminData = {
@@ -527,14 +527,17 @@ app.post('/api/auth/admin-login', [
     } else {
       const doc = adminSnapshot.docs[0];
       const docData = doc.data();
+      
       if (docData.adminUsername !== adminUsername) {
         await db.collection('users').doc(doc.id).update({
           adminUsername: adminUsername,
-          fullName: adminUsername
+          fullName: adminUsername,
+          updatedAt: new Date().toISOString()
         });
         docData.adminUsername = adminUsername;
         docData.fullName = adminUsername;
       }
+      
       adminUser = { id: doc.id, ...docData };
     }
 
@@ -656,8 +659,7 @@ app.get('/api/auth/verify-admin', authenticateToken, async (req, res) => {
       admin: {
         id: doc.id,
         email: userData.email,
-        username: userData.adminUsername || userData.fullName || 'Admin',
-        name: userData.adminName || userData.fullName || 'Admin'
+        username: userData.adminUsername || userData.fullName || 'Admin'
       }
     });
   } catch (error) {
@@ -1156,20 +1158,18 @@ app.post('/api/results/check', [
 });
 
 // ============================================
-// ADMIN DASHBOARD ROUTES
+// ADMIN DASHBOARD ROUTES - MODIFIED (no adminName)
 // ============================================
 
 // --- Stats ---
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
     
-    // Only sales are filtered by admin
+    // Filter sales by adminUsername only
     let salesSnapshot = await db.collection('sales')
       .where('date', '==', today)
-      .where('adminName', '==', adminName)
       .where('adminUsername', '==', adminUsername)
       .get();
     
@@ -1186,7 +1186,6 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
       todaySales,
       totalBookings: bookingsSnapshot.size || 0,
       totalMessages: messagesSnapshot.size || 0,
-      adminName,
       adminUsername
     });
   } catch (error) {
@@ -1195,14 +1194,12 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
   }
 });
 
-// --- Sales Chart (Filtered by Admin) ---
+// --- Sales Chart (Filtered by AdminUsername only) ---
 app.get('/api/admin/sales-chart', authenticateAdmin, async (req, res) => {
   try {
-    const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
     
     let salesSnapshot = await db.collection('sales')
-      .where('adminName', '==', adminName)
       .where('adminUsername', '==', adminUsername)
       .orderBy('date', 'desc')
       .limit(30)
@@ -1224,7 +1221,7 @@ app.get('/api/admin/sales-chart', authenticateAdmin, async (req, res) => {
   }
 });
 
-// --- Sales CRUD (Filtered by Admin) ---
+// --- Sales CRUD (Filtered by AdminUsername only) ---
 app.post('/api/admin/sales', authenticateAdmin, [
   body('customer').notEmpty().withMessage('اسم العميل مطلوب'),
   body('amount').isNumeric().withMessage('المبلغ يجب أن يكون رقماً')
@@ -1237,14 +1234,12 @@ app.post('/api/admin/sales', authenticateAdmin, [
 
     const { customer, amount } = req.body;
     const today = new Date().toISOString().split('T')[0];
-    const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
 
     const sale = {
       customer,
       amount: parseFloat(amount),
       date: today,
-      adminName,
       adminUsername,
       createdAt: new Date().toISOString()
     };
@@ -1269,7 +1264,6 @@ app.put('/api/admin/sales/:id', authenticateAdmin, [
 
     const { customer, amount } = req.body;
     const saleId = req.params.id;
-    const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
 
     const saleRef = db.collection('sales').doc(saleId);
@@ -1281,7 +1275,7 @@ app.put('/api/admin/sales/:id', authenticateAdmin, [
 
     // Verify this sale belongs to the current admin
     const saleData = saleDoc.data();
-    if (saleData.adminName !== adminName || saleData.adminUsername !== adminUsername) {
+    if (saleData.adminUsername !== adminUsername) {
       return res.status(403).json({ error: 'You do not have permission to update this sale' });
     }
 
@@ -1300,11 +1294,9 @@ app.put('/api/admin/sales/:id', authenticateAdmin, [
 
 app.get('/api/admin/sales', authenticateAdmin, async (req, res) => {
   try {
-    const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
     
     let salesSnapshot = await db.collection('sales')
-      .where('adminName', '==', adminName)
       .where('adminUsername', '==', adminUsername)
       .orderBy('createdAt', 'desc')
       .get();
@@ -1324,7 +1316,6 @@ app.get('/api/admin/sales', authenticateAdmin, async (req, res) => {
 app.delete('/api/admin/sales/:id', authenticateAdmin, async (req, res) => {
   try {
     const saleId = req.params.id;
-    const adminName = req.user.adminName || 'Admin';
     const adminUsername = req.user.adminUsername || 'admin';
 
     const saleRef = db.collection('sales').doc(saleId);
@@ -1336,7 +1327,7 @@ app.delete('/api/admin/sales/:id', authenticateAdmin, async (req, res) => {
 
     // Verify this sale belongs to the current admin
     const saleData = saleDoc.data();
-    if (saleData.adminName !== adminName || saleData.adminUsername !== adminUsername) {
+    if (saleData.adminUsername !== adminUsername) {
       return res.status(403).json({ error: 'You do not have permission to delete this sale' });
     }
 
