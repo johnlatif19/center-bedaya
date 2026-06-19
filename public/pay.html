@@ -110,6 +110,16 @@
             font-family: monospace;
             letter-spacing: 1px;
         }
+        .price-display {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #fbbf24;
+            text-align: center;
+            padding: 1rem;
+            background: rgba(245, 158, 11, 0.1);
+            border-radius: 12px;
+            border: 2px solid rgba(245, 158, 11, 0.2);
+        }
     </style>
 </head>
 <body class="font-cairo bg-gray-900 min-h-screen">
@@ -153,6 +163,12 @@
                     <h2 class="text-xl font-bold text-white" id="offerTitle">جاري تحميل العرض...</h2>
                 </div>
                 <p class="text-gray-400 text-sm" id="offerDescription"></p>
+                
+                <!-- Price Display -->
+                <div class="mt-4 price-display" id="priceDisplay">
+                    <span class="text-gray-400 text-sm block mb-1">المبلغ المطلوب</span>
+                    <span id="offerPrice">0</span> <span class="text-gray-400 text-lg">جنيه</span>
+                </div>
             </div>
 
             <!-- Wallet Info -->
@@ -187,11 +203,6 @@
                             class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
                     </div>
                     <div>
-                        <label class="block text-gray-300 text-sm font-bold mb-2">المبلغ المحول (جنيه)</label>
-                        <input type="number" id="paymentAmount" required placeholder="المبلغ"
-                            class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
-                    </div>
-                    <div>
                         <label class="block text-gray-300 text-sm font-bold mb-2">صورة إثبات الدفع (سكرين شوت)</label>
                         <div class="file-upload-area" id="fileUploadArea">
                             <div class="file-icon"><i class="fas fa-cloud-upload-alt"></i></div>
@@ -210,7 +221,7 @@
                     <button type="submit" 
                         class="w-full py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold rounded-lg hover:from-amber-700 hover:to-orange-700 transform hover:scale-105 transition-all duration-300 shadow-lg shadow-amber-500/25">
                         <i class="fas fa-check-circle ml-2"></i>
-                        تأكيد الدفع
+                        تأكيد الدفع - <span id="confirmPrice">0</span> ج
                     </button>
                 </form>
             </div>
@@ -233,19 +244,25 @@
             let isAuthenticated = false;
             let currentUser = null;
             let selectedOfferId = null;
+            let offerPrice = 0;
 
             // Get offer data from sessionStorage
             const offerId = sessionStorage.getItem('payOfferId');
             const offerTitle = sessionStorage.getItem('payOfferTitle');
+            const price = sessionStorage.getItem('payOfferPrice') || '0';
 
             // If no offer data, redirect back to offers
             if (!offerId || !offerTitle) {
                 window.location.href = '/offer';
             }
 
-            // Show offer title
-            document.getElementById('offerTitle').textContent = offerTitle || 'عرض غير معروف';
+            offerPrice = parseFloat(price) || 0;
             selectedOfferId = offerId;
+
+            // Show offer title and price
+            document.getElementById('offerTitle').textContent = offerTitle || 'عرض غير معروف';
+            document.getElementById('offerPrice').textContent = offerPrice.toFixed(2);
+            document.getElementById('confirmPrice').textContent = offerPrice.toFixed(2);
 
             // ============================================
             // TOAST
@@ -283,7 +300,6 @@
                         document.getElementById('userName').textContent = currentUser.fullName || 'مستخدم';
                         document.getElementById('userName').classList.remove('hidden');
                     } else {
-                        // Not authenticated, redirect to login
                         window.location.href = '/login';
                     }
                 } catch (_) {
@@ -298,6 +314,7 @@
                 await fetch('/api/auth/logout', { method: 'POST' });
                 sessionStorage.removeItem('payOfferId');
                 sessionStorage.removeItem('payOfferTitle');
+                sessionStorage.removeItem('payOfferPrice');
                 window.location.href = '/';
             }
 
@@ -357,7 +374,6 @@
                 e.preventDefault();
 
                 const phone = document.getElementById('payerPhone').value.trim();
-                const amount = document.getElementById('paymentAmount').value.trim();
                 const errorDiv = document.getElementById('paymentError');
                 const errorMsg = document.getElementById('paymentErrorMessage');
 
@@ -365,11 +381,6 @@
 
                 if (!phone) {
                     errorMsg.textContent = 'رقم التليفون مطلوب';
-                    errorDiv.classList.remove('hidden');
-                    return;
-                }
-                if (!amount || parseFloat(amount) <= 0) {
-                    errorMsg.textContent = 'المبلغ مطلوب ويجب أن يكون أكبر من صفر';
                     errorDiv.classList.remove('hidden');
                     return;
                 }
@@ -383,7 +394,7 @@
                 const formData = new FormData();
                 formData.append('offerId', selectedOfferId);
                 formData.append('phone', phone);
-                formData.append('amount', amount);
+                formData.append('amount', offerPrice.toString());
                 formData.append('image', selectedFile);
                 formData.append('userId', currentUser?.id || '');
 
@@ -398,6 +409,7 @@
                         // Clear session storage and redirect
                         sessionStorage.removeItem('payOfferId');
                         sessionStorage.removeItem('payOfferTitle');
+                        sessionStorage.removeItem('payOfferPrice');
                         setTimeout(() => {
                             window.location.href = '/offer';
                         }, 2000);
