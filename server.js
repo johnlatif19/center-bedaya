@@ -1900,11 +1900,6 @@ app.put('/api/admin/payments/:id', authenticateAdmin, [
     }
 });
 
-// Serve pay page
-app.get('/pay', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'pay.html'));
-});
-
 // ============================================
 // SERVE HTML PAGES
 // ============================================
@@ -1931,7 +1926,12 @@ app.get('/dashboard', (req, res) => {
 app.get('/reset-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
 });
-
+app.get('/offer', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'offer.html'));
+});
+app.get('/pay', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'pay.html'));
+});
 // ============================================
 // START SERVER
 // ============================================
