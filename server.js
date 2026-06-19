@@ -1751,6 +1751,161 @@ app.delete('/api/admin/offers/:id', authenticateAdmin, async (req, res) => {
 });
 
 // ============================================
+// PAYMENTS ROUTES
+// ============================================
+
+// Submit payment
+app.post('/api/payments', authenticateToken, upload.single('image'), [
+    body('offerId').notEmpty().withMessage('معرف العرض مطلوب'),
+    body('phone').notEmpty().withMessage('رقم الهاتف مطلوب'),
+    body('amount').isNumeric().withMessage('المبلغ مطلوب')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { offerId, phone, amount, userId } = req.body;
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({ error: 'صورة إثبات الدفع مطلوبة' });
+        }
+
+        // Upload image to Cloudinary
+        const result = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream({
+                folder: 'payments',
+                resource_type: 'image',
+                use_filename: true,
+                unique_filename: true
+            }, (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+            });
+            uploadStream.end(file.buffer);
+        });
+
+        const paymentData = {
+            offerId,
+            userId: userId || req.user.id,
+            phone,
+            amount: parseFloat(amount),
+            imageUrl: result.secure_url,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        const docRef = await db.collection('payments').add(paymentData);
+
+        // Send notification to admin
+        const adminHtml = `
+            <!DOCTYPE html>
+            <html dir="rtl" lang="ar">
+            <head><meta charset="UTF-8"><title>طلب دفع جديد</title></head>
+            <body style="font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; background-color: #0f172a; margin: 0; padding: 0;">
+                <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
+                    <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
+                        <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
+                            <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
+                            <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
+                        </div>
+                    </div>
+                    <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
+                        <div style="background: rgba(245, 158, 11, 0.15); border-right: 4px solid #f59e0b; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
+                            <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">💰 طلب دفع جديد</h2>
+                        </div>
+                        <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
+                            <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">🆔 معرف العرض:</span>
+                                <span style="color: #e2e8f0;">${offerId}</span>
+                            </div>
+                            <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">📱 رقم المحول:</span>
+                                <span style="color: #e2e8f0;">${phone}</span>
+                            </div>
+                            <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">💰 المبلغ:</span>
+                                <span style="color: #fbbf24; font-weight: 700;">${amount} جنيه</span>
+                            </div>
+                            <div style="display: flex; padding: 8px 0;">
+                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">📎 إثبات الدفع:</span>
+                                <a href="${result.secure_url}" target="_blank" style="color: #818cf8; text-decoration: underline;">عرض الصورة</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="padding: 20px 30px; text-align: center; border-top: 1px solid rgba(79,70,229,0.1); background: rgba(15, 23, 42, 0.4);">
+                        <p style="color: #64748b; font-size: 12px; margin: 0;">© 2025 مركز بداية للتدخل المبكر والتأهيل</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+        sendEmail(process.env.ADMIN_EMAIL, '💰 طلب دفع جديد - مركز بداية', adminHtml).catch(console.error);
+
+        res.status(201).json({
+            success: true,
+            message: 'تم إرسال طلب الدفع بنجاح',
+            payment: { id: docRef.id, ...paymentData }
+        });
+    } catch (error) {
+        console.error('Payment error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء معالجة الدفع' });
+    }
+});
+
+// Admin: Get all payments
+app.get('/api/admin/payments', authenticateAdmin, async (req, res) => {
+    try {
+        const paymentsSnapshot = await db.collection('payments')
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        const payments = [];
+        paymentsSnapshot.forEach(doc => {
+            payments.push({ id: doc.id, ...doc.data() });
+        });
+
+        res.json(payments);
+    } catch (error) {
+        console.error('Get payments error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء جلب طلبات الدفع' });
+    }
+});
+
+// Admin: Update payment status
+app.put('/api/admin/payments/:id', authenticateAdmin, [
+    body('status').isIn(['pending', 'approved', 'rejected']).withMessage('حالة غير صحيحة')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { status } = req.body;
+        const paymentId = req.params.id;
+
+        await db.collection('payments').doc(paymentId).update({
+            status,
+            updatedAt: new Date().toISOString()
+        });
+
+        res.json({ success: true, message: 'تم تحديث حالة الدفع بنجاح' });
+    } catch (error) {
+        console.error('Update payment error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء تحديث حالة الدفع' });
+    }
+});
+
+// Serve pay page
+app.get('/pay', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'pay.html'));
+});
+
+// ============================================
 // SERVE HTML PAGES
 // ============================================
 app.get('/', (req, res) => {
