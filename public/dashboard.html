@@ -1480,6 +1480,12 @@
                     } catch (error) { showToast('حدث خطأ', 'error'); }
                 };
 
+                // Load offers, packages, coupons, payments tables
+                loadOffersTable();
+                loadPackagesTable();
+                loadCouponsTable();
+                loadPaymentsTable();
+
                 loadDashboard();
                 setInterval(loadDashboard, 30000);
             }
@@ -1635,9 +1641,6 @@
                 showToast('حدث خطأ', 'error');
             }
         };
-
-        // Load offers table on dashboard init
-        loadOffersTable();
 
         // ============================================
         // PACKAGES CRUD (Dashboard)
@@ -1975,11 +1978,6 @@
                 showToast('حدث خطأ', 'error');
             }
         };
-
-        // Load tables on dashboard init
-        loadPackagesTable();
-        loadCouponsTable();
-        loadPaymentsTable();
     </script>
 </body>
 </html>
