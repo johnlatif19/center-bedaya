@@ -678,12 +678,9 @@
             }
 
             // ============================================
-            // AUTH VERIFICATION - MODIFIED with credentials
+            // AUTH VERIFICATION
             // ============================================
-            fetch('/api/auth/verify-admin', { 
-                method: 'GET',
-                credentials: 'include' 
-            })
+            fetch('/api/auth/verify-admin', { credentials: 'include' })
                 .then(response => {
                     if (!response.ok) { window.location.href = '/login-dashboard'; return; }
                     return response.json();
@@ -703,10 +700,7 @@
             // ============================================
             function initializeDashboard() {
                 document.getElementById('dashboardLogout')?.addEventListener('click', async () => {
-                    await fetch('/api/auth/logout', { 
-                        method: 'POST',
-                        credentials: 'include'
-                    });
+                    await fetch('/api/auth/logout', { method: 'POST' });
                     window.location.href = '/login-dashboard';
                 });
 
@@ -887,19 +881,17 @@
                     });
                 }
 
-                // ============================================
-                // Load Dashboard Data - MODIFIED with credentials
-                // ============================================
+                // Load Dashboard Data
                 async function loadDashboard() {
                     try {
                         const [statsRes, salesChartRes, salesRes, bookingsRes, contactsRes, resultsRes, messagesRes] = await Promise.all([
-                            fetch('/api/admin/stats', { credentials: 'include' }),
-                            fetch('/api/admin/sales-chart', { credentials: 'include' }),
-                            fetch('/api/admin/sales', { credentials: 'include' }),
-                            fetch('/api/admin/bookings', { credentials: 'include' }),
-                            fetch('/api/admin/contacts', { credentials: 'include' }),
-                            fetch('/api/admin/results', { credentials: 'include' }),
-                            fetch('/api/admin/messages', { credentials: 'include' })
+                            fetch('/api/admin/stats'),
+                            fetch('/api/admin/sales-chart'),
+                            fetch('/api/admin/sales'),
+                            fetch('/api/admin/bookings'),
+                            fetch('/api/admin/contacts'),
+                            fetch('/api/admin/results'),
+                            fetch('/api/admin/messages')
                         ]);
 
                         if (statsRes.status === 401 || statsRes.status === 403) {
@@ -1039,7 +1031,7 @@
                 }
 
                 // ============================================
-                // SALE CRUD - MODIFIED with credentials
+                // SALE CRUD
                 // ============================================
                 document.getElementById('addSaleForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
@@ -1049,7 +1041,6 @@
                     try {
                         const response = await fetch('/api/admin/sales', {
                             method: 'POST',
-                            credentials: 'include',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ customer, amount: parseFloat(amount) })
                         });
@@ -1080,7 +1071,6 @@
                     try {
                         const response = await fetch(`/api/admin/sales/${id}`, {
                             method: 'PUT',
-                            credentials: 'include',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ customer, amount: parseFloat(amount) })
                         });
@@ -1098,44 +1088,35 @@
                 window.deleteSale = async (id) => {
                     if (!confirm('هل أنت متأكد من حذف هذه العملية؟')) return;
                     try {
-                        const response = await fetch(`/api/admin/sales/${id}`, { 
-                            method: 'DELETE',
-                            credentials: 'include'
-                        });
+                        const response = await fetch(`/api/admin/sales/${id}`, { method: 'DELETE' });
                         if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
                     } catch (error) { showToast('حدث خطأ', 'error'); }
                 };
 
                 // ============================================
-                // BOOKING CRUD - MODIFIED with credentials
+                // BOOKING CRUD
                 // ============================================
                 window.deleteBooking = async (id) => {
                     if (!confirm('هل أنت متأكد من حذف هذا الحجز؟')) return;
                     try {
-                        const response = await fetch(`/api/admin/bookings/${id}`, { 
-                            method: 'DELETE',
-                            credentials: 'include'
-                        });
+                        const response = await fetch(`/api/admin/bookings/${id}`, { method: 'DELETE' });
                         if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
                     } catch (error) { showToast('حدث خطأ', 'error'); }
                 };
 
                 // ============================================
-                // CONTACT CRUD - MODIFIED with credentials
+                // CONTACT CRUD
                 // ============================================
                 window.deleteContact = async (id) => {
                     if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
                     try {
-                        const response = await fetch(`/api/admin/contacts/${id}`, { 
-                            method: 'DELETE',
-                            credentials: 'include'
-                        });
+                        const response = await fetch(`/api/admin/contacts/${id}`, { method: 'DELETE' });
                         if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
                     } catch (error) { showToast('حدث خطأ', 'error'); }
                 };
 
                 // ============================================
-                // RESULT CRUD - MODIFIED with credentials
+                // RESULT CRUD - MODIFIED to allow ALL file types
                 // ============================================
                 document.getElementById('uploadResultForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
@@ -1146,11 +1127,7 @@
                     formData.append('file', selectedFile);
                     formData.append('phone', phone);
                     try {
-                        const response = await fetch('/api/admin/results/upload', { 
-                            method: 'POST',
-                            credentials: 'include',
-                            body: formData 
-                        });
+                        const response = await fetch('/api/admin/results/upload', { method: 'POST', body: formData });
                         if (response.ok) {
                             showToast('تم رفع النتيجة بنجاح', 'success');
                             document.getElementById('uploadResultForm').reset();
@@ -1194,7 +1171,6 @@
                     try {
                         const response = await fetch(`/api/admin/results/${id}`, {
                             method: 'PUT',
-                            credentials: 'include',
                             body: formData
                         });
                         if (response.ok) {
@@ -1211,16 +1187,13 @@
                 window.deleteResult = async (id) => {
                     if (!confirm('هل أنت متأكد من حذف هذه النتيجة؟')) return;
                     try {
-                        const response = await fetch(`/api/admin/results/${id}`, { 
-                            method: 'DELETE',
-                            credentials: 'include'
-                        });
+                        const response = await fetch(`/api/admin/results/${id}`, { method: 'DELETE' });
                         if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
                     } catch (error) { showToast('حدث خطأ', 'error'); }
                 };
 
                 // ============================================
-                // MESSAGE CRUD - MODIFIED with credentials
+                // MESSAGE CRUD
                 // ============================================
                 document.getElementById('sendEmailForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
@@ -1230,7 +1203,6 @@
                     try {
                         const response = await fetch('/api/admin/send-email', {
                             method: 'POST',
-                            credentials: 'include',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ email, message })
                         });
@@ -1248,10 +1220,7 @@
                 window.deleteMessage = async (id) => {
                     if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
                     try {
-                        const response = await fetch(`/api/admin/messages/${id}`, { 
-                            method: 'DELETE',
-                            credentials: 'include'
-                        });
+                        const response = await fetch(`/api/admin/messages/${id}`, { method: 'DELETE' });
                         if (response.ok) { showToast('تم الحذف بنجاح', 'success'); loadDashboard(); }
                     } catch (error) { showToast('حدث خطأ', 'error'); }
                 };
