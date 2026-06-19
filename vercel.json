@@ -40,6 +40,10 @@
       "dest": "/public/offer.html"
     },
     {
+      "src": "/pay",
+      "dest": "/public/pay.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/public/index.html"
     }
