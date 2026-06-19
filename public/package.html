@@ -137,9 +137,67 @@
             cursor: not-allowed;
             transform: none;
         }
+
+        /* Page Auth Overlay */
+        .page-auth-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(10px);
+            z-index: 999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+        }
+        .page-auth-overlay.show {
+            display: flex;
+        }
+        .page-auth-overlay .auth-icon {
+            font-size: 4rem;
+            color: #4f46e5;
+            margin-bottom: 1.5rem;
+        }
+        .page-auth-overlay .auth-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #e2e8f0;
+            margin-bottom: 0.5rem;
+        }
+        .page-auth-overlay .auth-desc {
+            color: #94a3b8;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            max-width: 400px;
+        }
+        .page-auth-overlay .auth-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .page-auth-overlay .auth-buttons a {
+            padding: 0.75rem 2rem;
+            border-radius: 12px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
     </style>
 </head>
 <body class="font-cairo bg-gray-900">
+
+    <!-- Page Auth Overlay -->
+    <div class="page-auth-overlay" id="pageAuthOverlay">
+        <div class="auth-icon"><i class="fas fa-lock"></i></div>
+        <div class="auth-title">🔒 تسجيل الدخول مطلوب</div>
+        <div class="auth-desc">يرجى تسجيل الدخول لمشاهدة الباكدجات الحصرية</div>
+        <div class="auth-buttons">
+            <a href="/login" class="bg-indigo-600 text-white hover:bg-indigo-700">تسجيل الدخول</a>
+            <a href="/signup" class="bg-purple-600 text-white hover:bg-purple-700">إنشاء حساب</a>
+        </div>
+    </div>
 
     <!-- Navigation -->
     <nav class="fixed top-0 right-0 left-0 z-50 nav-blur shadow-lg">
@@ -317,6 +375,19 @@
                     currentUser = null;
                 }
                 updateUI();
+                // Show/hide page overlay based on auth
+                const overlay = document.getElementById('pageAuthOverlay');
+                if (overlay) {
+                    if (isAuthenticated) {
+                        overlay.classList.remove('show');
+                    } else {
+                        overlay.classList.add('show');
+                    }
+                }
+                // If authenticated, load packages
+                if (isAuthenticated) {
+                    loadPackages();
+                }
             }
 
             function updateUI() {
@@ -338,6 +409,8 @@
                 isAuthenticated = false;
                 currentUser = null;
                 updateUI();
+                const overlay = document.getElementById('pageAuthOverlay');
+                if (overlay) overlay.classList.add('show');
                 showToast('تم تسجيل الخروج بنجاح', 'success');
             }
 
@@ -467,7 +540,6 @@
 
                 initMobileMenu();
                 checkAuth();
-                loadPackages();
             });
 
         })();
