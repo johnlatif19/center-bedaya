@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الباكدجات - مركز بداية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { font-family: 'Cairo', sans-serif; }
+        html { scroll-behavior: smooth; }
+        body { direction: rtl; background: #0f172a; }
+        .nav-blur {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .package-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.08);
+            position: relative;
+            overflow: hidden;
+        }
+        .package-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.4);
+            border-color: rgba(79,70,229,0.3);
+        }
+        .package-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            padding: 0.25rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .package-price {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #fbbf24;
+        }
+        .package-price span {
+            font-size: 1rem;
+            color: #94a3b8;
+            font-weight: 400;
+        }
+        .package-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #cbd5e1;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .package-item i {
+            color: #34d399;
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #4f46e5, #7c3aed); border-radius: 4px; }
+        .fade-up {
+            opacity: 0;
+            animation: fadeUp 0.8s ease forwards;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .package-image {
+            height: 200px;
+            object-fit: cover;
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            .package-image { height: 160px; }
+        }
+        #toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            z-index: 2000;
+            transform: translateX(calc(100% + 30px));
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            max-width: 400px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        #toast.show { transform: translateX(0); opacity: 1; }
+        #toast.success {
+            background: linear-gradient(135deg, #065f46, #047857);
+            color: #d1fae5;
+            border: 1px solid rgba(52, 211, 153, 0.3);
+        }
+        #toast.error {
+            background: linear-gradient(135deg, #7f1d1d, #b91c1c);
+            color: #fca5a5;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+        #toast .toast-icon { margin-left: 10px; }
+
+        .btn-pay {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            justify-content: center;
+        }
+        .btn-pay:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px -10px rgba(245, 158, 11, 0.4);
+        }
+        .btn-pay:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+    </style>
+</head>
+<body class="font-cairo bg-gray-900">
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 right-0 left-0 z-50 nav-blur shadow-lg">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-4 space-x-reverse">
+                <a href="/" class="text-2xl font-bold text-indigo-400">
+                    <i class="fas fa-stethoscope ml-2"></i>
+                    مركز بداية
+                </a>
+            </div>
+            <div class="hidden md:flex items-center space-x-6 space-x-reverse">
+                <a href="/#about" class="text-gray-300 hover:text-indigo-400 transition">من نحن</a>
+                <a href="/#services" class="text-gray-300 hover:text-indigo-400 transition">خدماتنا</a>
+                <a href="/package" class="text-indigo-400 font-bold hover:text-indigo-300 transition border-b-2 border-indigo-400 pb-1">الباكدجات</a>
+                <a href="/offer" class="text-gray-300 hover:text-indigo-400 transition">العروض</a>
+                <a href="/#booking" class="text-gray-300 hover:text-indigo-400 transition">احجز الآن</a>
+                <a href="/#results" class="text-gray-300 hover:text-indigo-400 transition">النتائج</a>
+            </div>
+            <div class="flex items-center space-x-4 space-x-reverse">
+                <div id="authButtons" class="flex items-center space-x-3 space-x-reverse">
+                    <a href="/login" class="px-4 py-2 text-indigo-400 border-2 border-indigo-400 rounded-lg hover:bg-indigo-600 hover:text-white transition">
+                        <i class="fas fa-sign-in-alt ml-1"></i>دخول
+                    </a>
+                    <a href="/signup" class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition">
+                        <i class="fas fa-user-plus ml-1"></i>تسجيل
+                    </a>
+                </div>
+                <div id="userProfile" class="hidden items-center space-x-3 space-x-reverse">
+                    <span id="userName" class="text-gray-300 font-bold"></span>
+                    <button id="logoutBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                        <i class="fas fa-sign-out-alt ml-1"></i>خروج
+                    </button>
+                </div>
+                <button id="mobileMenuBtn" class="md:hidden p-2 text-gray-300 hover:bg-gray-800 rounded-lg transition">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </div>
+        </div>
+        <div id="mobileMenu" class="hidden md:hidden bg-gray-900 border-t border-gray-800">
+            <div class="container mx-auto px-4 py-3 flex flex-col space-y-3">
+                <a href="/#about" class="text-gray-300 hover:text-indigo-400 transition">من نحن</a>
+                <a href="/#services" class="text-gray-300 hover:text-indigo-400 transition">خدماتنا</a>
+                <a href="/package" class="text-indigo-400 font-bold hover:text-indigo-300 transition">الباكدجات</a>
+                <a href="/offer" class="text-gray-300 hover:text-indigo-400 transition">العروض</a>
+                <a href="/#booking" class="text-gray-300 hover:text-indigo-400 transition">احجز الآن</a>
+                <a href="/#results" class="text-gray-300 hover:text-indigo-400 transition">النتائج</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="relative pt-28 pb-16 overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-emerald-900/20 to-teal-900/20"></div>
+        <div class="container mx-auto px-4 relative z-10">
+            <div class="text-center fade-up">
+                <h1 class="text-4xl md:text-6xl font-bold text-white mb-4">📦 <span class="text-emerald-400">باكدجات</span>نا</h1>
+                <p class="text-xl text-gray-300 max-w-2xl mx-auto">اختر الباكدج المناسب لك واستمتع بخدماتنا المميزة بأسعار تنافسية</p>
+                <div class="h-1 w-24 bg-gradient-to-r from-emerald-500 to-teal-600 mx-auto mt-6 rounded-full"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Packages Grid -->
+    <section class="py-8 pb-20">
+        <div class="container mx-auto px-4">
+            <div id="packagesGrid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Loading State -->
+                <div class="col-span-full text-center py-12 text-gray-500" id="loadingState">
+                    <i class="fas fa-spinner fa-spin text-3xl text-emerald-400 mb-4 block"></i>
+                    <p>جاري تحميل الباكدجات...</p>
+                </div>
+                <!-- No Packages -->
+                <div class="col-span-full text-center py-12 hidden" id="noPackagesState">
+                    <div class="text-6xl text-gray-600 mb-4">📦</div>
+                    <p class="text-gray-400 text-lg">لا توجد باكدجات حالياً</p>
+                    <p class="text-gray-500 text-sm">ترقبوا الباكدجات القادمة!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-950 text-white border-t border-gray-800">
+        <div class="container mx-auto px-4 py-12">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-2xl font-bold text-indigo-400 mb-4">مركز بداية</h3>
+                    <p class="text-gray-400">للتدخل المبكر والتأهيل</p>
+                </div>
+                <div>
+                    <h4 class="text-lg font-bold mb-4">روابط سريعة</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="/" class="hover:text-indigo-400 transition">الرئيسية</a></li>
+                        <li><a href="/#about" class="hover:text-indigo-400 transition">معلومات عنا</a></li>
+                        <li><a href="/#services" class="hover:text-indigo-400 transition">خدماتنا</a></li>
+                        <li><a href="/package" class="hover:text-indigo-400 transition">الباكدجات</a></li>
+                        <li><a href="/offer" class="hover:text-indigo-400 transition">العروض</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-bold mb-4">معلومات الاتصال</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><i class="fas fa-phone ml-2 text-indigo-400"></i> 01278127159</li>
+                        <li><i class="fab fa-whatsapp ml-2 text-green-400"></i> 01278127159</li>
+                        <li><i class="fas fa-map-marker-alt ml-2 text-indigo-400"></i> امبابة، القاهرة</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-bold mb-4">أوقات العمل</h4>
+                    <ul class="space-y-1 text-gray-400 text-sm">
+                        <li>السبت: 2م - 11م</li>
+                        <li>الاحد - الخميس: 6 م - 11 م</li>
+                        <li>الجمعة: 2 م - 11 م</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500">
+                <p>© 2025 مركز بداية. جميع الحقوق محفوظة</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast -->
+    <div id="toast">
+        <span class="toast-icon"><i class="fas fa-check-circle"></i></span>
+        <span id="toastMessage">تم بنجاح</span>
+    </div>
+
+    <script>
+        (() => {
+            'use strict';
+
+            // ============================================
+            // TOAST
+            // ============================================
+            let toastTimeout = null;
+            function showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                const toastMsg = document.getElementById('toastMessage');
+                const icon = toast.querySelector('.toast-icon i');
+                if (toastTimeout) { clearTimeout(toastTimeout); toastTimeout = null; }
+                toast.classList.remove('success', 'error', 'show');
+                toastMsg.textContent = message;
+                if (type === 'success') {
+                    toast.classList.add('success');
+                    icon.className = 'fas fa-check-circle';
+                } else {
+                    toast.classList.add('error');
+                    icon.className = 'fas fa-exclamation-circle';
+                }
+                void toast.offsetWidth;
+                toast.classList.add('show');
+                toastTimeout = setTimeout(() => { toast.classList.remove('show'); toastTimeout = null; }, 3000);
+            }
+
+            // ============================================
+            // AUTH STATE
+            // ============================================
+            let isAuthenticated = false;
+            let currentUser = null;
+
+            async function checkAuth() {
+                try {
+                    const res = await fetch('/api/auth/verify', { credentials: 'include' });
+                    const data = await res.json();
+                    if (data.authenticated) {
+                        isAuthenticated = true;
+                        currentUser = data.user;
+                    } else {
+                        isAuthenticated = false;
+                        currentUser = null;
+                    }
+                } catch (_) {
+                    isAuthenticated = false;
+                    currentUser = null;
+                }
+                updateUI();
+            }
+
+            function updateUI() {
+                const authButtons = document.getElementById('authButtons');
+                const userProfile = document.getElementById('userProfile');
+                const userName = document.getElementById('userName');
+                if (isAuthenticated && currentUser) {
+                    if (authButtons) authButtons.classList.add('hidden');
+                    if (userProfile) userProfile.classList.remove('hidden');
+                    if (userName) userName.textContent = currentUser.fullName || 'مستخدم';
+                } else {
+                    if (authButtons) authButtons.classList.remove('hidden');
+                    if (userProfile) userProfile.classList.add('hidden');
+                }
+            }
+
+            async function logout() {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                isAuthenticated = false;
+                currentUser = null;
+                updateUI();
+                showToast('تم تسجيل الخروج بنجاح', 'success');
+            }
+
+            // ============================================
+            // MOBILE MENU
+            // ============================================
+            function initMobileMenu() {
+                const btn = document.getElementById('mobileMenuBtn');
+                const menu = document.getElementById('mobileMenu');
+                if (btn && menu) {
+                    btn.addEventListener('click', () => menu.classList.toggle('hidden'));
+                }
+            }
+
+            // ============================================
+            // LOAD PACKAGES
+            // ============================================
+            async function loadPackages() {
+                const grid = document.getElementById('packagesGrid');
+                const loading = document.getElementById('loadingState');
+                const noPackages = document.getElementById('noPackagesState');
+
+                if (loading) loading.classList.remove('hidden');
+                if (noPackages) noPackages.classList.add('hidden');
+
+                const children = grid.children;
+                for (let i = children.length - 1; i >= 0; i--) {
+                    if (children[i].id !== 'loadingState' && children[i].id !== 'noPackagesState') {
+                        children[i].remove();
+                    }
+                }
+
+                try {
+                    const res = await fetch('/api/packages');
+                    if (!res.ok) throw new Error('Failed to fetch packages');
+                    const packages = await res.json();
+
+                    if (loading) loading.classList.add('hidden');
+
+                    if (!packages || packages.length === 0) {
+                        if (noPackages) noPackages.classList.remove('hidden');
+                        return;
+                    }
+
+                    if (noPackages) noPackages.classList.add('hidden');
+
+                    packages.forEach((pkg, index) => {
+                        const card = document.createElement('div');
+                        card.className = `package-card rounded-2xl overflow-hidden shadow-lg fade-up`;
+                        card.style.animationDelay = `${(index % 3) * 0.15}s`;
+
+                        const imageHtml = pkg.imageUrl 
+                            ? `<img src="${pkg.imageUrl}" alt="${pkg.title}" class="package-image">`
+                            : `<div class="package-image bg-gradient-to-br from-emerald-900/50 to-teal-900/50 flex items-center justify-center text-6xl text-emerald-400/30">
+                                <i class="fas fa-box"></i>
+                               </div>`;
+
+                        const badgeHtml = pkg.badge 
+                            ? `<span class="package-badge">${pkg.badge}</span>`
+                            : '';
+
+                        const itemsHtml = pkg.items && pkg.items.length > 0 
+                            ? pkg.items.map(item => `
+                                <div class="package-item">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>${item}</span>
+                                </div>
+                            `).join('')
+                            : '<p class="text-gray-500 text-sm">لا توجد محتويات محددة</p>';
+
+                        card.innerHTML = `
+                            ${imageHtml}
+                            ${badgeHtml}
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-white mb-1">${pkg.title}</h3>
+                                <p class="text-gray-400 text-sm mb-3">${pkg.description || ''}</p>
+                                <div class="package-price">
+                                    ${pkg.price} <span>جنيه</span>
+                                </div>
+                                <div class="mt-4 space-y-1">
+                                    ${itemsHtml}
+                                </div>
+                                <button onclick="goToPayPackage('${pkg.id}', '${pkg.title.replace(/'/g, "\\'")}', '${pkg.price}')" 
+                                        class="btn-pay mt-4">
+                                    <i class="fas fa-credit-card"></i>
+                                    اشتر الآن - ${pkg.price} ج
+                                </button>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+
+                    document.querySelectorAll('.package-card.fade-up').forEach(el => {
+                        el.style.opacity = '0';
+                        el.style.animation = 'fadeUp 0.8s ease forwards';
+                        el.style.animationDelay = el.style.animationDelay || '0s';
+                    });
+
+                } catch (error) {
+                    console.error('Error loading packages:', error);
+                    if (loading) loading.classList.add('hidden');
+                    if (noPackages) noPackages.classList.remove('hidden');
+                    showToast('حدث خطأ في تحميل الباكدجات', 'error');
+                }
+            }
+
+            // ============================================
+            // GO TO PAY FOR PACKAGE
+            // ============================================
+            window.goToPayPackage = function(packageId, packageTitle, packagePrice) {
+                if (!isAuthenticated) {
+                    showToast('يرجى تسجيل الدخول أولاً', 'error');
+                    return;
+                }
+                sessionStorage.setItem('payPackageId', packageId);
+                sessionStorage.setItem('payPackageTitle', packageTitle);
+                sessionStorage.setItem('payPackagePrice', packagePrice || '0');
+                window.location.href = '/pay-package';
+            };
+
+            // ============================================
+            // INIT
+            // ============================================
+            document.addEventListener('DOMContentLoaded', () => {
+                const logoutBtn = document.getElementById('logoutBtn');
+                if (logoutBtn) logoutBtn.addEventListener('click', logout);
+
+                initMobileMenu();
+                checkAuth();
+                loadPackages();
+            });
+
+        })();
+    </script>
+</body>
+</html>
