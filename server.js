@@ -1619,7 +1619,8 @@ app.get('/api/offers', async (req, res) => {
 // Admin: Create offer
 app.post('/api/admin/offers', authenticateAdmin, upload.single('image'), [
     body('title').notEmpty().withMessage('عنوان العرض مطلوب'),
-    body('description').notEmpty().withMessage('وصف العرض مطلوب')
+    body('description').notEmpty().withMessage('وصف العرض مطلوب'),
+    body('price').isNumeric().withMessage('السعر مطلوب')
 ], async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -1627,7 +1628,7 @@ app.post('/api/admin/offers', authenticateAdmin, upload.single('image'), [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { title, description, badge, validUntil } = req.body;
+        const { title, description, price, badge, validUntil } = req.body;
         const file = req.file;
 
         let imageUrl = null;
@@ -1650,6 +1651,7 @@ app.post('/api/admin/offers', authenticateAdmin, upload.single('image'), [
         const offerData = {
             title,
             description,
+            price: parseFloat(price),
             badge: badge || '',
             validUntil: validUntil || null,
             imageUrl,
@@ -1687,7 +1689,8 @@ app.get('/api/admin/offers', authenticateAdmin, async (req, res) => {
 // Admin: Update offer
 app.put('/api/admin/offers/:id', authenticateAdmin, upload.single('image'), [
     body('title').notEmpty().withMessage('عنوان العرض مطلوب'),
-    body('description').notEmpty().withMessage('وصف العرض مطلوب')
+    body('description').notEmpty().withMessage('وصف العرض مطلوب'),
+    body('price').isNumeric().withMessage('السعر مطلوب')
 ], async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -1695,7 +1698,7 @@ app.put('/api/admin/offers/:id', authenticateAdmin, upload.single('image'), [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { title, description, badge, validUntil } = req.body;
+        const { title, description, price, badge, validUntil } = req.body;
         const file = req.file;
         const offerId = req.params.id;
 
@@ -1709,6 +1712,7 @@ app.put('/api/admin/offers/:id', authenticateAdmin, upload.single('image'), [
         let updateData = {
             title,
             description,
+            price: parseFloat(price),
             badge: badge || '',
             validUntil: validUntil || null,
             updatedAt: new Date().toISOString()
@@ -1794,6 +1798,7 @@ app.post('/api/payments', authenticateToken, upload.single('image'), [
             amount: parseFloat(amount),
             imageUrl: result.secure_url,
             status: 'pending',
+            type: 'offer',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -2068,6 +2073,7 @@ app.delete('/api/admin/packages/:id', authenticateAdmin, async (req, res) => {
         res.status(500).json({ error: 'حدث خطأ أثناء حذف الباكدج' });
     }
 });
+
 // ============================================
 // PACKAGE PAYMENT ROUTES
 // ============================================
@@ -2193,6 +2199,7 @@ app.post('/api/payments/package', authenticateToken, upload.single('image'), [
         res.status(500).json({ error: 'حدث خطأ أثناء معالجة الدفع' });
     }
 });
+
 // ============================================
 // COUPONS ROUTES (Admin only)
 // ============================================
@@ -2232,7 +2239,7 @@ app.post('/api/admin/coupons', authenticateAdmin, [
             packageId,
             validUntil: validUntil || null,
             usedCount: 0,
-            maxUses: null, // unlimited by default
+            maxUses: null,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -2352,20 +2359,23 @@ app.get('/dashboard', (req, res) => {
 app.get('/reset-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
 });
+
 app.get('/offer', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'offer.html'));
 });
+
 app.get('/pay', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'pay.html'));
 });
+
 app.get('/pay-package', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'pay-package.html'));
 });
 
-// Serve package page
 app.get('/package', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'package.html'));
 });
+
 // ============================================
 // START SERVER
 // ============================================
