@@ -36,6 +36,10 @@
       "dest": "/public/reset-password.html"
     },
     {
+      "src": "/offer",
+      "dest": "/public/offer.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/public/index.html"
     }
