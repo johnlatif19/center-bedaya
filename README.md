@@ -1,34 +1,40 @@
 # مركز بداية للتدخل المبكر والتأهيل
 
-## Complete Web Application
+## Center Bedaya - Complete Web Application
 
-### Overview
-A production-ready Arabic RTL web application for "مركز بداية للتدخل المبكر والتأهيل" (Bidaya Center for Early Intervention and Rehabilitation).
+### نظرة عامة
+تطبيق ويب متكامل باللغة العربية (RTL) خاص بـ **مركز بداية للتدخل المبكر والتأهيل**.
 
-### Features
-- **User Authentication**: JWT-based with secure cookies
-- **Admin Dashboard**: Complete management system
-- **Booking System**: Online appointment scheduling
-- **Results Management**: Upload and retrieve results
-- **Email System**: Send emails via Nodemailer
-- **Telegram Notifications**: Real-time alerts
-- **Cloudinary Integration**: File storage
-- **Dark/Light Mode**: Theme persistence
-- **Responsive Design**: Mobile-first approach
-- **RTL Support**: Full Arabic layout
+---
 
-### Tech Stack
+## المميزات
+- نظام تسجيل دخول آمن باستخدام JWT
+- لوحة تحكم إدارية متكاملة
+- نظام حجز مواعيد إلكتروني
+- إدارة ورفع النتائج
+- إرسال بريد إلكتروني عبر Nodemailer
+- إشعارات فورية عبر Telegram Bot
+- تخزين الملفات عبر Cloudinary
+- دعم الوضع الليلي والنهاري
+- تصميم متجاوب لجميع الأجهزة
+- دعم كامل للغة العربية (RTL)
+
+---
+
+## التقنيات المستخدمة
 - **Backend**: Node.js, Express.js
 - **Database**: Firebase Firestore
 - **Authentication**: JWT, bcrypt
-- **Email**: Nodemailer
-- **Storage**: Cloudinary
+- **Email Service**: Nodemailer
+- **File Storage**: Cloudinary
 - **Notifications**: Telegram Bot API
 - **Deployment**: Vercel
 
-### Installation
+---
 
-1. Clone the repository:
+## التثبيت والتشغيل
+
+### 1. استنساخ المشروع
 ```bash
 git clone <repository-url>
-cd markaz-bidaya
+cd center-bedaya
