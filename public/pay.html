@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الدفع - مركز بداية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { font-family: 'Cairo', sans-serif; }
+        body { direction: rtl; background: #0f172a; }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .nav-blur {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        #toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            z-index: 2000;
+            transform: translateX(calc(100% + 30px));
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            max-width: 400px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        #toast.show { transform: translateX(0); opacity: 1; }
+        #toast.success {
+            background: linear-gradient(135deg, #065f46, #047857);
+            color: #d1fae5;
+            border: 1px solid rgba(52, 211, 153, 0.3);
+        }
+        #toast.error {
+            background: linear-gradient(135deg, #7f1d1d, #b91c1c);
+            color: #fca5a5;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+        #toast .toast-icon { margin-left: 10px; }
+
+        .file-upload-area {
+            border: 2px dashed rgba(79,70,229,0.3);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+        }
+        .file-upload-area:hover {
+            border-color: #4f46e5;
+            background: rgba(79,70,229,0.05);
+        }
+        .file-upload-area.dragover {
+            border-color: #4f46e5;
+            background: rgba(79,70,229,0.1);
+        }
+        .file-upload-area .file-icon {
+            font-size: 3rem;
+            color: #4f46e5;
+            margin-bottom: 0.5rem;
+        }
+        .file-upload-area .file-text {
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+        .file-upload-area .file-text strong {
+            color: #818cf8;
+        }
+        .file-preview {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(30,41,59,0.5);
+            border-radius: 8px;
+            display: none;
+            align-items: center;
+            gap: 1rem;
+        }
+        .file-preview.show { display: flex; }
+        .file-preview .file-info { flex: 1; }
+        .file-preview .file-info .file-name { color: #e2e8f0; font-weight: bold; }
+        .file-preview .file-info .file-size { color: #94a3b8; font-size: 0.75rem; }
+        .file-preview .remove-file { color: #ef4444; cursor: pointer; transition: color 0.3s ease; }
+        .file-preview .remove-file:hover { color: #dc2626; }
+
+        .wallet-info {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05));
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        .wallet-info .wallet-label {
+            color: #94a3b8;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .wallet-info .wallet-value {
+            color: #fbbf24;
+            font-size: 1.2rem;
+            font-weight: 700;
+            font-family: monospace;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body class="font-cairo bg-gray-900 min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 right-0 left-0 z-50 nav-blur shadow-lg">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-4 space-x-reverse">
+                <a href="/" class="text-2xl font-bold text-indigo-400">
+                    <i class="fas fa-stethoscope ml-2"></i>
+                    مركز بداية
+                </a>
+            </div>
+            <div class="flex items-center space-x-4 space-x-reverse">
+                <span id="userName" class="text-gray-300 font-bold hidden"></span>
+                <button onclick="window.location.href='/offer'" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition">
+                    <i class="fas fa-arrow-right ml-1"></i>
+                    العودة للعروض
+                </button>
+                <button id="logoutBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                    <i class="fas fa-sign-out-alt ml-1"></i>
+                    خروج
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <section class="pt-24 pb-12">
+        <div class="container mx-auto px-4 max-w-2xl">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-white">💳 <span class="text-amber-400">الدفع</span></h1>
+                <p class="text-gray-400 mt-2">أكمل عملية الدفع لتأكيد اشتراكك في العرض</p>
+                <div class="h-1 w-20 bg-gradient-to-r from-amber-500 to-orange-600 mx-auto mt-4 rounded-full"></div>
+            </div>
+
+            <!-- Offer Info -->
+            <div class="glass-card p-6 rounded-2xl shadow-lg mb-6" id="offerInfo">
+                <div class="flex items-center gap-3 mb-2">
+                    <i class="fas fa-tag text-amber-400 text-xl"></i>
+                    <h2 class="text-xl font-bold text-white" id="offerTitle">جاري تحميل العرض...</h2>
+                </div>
+                <p class="text-gray-400 text-sm" id="offerDescription"></p>
+            </div>
+
+            <!-- Wallet Info -->
+            <div class="glass-card p-6 rounded-2xl shadow-lg mb-6">
+                <h3 class="text-lg font-bold text-white mb-4">💼 بيانات المحفظة</h3>
+                <div class="wallet-info">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="wallet-label">نوع المحفظة</p>
+                            <p class="wallet-value text-amber-400">📱 فودافون كاش</p>
+                        </div>
+                        <div>
+                            <p class="wallet-label">رقم المحفظة</p>
+                            <p class="wallet-value">01278127159</p>
+                        </div>
+                        <div class="col-span-2">
+                            <p class="wallet-label">المحفظة مسجلة باسم</p>
+                            <p class="wallet-value text-amber-400">مركز بداية للتدخل المبكر</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-3 text-center">⚠️ يرجى تحويل المبلغ المطلوب إلى رقم المحفظة أعلاه</p>
+            </div>
+
+            <!-- Payment Form -->
+            <div class="glass-card p-6 rounded-2xl shadow-lg">
+                <h3 class="text-lg font-bold text-white mb-4">📝 تأكيد الدفع</h3>
+                <form id="paymentForm" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-300 text-sm font-bold mb-2">رقم التليفون الذي حولت منه</label>
+                        <input type="tel" id="payerPhone" required placeholder="مثلاً: 01234567890"
+                            class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-gray-300 text-sm font-bold mb-2">المبلغ المحول (جنيه)</label>
+                        <input type="number" id="paymentAmount" required placeholder="المبلغ"
+                            class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-gray-300 text-sm font-bold mb-2">صورة إثبات الدفع (سكرين شوت)</label>
+                        <div class="file-upload-area" id="fileUploadArea">
+                            <div class="file-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                            <div class="file-text"><strong>اختر صورة</strong> أو اسحبها هنا<br><span class="text-xs text-gray-500">PNG, JPG, WEBP - حد أقصى 5 ميجابايت</span></div>
+                            <input type="file" id="paymentFile" class="hidden" accept="image/*">
+                        </div>
+                        <div class="file-preview" id="filePreview">
+                            <div class="file-info"><div class="file-name" id="fileName">اسم الملف</div><div class="file-size" id="fileSize">حجم الملف</div></div>
+                            <div class="remove-file" id="removeFile"><i class="fas fa-times-circle text-xl"></i></div>
+                        </div>
+                        <div id="fileUploadError" class="hidden text-red-400 text-sm mt-2"></div>
+                    </div>
+                    <div id="paymentError" class="hidden bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded relative" role="alert">
+                        <span id="paymentErrorMessage"></span>
+                    </div>
+                    <button type="submit" 
+                        class="w-full py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold rounded-lg hover:from-amber-700 hover:to-orange-700 transform hover:scale-105 transition-all duration-300 shadow-lg shadow-amber-500/25">
+                        <i class="fas fa-check-circle ml-2"></i>
+                        تأكيد الدفع
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Toast -->
+    <div id="toast">
+        <span class="toast-icon"><i class="fas fa-check-circle"></i></span>
+        <span id="toastMessage">تم بنجاح</span>
+    </div>
+
+    <script>
+        (() => {
+            'use strict';
+
+            // ============================================
+            // CHECK AUTH & OFFER DATA
+            // ============================================
+            let isAuthenticated = false;
+            let currentUser = null;
+            let selectedOfferId = null;
+
+            // Get offer data from sessionStorage
+            const offerId = sessionStorage.getItem('payOfferId');
+            const offerTitle = sessionStorage.getItem('payOfferTitle');
+
+            // If no offer data, redirect back to offers
+            if (!offerId || !offerTitle) {
+                window.location.href = '/offer';
+            }
+
+            // Show offer title
+            document.getElementById('offerTitle').textContent = offerTitle || 'عرض غير معروف';
+            selectedOfferId = offerId;
+
+            // ============================================
+            // TOAST
+            // ============================================
+            let toastTimeout = null;
+            function showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                const toastMsg = document.getElementById('toastMessage');
+                const icon = toast.querySelector('.toast-icon i');
+                if (toastTimeout) { clearTimeout(toastTimeout); toastTimeout = null; }
+                toast.classList.remove('success', 'error', 'show');
+                toastMsg.textContent = message;
+                if (type === 'success') {
+                    toast.classList.add('success');
+                    icon.className = 'fas fa-check-circle';
+                } else {
+                    toast.classList.add('error');
+                    icon.className = 'fas fa-exclamation-circle';
+                }
+                void toast.offsetWidth;
+                toast.classList.add('show');
+                toastTimeout = setTimeout(() => { toast.classList.remove('show'); toastTimeout = null; }, 3000);
+            }
+
+            // ============================================
+            // AUTH CHECK
+            // ============================================
+            async function checkAuth() {
+                try {
+                    const res = await fetch('/api/auth/verify', { credentials: 'include' });
+                    const data = await res.json();
+                    if (data.authenticated) {
+                        isAuthenticated = true;
+                        currentUser = data.user;
+                        document.getElementById('userName').textContent = currentUser.fullName || 'مستخدم';
+                        document.getElementById('userName').classList.remove('hidden');
+                    } else {
+                        // Not authenticated, redirect to login
+                        window.location.href = '/login';
+                    }
+                } catch (_) {
+                    window.location.href = '/login';
+                }
+            }
+
+            // ============================================
+            // LOGOUT
+            // ============================================
+            async function logout() {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                sessionStorage.removeItem('payOfferId');
+                sessionStorage.removeItem('payOfferTitle');
+                window.location.href = '/';
+            }
+
+            // ============================================
+            // FILE UPLOAD HANDLERS
+            // ============================================
+            const fileUploadArea = document.getElementById('fileUploadArea');
+            const fileInput = document.getElementById('paymentFile');
+            const filePreview = document.getElementById('filePreview');
+            const fileName = document.getElementById('fileName');
+            const fileSize = document.getElementById('fileSize');
+            const removeFile = document.getElementById('removeFile');
+            const fileUploadError = document.getElementById('fileUploadError');
+            let selectedFile = null;
+
+            fileUploadArea?.addEventListener('click', () => fileInput?.click());
+            fileUploadArea?.addEventListener('dragover', (e) => { e.preventDefault(); fileUploadArea.classList.add('dragover'); });
+            fileUploadArea?.addEventListener('dragleave', () => fileUploadArea.classList.remove('dragover'));
+            fileUploadArea?.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileUploadArea.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+            });
+            fileInput?.addEventListener('change', (e) => { if (e.target.files.length > 0) handleFile(e.target.files[0]); });
+
+            function handleFile(file) {
+                if (!file.type.startsWith('image/')) {
+                    fileUploadError.textContent = 'يرجى اختيار ملف صورة فقط';
+                    fileUploadError.classList.remove('hidden');
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    fileUploadError.textContent = 'حجم الصورة كبير جداً. الحد الأقصى 5 ميجابايت';
+                    fileUploadError.classList.remove('hidden');
+                    return;
+                }
+                fileUploadError.classList.add('hidden');
+                selectedFile = file;
+                fileName.textContent = file.name;
+                fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' ميجابايت';
+                filePreview.classList.add('show');
+                fileUploadArea.style.display = 'none';
+            }
+
+            removeFile?.addEventListener('click', () => {
+                selectedFile = null;
+                filePreview.classList.remove('show');
+                fileUploadArea.style.display = 'block';
+                fileInput.value = '';
+                fileUploadError.classList.add('hidden');
+            });
+
+            // ============================================
+            // PAYMENT FORM SUBMIT
+            // ============================================
+            document.getElementById('paymentForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const phone = document.getElementById('payerPhone').value.trim();
+                const amount = document.getElementById('paymentAmount').value.trim();
+                const errorDiv = document.getElementById('paymentError');
+                const errorMsg = document.getElementById('paymentErrorMessage');
+
+                errorDiv.classList.add('hidden');
+
+                if (!phone) {
+                    errorMsg.textContent = 'رقم التليفون مطلوب';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+                if (!amount || parseFloat(amount) <= 0) {
+                    errorMsg.textContent = 'المبلغ مطلوب ويجب أن يكون أكبر من صفر';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+                if (!selectedFile) {
+                    errorMsg.textContent = 'يرجى رفع صورة إثبات الدفع';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('offerId', selectedOfferId);
+                formData.append('phone', phone);
+                formData.append('amount', amount);
+                formData.append('image', selectedFile);
+                formData.append('userId', currentUser?.id || '');
+
+                try {
+                    const response = await fetch('/api/payments', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        showToast('تم إرسال طلب الدفع بنجاح! سيتم مراجعته قريباً', 'success');
+                        // Clear session storage and redirect
+                        sessionStorage.removeItem('payOfferId');
+                        sessionStorage.removeItem('payOfferTitle');
+                        setTimeout(() => {
+                            window.location.href = '/offer';
+                        }, 2000);
+                    } else {
+                        const data = await response.json();
+                        errorMsg.textContent = data.error || 'حدث خطأ أثناء إرسال الطلب';
+                        errorDiv.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    errorMsg.textContent = 'حدث خطأ في التواصل مع الخادم';
+                    errorDiv.classList.remove('hidden');
+                }
+            });
+
+            // ============================================
+            // INIT
+            // ============================================
+            document.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('logoutBtn')?.addEventListener('click', logout);
+                checkAuth();
+            });
+
+        })();
+    </script>
+</body>
+</html>
