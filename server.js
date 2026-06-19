@@ -2234,6 +2234,14 @@ app.get('/offer', (req, res) => {
 app.get('/pay', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'pay.html'));
 });
+app.get('/pay-package', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'pay-package.html'));
+});
+
+// Serve package page
+app.get('/package', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'package.html'));
+});
 // ============================================
 // START SERVER
 // ============================================
