@@ -501,31 +501,23 @@ app.post('/api/auth/admin-login', [
   try {
     const { username, password } = req.body;
 
-    let matchedAdmin = null;
-    let adminName = null;
-    let adminUsername = null;
-
-    if (username === process.env.ADMIN_USERNAME1 && password === process.env.ADMIN_PASSWORD1) {
-      matchedAdmin = true;
-      adminName = process.env.ADMIN_NAME1 || 'Admin 1';
-      adminUsername = process.env.ADMIN_USERNAME1;
-    } else if (username === process.env.ADMIN_USERNAME2 && password === process.env.ADMIN_PASSWORD2) {
-      matchedAdmin = true;
-      adminName = process.env.ADMIN_NAME2 || 'Admin 2';
-      adminUsername = process.env.ADMIN_USERNAME2;
-    }
-
-    if (!matchedAdmin) {
+    // التحقق من المدير الوحيد
+    if (username !== process.env.ADMIN_NAME || password !== process.env.ADMIN_PASSWORD) {
       return res.status(401).json({ error: 'بيانات الدخول غير صحيحة' });
     }
 
+    const adminName = process.env.ADMIN_NAME;
+    const adminUsername = process.env.ADMIN_NAME;
+
+    // البحث عن المدير في قاعدة البيانات
     let adminSnapshot = await db.collection('users')
       .where('email', '==', process.env.ADMIN_EMAIL)
       .get();
 
     let adminUser;
     if (adminSnapshot.empty) {
-      const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD1, 10);
+      // إنشاء حساب المدير إذا لم يكن موجوداً
+      const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
       const adminData = {
         fullName: adminName,
         email: process.env.ADMIN_EMAIL,
@@ -538,6 +530,7 @@ app.post('/api/auth/admin-login', [
       const docRef = await db.collection('users').add(adminData);
       adminUser = { id: docRef.id, ...adminData };
     } else {
+      // تحديث بيانات المدير إذا كانت مختلفة
       const doc = adminSnapshot.docs[0];
       const docData = doc.data();
       if (docData.adminName !== adminName || docData.adminUsername !== adminUsername) {
@@ -553,6 +546,7 @@ app.post('/api/auth/admin-login', [
       adminUser = { id: doc.id, ...docData };
     }
 
+    // إنشاء التوكن
     const token = generateToken(adminUser, true, { adminName, adminUsername });
 
     res.cookie('token', token, {
