@@ -246,6 +246,14 @@
                     <i class="fas fa-tags w-5"></i>
                     <span>العروض</span>
                 </a>
+                <a data-section="section-packages" class="sidebar-link flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-indigo-900/30 text-gray-300 hover:text-indigo-400 transition">
+                    <i class="fas fa-boxes w-5"></i>
+                    <span>الباكدجات</span>
+                </a>
+                <a data-section="section-coupons" class="sidebar-link flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-indigo-900/30 text-gray-300 hover:text-indigo-400 transition">
+                    <i class="fas fa-ticket-alt w-5"></i>
+                    <span>الكوبونات</span>
+                </a>
                 <a data-section="section-payments" class="sidebar-link flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-indigo-900/30 text-gray-300 hover:text-indigo-400 transition">
                     <i class="fas fa-credit-card w-5"></i>
                     <span>الدفعات</span>
@@ -531,105 +539,248 @@
                     </div>
                 </div>
             </section>
+
             <!-- ============================================ -->
-<!-- SECTION 6: العروض (Offers) -->
-<!-- ============================================ -->
-<section id="section-offers" class="dashboard-section">
-    <div class="flex items-center gap-3 mb-6">
-        <div class="w-1 h-8 bg-gradient-to-b from-pink-500 to-rose-600 rounded-full"></div>
-        <h2 class="text-2xl font-bold text-white">إدارة العروض</h2>
-    </div>
+            <!-- SECTION 6: العروض (Offers) -->
+            <!-- ============================================ -->
+            <section id="section-offers" class="dashboard-section">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-1 h-8 bg-gradient-to-b from-pink-500 to-rose-600 rounded-full"></div>
+                    <h2 class="text-2xl font-bold text-white">إدارة العروض</h2>
+                </div>
 
-    <!-- Add Offer -->
-    <div class="glass-card p-6 rounded-2xl shadow-lg mb-8">
-        <h3 class="text-xl font-bold text-white mb-4">إضافة عرض جديد</h3>
-        <form id="addOfferForm" class="space-y-4">
-            <div class="grid md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-gray-300 text-sm font-bold mb-2">عنوان العرض</label>
-                    <input type="text" id="offerTitle" required placeholder="مثلاً: خصم 50% على جلسات التخاطب" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
-                </div>
-                <div>
-                    <label class="block text-gray-300 text-sm font-bold mb-2">نوع العرض (اختياري)</label>
-                    <input type="text" id="offerBadge" placeholder="مثلاً: عرض محدود" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
-                </div>
-            </div>
-            <div>
-                <label class="block text-gray-300 text-sm font-bold mb-2">وصف العرض</label>
-                <textarea id="offerDescription" rows="3" required placeholder="وصف تفصيلي للعرض..." class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition"></textarea>
-            </div>
-            <div class="grid md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-gray-300 text-sm font-bold mb-2">صورة العرض (اختياري)</label>
-                    <div class="file-upload-area" id="offerFileUploadArea" style="padding:1rem;">
-                        <div class="file-icon" style="font-size:2rem;"><i class="fas fa-cloud-upload-alt"></i></div>
-                        <div class="file-text"><strong>اختر صورة</strong> أو اسحبها هنا<br><span class="text-xs text-gray-500">PNG, JPG, WEBP - حد أقصى 5 ميجابايت</span></div>
-                        <input type="file" id="offerFile" class="hidden" accept="image/*">
-                    </div>
-                    <div class="file-preview" id="offerFilePreview">
-                        <div class="file-info"><div class="file-name" id="offerFileName">اسم الملف</div><div class="file-size" id="offerFileSize">حجم الملف</div></div>
-                        <div class="remove-file" id="offerRemoveFile"><i class="fas fa-times-circle text-xl"></i></div>
-                    </div>
-                    <div id="offerFileUploadError" class="hidden text-red-400 text-sm mt-2"></div>
-                </div>
-                <div>
-                    <label class="block text-gray-300 text-sm font-bold mb-2">صالح حتى (اختياري)</label>
-                    <input type="date" id="offerValidUntil" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
-                </div>
-            </div>
-            <button type="submit" class="w-full py-3 bg-gradient-to-r from-pink-600 to-rose-600 text-white font-bold rounded-lg hover:from-pink-700 hover:to-rose-700 transition shadow-lg shadow-pink-500/25">
-                <i class="fas fa-plus ml-2"></i>إضافة عرض
-            </button>
-        </form>
-    </div>
-
-    <!-- Offers List -->
-    <div class="glass-card p-6 rounded-2xl shadow-lg">
-        <h3 class="text-xl font-bold text-white mb-4">قائمة العروض</h3>
-        <div class="table-scroll">
-            <table class="w-full">
-                <thead><tr class="border-b border-gray-700 sticky top-0 bg-gray-900/95">
-                    <th class="text-right py-3 px-4 text-gray-400 text-sm">العنوان</th>
-                    <th class="text-right py-3 px-4 text-gray-400 text-sm">الوصف</th>
-                    <th class="text-right py-3 px-4 text-gray-400 text-sm">النوع</th>
-                    <th class="text-right py-3 px-4 text-gray-400 text-sm">صالح حتى</th>
-                    <th class="text-right py-3 px-4 text-gray-400 text-sm">صورة</th>
-                    <th class="text-right py-3 px-4 text-gray-400 text-sm">الإجراءات</th>
-                </tr></thead>
-                <tbody id="offersTableBody">
-                    <tr><td colspan="6" class="text-center py-8 text-gray-500">لا توجد عروض</td></tr>
-                </tbody>
-                    </table>
+                <!-- Add Offer -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg mb-8">
+                    <h3 class="text-xl font-bold text-white mb-4">إضافة عرض جديد</h3>
+                    <form id="addOfferForm" class="space-y-4">
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-300 text-sm font-bold mb-2">عنوان العرض</label>
+                                <input type="text" id="offerTitle" required placeholder="مثلاً: خصم 50% على جلسات التخاطب" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            </div>
+                            <div>
+                                <label class="block text-gray-300 text-sm font-bold mb-2">نوع العرض (اختياري)</label>
+                                <input type="text" id="offerBadge" placeholder="مثلاً: عرض محدود" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            </div>
                         </div>
+                        <div>
+                            <label class="block text-gray-300 text-sm font-bold mb-2">وصف العرض</label>
+                            <textarea id="offerDescription" rows="3" required placeholder="وصف تفصيلي للعرض..." class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition"></textarea>
+                        </div>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-gray-300 text-sm font-bold mb-2">سعر العرض (جنيه)</label>
+                                <input type="number" id="offerPrice" required placeholder="مثلاً: 500" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            </div>
+                            <div>
+                                <label class="block text-gray-300 text-sm font-bold mb-2">صورة العرض (اختياري)</label>
+                                <div class="file-upload-area" id="offerFileUploadArea" style="padding:1rem;">
+                                    <div class="file-icon" style="font-size:2rem;"><i class="fas fa-cloud-upload-alt"></i></div>
+                                    <div class="file-text"><strong>اختر صورة</strong> أو اسحبها هنا<br><span class="text-xs text-gray-500">PNG, JPG, WEBP - حد أقصى 5 ميجابايت</span></div>
+                                    <input type="file" id="offerFile" class="hidden" accept="image/*">
+                                </div>
+                                <div class="file-preview" id="offerFilePreview">
+                                    <div class="file-info"><div class="file-name" id="offerFileName">اسم الملف</div><div class="file-size" id="offerFileSize">حجم الملف</div></div>
+                                    <div class="remove-file" id="offerRemoveFile"><i class="fas fa-times-circle text-xl"></i></div>
+                                </div>
+                                <div id="offerFileUploadError" class="hidden text-red-400 text-sm mt-2"></div>
+                            </div>
+                            <div>
+                                <label class="block text-gray-300 text-sm font-bold mb-2">صالح حتى (اختياري)</label>
+                                <input type="date" id="offerValidUntil" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-gradient-to-r from-pink-600 to-rose-600 text-white font-bold rounded-lg hover:from-pink-700 hover:to-rose-700 transition shadow-lg shadow-pink-500/25">
+                            <i class="fas fa-plus ml-2"></i>إضافة عرض
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Offers List -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-bold text-white mb-4">قائمة العروض</h3>
+                    <div class="table-scroll">
+                        <table class="w-full">
+                            <thead><tr class="border-b border-gray-700 sticky top-0 bg-gray-900/95">
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">العنوان</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">السعر</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">الوصف</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">النوع</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">صالح حتى</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">صورة</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">الإجراءات</th>
+                            </tr></thead>
+                            <tbody id="offersTableBody">
+                                <tr><td colspan="7" class="text-center py-8 text-gray-500">لا توجد عروض</td></tr>
+                            </tbody>
+                        </table>
                     </div>
+                </div>
             </section>
+
             <!-- ============================================ -->
-<!-- SECTION 7: الدفعات (Payments) -->
-<!-- ============================================ -->
-<section id="section-payments" class="dashboard-section">
-    <div class="flex items-center gap-3 mb-6">
-        <div class="w-1 h-8 bg-gradient-to-b from-amber-500 to-orange-600 rounded-full"></div>
-        <h2 class="text-2xl font-bold text-white">إدارة الدفعات</h2>
-    </div>
-    <div class="glass-card p-6 rounded-2xl shadow-lg">
-        <div class="table-scroll">
-            <table class="w-full">
-                <thead><tr class="border-b border-gray-700 sticky top-0 bg-gray-900/95">
-                    <th class="text-right py-3 px-4 text-gray-400 text-sm">العرض</th>
-                    <th class="text-right py-3 px-4 text-gray-400 text-sm">رقم المحول</th>
-                    <th class="text-right py-3 px-4 text-gray-400 text-sm">المبلغ</th>
-                    <th class="text-right py-3 px-4 text-gray-400 text-sm">إثبات الدفع</th>
-                    <th class="text-right py-3 px-4 text-gray-400 text-sm">الحالة</th>
-                    <th class="text-right py-3 px-4 text-gray-400 text-sm">التاريخ</th>
-                    <th class="text-right py-3 px-4 text-gray-400 text-sm">الإجراءات</th>
-                </tr></thead>
-                <tbody id="paymentsTableBody">
-                    <tr><td colspan="7" class="text-center py-8 text-gray-500">لا توجد طلبات دفع</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</section>
+            <!-- SECTION 7: الباكدجات (Packages) -->
+            <!-- ============================================ -->
+            <section id="section-packages" class="dashboard-section">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-1 h-8 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></div>
+                    <h2 class="text-2xl font-bold text-white">إدارة الباكدجات</h2>
+                </div>
+
+                <!-- Add Package -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg mb-8">
+                    <h3 class="text-xl font-bold text-white mb-4">إضافة باكدج جديد</h3>
+                    <form id="addPackageForm" class="space-y-4">
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-300 text-sm font-bold mb-2">عنوان الباكدج</label>
+                                <input type="text" id="packageTitle" required placeholder="مثلاً: الباكدج الذهبي" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            </div>
+                            <div>
+                                <label class="block text-gray-300 text-sm font-bold mb-2">السعر (جنيه)</label>
+                                <input type="number" id="packagePrice" required placeholder="مثلاً: 500" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 text-sm font-bold mb-2">وصف الباكدج</label>
+                            <textarea id="packageDescription" rows="3" required placeholder="وصف تفصيلي للباكدج..." class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 text-sm font-bold mb-2">المحتويات (افصل بينها بفاصلة)</label>
+                            <input type="text" id="packageItems" required placeholder="جلسة تخاطب, جلسة تعديل سلوك, تقرير شامل" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-300 text-sm font-bold mb-2">نوع الباكدج (اختياري)</label>
+                                <input type="text" id="packageBadge" placeholder="مثلاً: مميز" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            </div>
+                            <div>
+                                <label class="block text-gray-300 text-sm font-bold mb-2">صورة الباكدج (اختياري)</label>
+                                <div class="file-upload-area" id="packageFileUploadArea" style="padding:1rem;">
+                                    <div class="file-icon" style="font-size:2rem;"><i class="fas fa-cloud-upload-alt"></i></div>
+                                    <div class="file-text"><strong>اختر صورة</strong><br><span class="text-xs text-gray-500">PNG, JPG, WEBP - حد أقصى 5 ميجابايت</span></div>
+                                    <input type="file" id="packageFile" class="hidden" accept="image/*">
+                                </div>
+                                <div class="file-preview" id="packageFilePreview">
+                                    <div class="file-info"><div class="file-name" id="packageFileName">اسم الملف</div><div class="file-size" id="packageFileSize">حجم الملف</div></div>
+                                    <div class="remove-file" id="packageRemoveFile"><i class="fas fa-times-circle text-xl"></i></div>
+                                </div>
+                                <div id="packageFileUploadError" class="hidden text-red-400 text-sm mt-2"></div>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-lg hover:from-emerald-700 hover:to-teal-700 transition shadow-lg shadow-emerald-500/25">
+                            <i class="fas fa-plus ml-2"></i>إضافة باكدج
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Packages List -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-bold text-white mb-4">قائمة الباكدجات</h3>
+                    <div class="table-scroll">
+                        <table class="w-full">
+                            <thead><tr class="border-b border-gray-700 sticky top-0 bg-gray-900/95">
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">العنوان</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">السعر</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">المحتويات</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">النوع</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">صورة</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">الإجراءات</th>
+                            </tr></thead>
+                            <tbody id="packagesTableBody">
+                                <tr><td colspan="6" class="text-center py-8 text-gray-500">لا توجد باكدجات</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================ -->
+            <!-- SECTION 8: الكوبونات (Coupons) -->
+            <!-- ============================================ -->
+            <section id="section-coupons" class="dashboard-section">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-1 h-8 bg-gradient-to-b from-purple-500 to-pink-600 rounded-full"></div>
+                    <h2 class="text-2xl font-bold text-white">إدارة الكوبونات</h2>
+                </div>
+
+                <!-- Add Coupon -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg mb-8">
+                    <h3 class="text-xl font-bold text-white mb-4">إضافة كوبون جديد</h3>
+                    <form id="addCouponForm" class="space-y-4">
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-300 text-sm font-bold mb-2">كود الكوبون</label>
+                                <input type="text" id="couponCode" required placeholder="مثلاً: DISCOUNT50" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            </div>
+                            <div>
+                                <label class="block text-gray-300 text-sm font-bold mb-2">نسبة الخصم (%)</label>
+                                <input type="number" id="couponDiscount" required placeholder="مثلاً: 25" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 text-sm font-bold mb-2">معرف الباكدج (Package ID)</label>
+                            <input type="text" id="couponPackageId" required placeholder="أدخل معرف الباكدج" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 text-sm font-bold mb-2">صالح حتى (اختياري)</label>
+                            <input type="date" id="couponValidUntil" class="w-full px-4 py-2 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition">
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-lg hover:from-purple-700 hover:to-pink-700 transition shadow-lg shadow-purple-500/25">
+                            <i class="fas fa-plus ml-2"></i>إضافة كوبون
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Coupons List -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-bold text-white mb-4">قائمة الكوبونات</h3>
+                    <div class="table-scroll">
+                        <table class="w-full">
+                            <thead><tr class="border-b border-gray-700 sticky top-0 bg-gray-900/95">
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">الكود</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">الخصم</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">معرف الباكدج</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">عدد الاستخدامات</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">صالح حتى</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">الإجراءات</th>
+                            </tr></thead>
+                            <tbody id="couponsTableBody">
+                                <tr><td colspan="6" class="text-center py-8 text-gray-500">لا توجد كوبونات</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================ -->
+            <!-- SECTION 9: الدفعات (Payments) -->
+            <!-- ============================================ -->
+            <section id="section-payments" class="dashboard-section">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-1 h-8 bg-gradient-to-b from-amber-500 to-orange-600 rounded-full"></div>
+                    <h2 class="text-2xl font-bold text-white">إدارة الدفعات</h2>
+                </div>
+                <div class="glass-card p-6 rounded-2xl shadow-lg">
+                    <div class="table-scroll">
+                        <table class="w-full">
+                            <thead><tr class="border-b border-gray-700 sticky top-0 bg-gray-900/95">
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">العرض/الباكدج</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">رقم المحول</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">المبلغ</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">النوع</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">إثبات الدفع</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">الحالة</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">التاريخ</th>
+                                <th class="text-right py-3 px-4 text-gray-400 text-sm">الإجراءات</th>
+                            </tr></thead>
+                            <tbody id="paymentsTableBody">
+                                <tr><td colspan="8" class="text-center py-8 text-gray-500">لا توجد طلبات دفع</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         </div>
     </main>
 
@@ -1333,243 +1484,502 @@
                 setInterval(loadDashboard, 30000);
             }
         });
+
         // ============================================
-// OFFERS CRUD (Dashboard)
-// ============================================
+        // OFFERS CRUD (Dashboard)
+        // ============================================
 
-// --- File upload handling for offers ---
-const offerFileUploadArea = document.getElementById('offerFileUploadArea');
-const offerFileInput = document.getElementById('offerFile');
-const offerFilePreview = document.getElementById('offerFilePreview');
-const offerFileName = document.getElementById('offerFileName');
-const offerFileSize = document.getElementById('offerFileSize');
-const offerRemoveFile = document.getElementById('offerRemoveFile');
-const offerFileUploadError = document.getElementById('offerFileUploadError');
-let offerSelectedFile = null;
+        // --- File upload handling for offers ---
+        const offerFileUploadArea = document.getElementById('offerFileUploadArea');
+        const offerFileInput = document.getElementById('offerFile');
+        const offerFilePreview = document.getElementById('offerFilePreview');
+        const offerFileName = document.getElementById('offerFileName');
+        const offerFileSize = document.getElementById('offerFileSize');
+        const offerRemoveFile = document.getElementById('offerRemoveFile');
+        const offerFileUploadError = document.getElementById('offerFileUploadError');
+        let offerSelectedFile = null;
 
-if (offerFileUploadArea) {
-    offerFileUploadArea.addEventListener('click', () => offerFileInput?.click());
-    offerFileUploadArea.addEventListener('dragover', (e) => { e.preventDefault(); offerFileUploadArea.classList.add('dragover'); });
-    offerFileUploadArea.addEventListener('dragleave', () => offerFileUploadArea.classList.remove('dragover'));
-    offerFileUploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        offerFileUploadArea.classList.remove('dragover');
-        if (e.dataTransfer.files.length > 0) handleOfferFile(e.dataTransfer.files[0]);
-    });
-}
-if (offerFileInput) {
-    offerFileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleOfferFile(e.target.files[0]); });
-}
+        if (offerFileUploadArea) {
+            offerFileUploadArea.addEventListener('click', () => offerFileInput?.click());
+            offerFileUploadArea.addEventListener('dragover', (e) => { e.preventDefault(); offerFileUploadArea.classList.add('dragover'); });
+            offerFileUploadArea.addEventListener('dragleave', () => offerFileUploadArea.classList.remove('dragover'));
+            offerFileUploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                offerFileUploadArea.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) handleOfferFile(e.dataTransfer.files[0]);
+            });
+        }
+        if (offerFileInput) {
+            offerFileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleOfferFile(e.target.files[0]); });
+        }
 
-function handleOfferFile(file) {
-    if (!file.type.startsWith('image/')) {
-        offerFileUploadError.textContent = 'يرجى اختيار ملف صورة فقط';
-        offerFileUploadError.classList.remove('hidden');
-        return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-        offerFileUploadError.textContent = 'حجم الصورة كبير جداً. الحد الأقصى 5 ميجابايت';
-        offerFileUploadError.classList.remove('hidden');
-        return;
-    }
-    offerFileUploadError.classList.add('hidden');
-    offerSelectedFile = file;
-    offerFileName.textContent = file.name;
-    offerFileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' ميجابايت';
-    offerFilePreview.classList.add('show');
-    offerFileUploadArea.style.display = 'none';
-}
+        function handleOfferFile(file) {
+            if (!file.type.startsWith('image/')) {
+                offerFileUploadError.textContent = 'يرجى اختيار ملف صورة فقط';
+                offerFileUploadError.classList.remove('hidden');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                offerFileUploadError.textContent = 'حجم الصورة كبير جداً. الحد الأقصى 5 ميجابايت';
+                offerFileUploadError.classList.remove('hidden');
+                return;
+            }
+            offerFileUploadError.classList.add('hidden');
+            offerSelectedFile = file;
+            offerFileName.textContent = file.name;
+            offerFileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' ميجابايت';
+            offerFilePreview.classList.add('show');
+            offerFileUploadArea.style.display = 'none';
+        }
 
-if (offerRemoveFile) {
-    offerRemoveFile.addEventListener('click', () => {
-        offerSelectedFile = null;
-        offerFilePreview.classList.remove('show');
-        offerFileUploadArea.style.display = 'block';
-        offerFileInput.value = '';
-        offerFileUploadError.classList.add('hidden');
-    });
-}
+        if (offerRemoveFile) {
+            offerRemoveFile.addEventListener('click', () => {
+                offerSelectedFile = null;
+                offerFilePreview.classList.remove('show');
+                offerFileUploadArea.style.display = 'block';
+                offerFileInput.value = '';
+                offerFileUploadError.classList.add('hidden');
+            });
+        }
 
-// --- Add Offer ---
-document.getElementById('addOfferForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const title = document.getElementById('offerTitle').value.trim();
-    const description = document.getElementById('offerDescription').value.trim();
-    const badge = document.getElementById('offerBadge').value.trim();
-    const validUntil = document.getElementById('offerValidUntil').value;
+        // --- Add Offer ---
+        document.getElementById('addOfferForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('offerTitle').value.trim();
+            const description = document.getElementById('offerDescription').value.trim();
+            const price = document.getElementById('offerPrice').value.trim();
+            const badge = document.getElementById('offerBadge').value.trim();
+            const validUntil = document.getElementById('offerValidUntil').value;
 
-    if (!title || !description) {
-        showToast('عنوان العرض ووصفه مطلوبان', 'error');
-        return;
-    }
+            if (!title || !description || !price) {
+                showToast('عنوان العرض ووصفه وسعره مطلوبون', 'error');
+                return;
+            }
 
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('description', description);
-    if (badge) formData.append('badge', badge);
-    if (validUntil) formData.append('validUntil', validUntil);
-    if (offerSelectedFile) formData.append('image', offerSelectedFile);
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('description', description);
+            formData.append('price', price);
+            if (badge) formData.append('badge', badge);
+            if (validUntil) formData.append('validUntil', validUntil);
+            if (offerSelectedFile) formData.append('image', offerSelectedFile);
 
-    try {
-        const response = await fetch('/api/admin/offers', {
-            method: 'POST',
-            body: formData
+            try {
+                const response = await fetch('/api/admin/offers', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (response.ok) {
+                    showToast('تم إضافة العرض بنجاح', 'success');
+                    document.getElementById('addOfferForm').reset();
+                    offerSelectedFile = null;
+                    offerFilePreview.classList.remove('show');
+                    offerFileUploadArea.style.display = 'block';
+                    offerFileInput.value = '';
+                    loadOffersTable();
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'حدث خطأ', 'error');
+                }
+            } catch (error) {
+                showToast('حدث خطأ في التواصل مع الخادم', 'error');
+            }
         });
-        if (response.ok) {
-            showToast('تم إضافة العرض بنجاح', 'success');
-            document.getElementById('addOfferForm').reset();
-            offerSelectedFile = null;
-            offerFilePreview.classList.remove('show');
-            offerFileUploadArea.style.display = 'block';
-            offerFileInput.value = '';
-            loadOffersTable();
-        } else {
-            const data = await response.json();
-            showToast(data.error || 'حدث خطأ', 'error');
-        }
-    } catch (error) {
-        showToast('حدث خطأ في التواصل مع الخادم', 'error');
-    }
-});
 
-// --- Load Offers Table ---
-async function loadOffersTable() {
-    try {
-        const response = await fetch('/api/admin/offers', { credentials: 'include' });
-        if (!response.ok) throw new Error('Failed to fetch offers');
-        const offers = await response.json();
-        const tbody = document.getElementById('offersTableBody');
+        // --- Load Offers Table ---
+        async function loadOffersTable() {
+            try {
+                const response = await fetch('/api/admin/offers', { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to fetch offers');
+                const offers = await response.json();
+                const tbody = document.getElementById('offersTableBody');
 
-        if (offers.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">لا توجد عروض</td></tr>`;
-            return;
-        }
+                if (offers.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-gray-500">لا توجد عروض</td></tr>`;
+                    return;
+                }
 
-        tbody.innerHTML = offers.map(offer => `
-            <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
-                <td class="py-3 px-4 text-gray-300">${offer.title}</td>
-                <td class="py-3 px-4 text-gray-300 max-w-xs truncate" title="${offer.description}">${offer.description.substring(0, 40)}${offer.description.length > 40 ? '...' : ''}</td>
-                <td class="py-3 px-4"><span class="px-2 py-1 rounded-full text-xs ${offer.badge ? 'bg-indigo-500/20 text-indigo-300' : 'bg-gray-700 text-gray-400'}">${offer.badge || 'بدون'}</span></td>
-                <td class="py-3 px-4 text-gray-300">${offer.validUntil ? new Date(offer.validUntil).toLocaleDateString('ar') : 'غير محدد'}</td>
-                <td class="py-3 px-4">
-                    ${offer.imageUrl ? `<a href="${offer.imageUrl}" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition"><i class="fas fa-image"></i></a>` : '-'}
-                </td>
-                <td class="py-3 px-4">
-                    <button onclick="deleteOffer('${offer.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>
-        `).join('');
-    } catch (error) {
-        console.error('Error loading offers:', error);
-    }
-}
-
-// --- Delete Offer ---
-window.deleteOffer = async (id) => {
-    if (!confirm('هل أنت متأكد من حذف هذا العرض؟')) return;
-    try {
-        const response = await fetch(`/api/admin/offers/${id}`, { method: 'DELETE' });
-        if (response.ok) {
-            showToast('تم حذف العرض بنجاح', 'success');
-            loadOffersTable();
-        } else {
-            const data = await response.json();
-            showToast(data.error || 'حدث خطأ', 'error');
-        }
-    } catch (error) {
-        showToast('حدث خطأ', 'error');
-    }
-};
-
-// Load offers table on dashboard init
-loadOffersTable();
-        // ============================================
-// PAYMENTS CRUD (Dashboard)
-// ============================================
-async function loadPaymentsTable() {
-    try {
-        const response = await fetch('/api/admin/payments', { credentials: 'include' });
-        if (!response.ok) throw new Error('Failed to fetch payments');
-        const payments = await response.json();
-        const tbody = document.getElementById('paymentsTableBody');
-
-        if (payments.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-gray-500">لا توجد طلبات دفع</td></tr>`;
-            return;
+                tbody.innerHTML = offers.map(offer => `
+                    <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
+                        <td class="py-3 px-4 text-gray-300">${offer.title}</td>
+                        <td class="py-3 px-4 text-amber-400 font-bold">${offer.price || 0} ج</td>
+                        <td class="py-3 px-4 text-gray-300 max-w-xs truncate" title="${offer.description}">${offer.description.substring(0, 40)}${offer.description.length > 40 ? '...' : ''}</td>
+                        <td class="py-3 px-4"><span class="px-2 py-1 rounded-full text-xs ${offer.badge ? 'bg-indigo-500/20 text-indigo-300' : 'bg-gray-700 text-gray-400'}">${offer.badge || 'بدون'}</span></td>
+                        <td class="py-3 px-4 text-gray-300">${offer.validUntil ? new Date(offer.validUntil).toLocaleDateString('ar') : 'غير محدد'}</td>
+                        <td class="py-3 px-4">
+                            ${offer.imageUrl ? `<a href="${offer.imageUrl}" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition"><i class="fas fa-image"></i></a>` : '-'}
+                        </td>
+                        <td class="py-3 px-4">
+                            <button onclick="deleteOffer('${offer.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading offers:', error);
+            }
         }
 
-        const statusColors = {
-            pending: 'bg-amber-500/20 text-amber-300',
-            approved: 'bg-emerald-500/20 text-emerald-300',
-            rejected: 'bg-red-500/20 text-red-300'
-        };
-        const statusLabels = {
-            pending: 'قيد المراجعة',
-            approved: 'تم الموافقة',
-            rejected: 'مرفوض'
+        // --- Delete Offer ---
+        window.deleteOffer = async (id) => {
+            if (!confirm('هل أنت متأكد من حذف هذا العرض؟')) return;
+            try {
+                const response = await fetch(`/api/admin/offers/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    showToast('تم حذف العرض بنجاح', 'success');
+                    loadOffersTable();
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'حدث خطأ', 'error');
+                }
+            } catch (error) {
+                showToast('حدث خطأ', 'error');
+            }
         };
 
-        tbody.innerHTML = payments.map(payment => `
-            <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
-                <td class="py-3 px-4 text-gray-300">${payment.offerId || '-'}</td>
-                <td class="py-3 px-4 text-gray-300">${payment.phone}</td>
-                <td class="py-3 px-4 text-amber-400 font-bold">${payment.amount} ج</td>
-                <td class="py-3 px-4">
-                    <a href="${payment.imageUrl}" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition">
-                        <i class="fas fa-image"></i> عرض
-                    </a>
-                </td>
-                <td class="py-3 px-4">
-                    <span class="px-2 py-1 rounded-full text-xs ${statusColors[payment.status] || 'bg-gray-700 text-gray-400'}">
-                        ${statusLabels[payment.status] || payment.status}
-                    </span>
-                </td>
-                <td class="py-3 px-4 text-gray-300">${payment.createdAt ? new Date(payment.createdAt).toLocaleDateString('ar') : '-'}</td>
-                <td class="py-3 px-4">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        ${payment.status === 'pending' ? `
-                            <button onclick="updatePaymentStatus('${payment.id}', 'approved')" 
-                                    class="text-emerald-400 hover:text-emerald-300 transition action-btn bg-emerald-500/20 px-3 py-1 rounded-lg text-sm">
-                                <i class="fas fa-check"></i> موافقة
-                            </button>
-                            <button onclick="updatePaymentStatus('${payment.id}', 'rejected')" 
-                                    class="text-red-400 hover:text-red-300 transition action-btn bg-red-500/20 px-3 py-1 rounded-lg text-sm">
-                                <i class="fas fa-times"></i> رفض
-                            </button>
-                        ` : `
-                            <span class="text-gray-500 text-sm">${payment.status === 'approved' ? '✅ تمت الموافقة' : '❌ مرفوض'}</span>
-                        `}
-                    </div>
-                </td>
-            </tr>
-        `).join('');
-    } catch (error) {
-        console.error('Error loading payments:', error);
-    }
-}
+        // Load offers table on dashboard init
+        loadOffersTable();
 
-window.updatePaymentStatus = async (id, status) => {
-    if (!confirm(`هل أنت متأكد من ${status === 'approved' ? 'الموافقة على' : 'رفض'} هذا الطلب؟`)) return;
-    try {
-        const response = await fetch(`/api/admin/payments/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status })
-        });
-        if (response.ok) {
-            showToast(`تم ${status === 'approved' ? 'الموافقة على' : 'رفض'} الطلب بنجاح`, 'success');
-            loadPaymentsTable();
-        } else {
-            const data = await response.json();
-            showToast(data.error || 'حدث خطأ', 'error');
+        // ============================================
+        // PACKAGES CRUD (Dashboard)
+        // ============================================
+
+        // --- File upload handling for packages ---
+        const packageFileUploadArea = document.getElementById('packageFileUploadArea');
+        const packageFileInput = document.getElementById('packageFile');
+        const packageFilePreview = document.getElementById('packageFilePreview');
+        const packageFileName = document.getElementById('packageFileName');
+        const packageFileSize = document.getElementById('packageFileSize');
+        const packageRemoveFile = document.getElementById('packageRemoveFile');
+        const packageFileUploadError = document.getElementById('packageFileUploadError');
+        let packageSelectedFile = null;
+
+        if (packageFileUploadArea) {
+            packageFileUploadArea.addEventListener('click', () => packageFileInput?.click());
+            packageFileUploadArea.addEventListener('dragover', (e) => { e.preventDefault(); packageFileUploadArea.classList.add('dragover'); });
+            packageFileUploadArea.addEventListener('dragleave', () => packageFileUploadArea.classList.remove('dragover'));
+            packageFileUploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                packageFileUploadArea.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) handlePackageFile(e.dataTransfer.files[0]);
+            });
         }
-    } catch (error) {
-        showToast('حدث خطأ', 'error');
-    }
-};
+        if (packageFileInput) {
+            packageFileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handlePackageFile(e.target.files[0]); });
+        }
 
-// Add to loadDashboard or call separately
-loadPaymentsTable();
+        function handlePackageFile(file) {
+            if (!file.type.startsWith('image/')) {
+                packageFileUploadError.textContent = 'يرجى اختيار ملف صورة فقط';
+                packageFileUploadError.classList.remove('hidden');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                packageFileUploadError.textContent = 'حجم الصورة كبير جداً. الحد الأقصى 5 ميجابايت';
+                packageFileUploadError.classList.remove('hidden');
+                return;
+            }
+            packageFileUploadError.classList.add('hidden');
+            packageSelectedFile = file;
+            packageFileName.textContent = file.name;
+            packageFileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' ميجابايت';
+            packageFilePreview.classList.add('show');
+            packageFileUploadArea.style.display = 'none';
+        }
+
+        if (packageRemoveFile) {
+            packageRemoveFile.addEventListener('click', () => {
+                packageSelectedFile = null;
+                packageFilePreview.classList.remove('show');
+                packageFileUploadArea.style.display = 'block';
+                packageFileInput.value = '';
+                packageFileUploadError.classList.add('hidden');
+            });
+        }
+
+        // --- Add Package ---
+        document.getElementById('addPackageForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('packageTitle').value.trim();
+            const description = document.getElementById('packageDescription').value.trim();
+            const price = document.getElementById('packagePrice').value.trim();
+            const items = document.getElementById('packageItems').value.trim();
+            const badge = document.getElementById('packageBadge').value.trim();
+
+            if (!title || !description || !price || !items) {
+                showToast('جميع الحقول المطلوبة يجب تعبئتها', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('description', description);
+            formData.append('price', price);
+            formData.append('items', items);
+            if (badge) formData.append('badge', badge);
+            if (packageSelectedFile) formData.append('image', packageSelectedFile);
+
+            try {
+                const response = await fetch('/api/admin/packages', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (response.ok) {
+                    showToast('تم إضافة الباكدج بنجاح', 'success');
+                    document.getElementById('addPackageForm').reset();
+                    packageSelectedFile = null;
+                    packageFilePreview.classList.remove('show');
+                    packageFileUploadArea.style.display = 'block';
+                    packageFileInput.value = '';
+                    loadPackagesTable();
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'حدث خطأ', 'error');
+                }
+            } catch (error) {
+                showToast('حدث خطأ في التواصل مع الخادم', 'error');
+            }
+        });
+
+        // --- Load Packages Table ---
+        async function loadPackagesTable() {
+            try {
+                const response = await fetch('/api/admin/packages', { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to fetch packages');
+                const packages = await response.json();
+                const tbody = document.getElementById('packagesTableBody');
+
+                if (packages.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">لا توجد باكدجات</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = packages.map(pkg => `
+                    <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
+                        <td class="py-3 px-4 text-gray-300">${pkg.title}</td>
+                        <td class="py-3 px-4 text-amber-400 font-bold">${pkg.price} ج</td>
+                        <td class="py-3 px-4 text-gray-300">
+                            <div class="flex flex-wrap gap-1">
+                                ${pkg.items && pkg.items.length > 0 ? pkg.items.map(item => `<span class="px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-xs">${item}</span>`).join('') : '-'}
+                            </div>
+                        </td>
+                        <td class="py-3 px-4"><span class="px-2 py-1 rounded-full text-xs ${pkg.badge ? 'bg-emerald-500/20 text-emerald-300' : 'bg-gray-700 text-gray-400'}">${pkg.badge || 'بدون'}</span></td>
+                        <td class="py-3 px-4">
+                            ${pkg.imageUrl ? `<a href="${pkg.imageUrl}" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition"><i class="fas fa-image"></i></a>` : '-'}
+                        </td>
+                        <td class="py-3 px-4">
+                            <button onclick="deletePackage('${pkg.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading packages:', error);
+            }
+        }
+
+        // --- Delete Package ---
+        window.deletePackage = async (id) => {
+            if (!confirm('هل أنت متأكد من حذف هذا الباكدج؟')) return;
+            try {
+                const response = await fetch(`/api/admin/packages/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    showToast('تم حذف الباكدج بنجاح', 'success');
+                    loadPackagesTable();
+                    loadCouponsTable();
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'حدث خطأ', 'error');
+                }
+            } catch (error) {
+                showToast('حدث خطأ', 'error');
+            }
+        };
+
+        // ============================================
+        // COUPONS CRUD (Dashboard)
+        // ============================================
+
+        // --- Add Coupon ---
+        document.getElementById('addCouponForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('couponCode').value.trim().toUpperCase();
+            const discount = document.getElementById('couponDiscount').value.trim();
+            const packageId = document.getElementById('couponPackageId').value.trim();
+            const validUntil = document.getElementById('couponValidUntil').value;
+
+            if (!code || !discount || !packageId) {
+                showToast('جميع الحقول المطلوبة يجب تعبئتها', 'error');
+                return;
+            }
+
+            const data = {
+                code,
+                discount: parseFloat(discount),
+                packageId,
+                validUntil: validUntil || null
+            };
+
+            try {
+                const response = await fetch('/api/admin/coupons', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    showToast('تم إضافة الكوبون بنجاح', 'success');
+                    document.getElementById('addCouponForm').reset();
+                    loadCouponsTable();
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'حدث خطأ', 'error');
+                }
+            } catch (error) {
+                showToast('حدث خطأ في التواصل مع الخادم', 'error');
+            }
+        });
+
+        // --- Load Coupons Table ---
+        async function loadCouponsTable() {
+            try {
+                const response = await fetch('/api/admin/coupons', { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to fetch coupons');
+                const coupons = await response.json();
+                const tbody = document.getElementById('couponsTableBody');
+
+                if (coupons.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">لا توجد كوبونات</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = coupons.map(coupon => `
+                    <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
+                        <td class="py-3 px-4">
+                            <span class="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-lg font-bold font-mono">${coupon.code}</span>
+                        </td>
+                        <td class="py-3 px-4 text-emerald-400 font-bold">${coupon.discount}%</td>
+                        <td class="py-3 px-4 text-gray-300 text-sm">${coupon.packageId}</td>
+                        <td class="py-3 px-4 text-gray-300">${coupon.usedCount || 0}${coupon.maxUses ? ` / ${coupon.maxUses}` : ''}</td>
+                        <td class="py-3 px-4 text-gray-300">${coupon.validUntil ? new Date(coupon.validUntil).toLocaleDateString('ar') : 'غير محدد'}</td>
+                        <td class="py-3 px-4">
+                            <button onclick="deleteCoupon('${coupon.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading coupons:', error);
+            }
+        }
+
+        // --- Delete Coupon ---
+        window.deleteCoupon = async (id) => {
+            if (!confirm('هل أنت متأكد من حذف هذا الكوبون؟')) return;
+            try {
+                const response = await fetch(`/api/admin/coupons/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    showToast('تم حذف الكوبون بنجاح', 'success');
+                    loadCouponsTable();
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'حدث خطأ', 'error');
+                }
+            } catch (error) {
+                showToast('حدث خطأ', 'error');
+            }
+        };
+
+        // ============================================
+        // PAYMENTS CRUD (Dashboard)
+        // ============================================
+        async function loadPaymentsTable() {
+            try {
+                const response = await fetch('/api/admin/payments', { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to fetch payments');
+                const payments = await response.json();
+                const tbody = document.getElementById('paymentsTableBody');
+
+                if (payments.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-gray-500">لا توجد طلبات دفع</td></tr>`;
+                    return;
+                }
+
+                const statusColors = {
+                    pending: 'bg-amber-500/20 text-amber-300',
+                    approved: 'bg-emerald-500/20 text-emerald-300',
+                    rejected: 'bg-red-500/20 text-red-300'
+                };
+                const statusLabels = {
+                    pending: 'قيد المراجعة',
+                    approved: 'تم الموافقة',
+                    rejected: 'مرفوض'
+                };
+
+                tbody.innerHTML = payments.map(payment => `
+                    <tr class="border-b border-gray-700 hover:bg-gray-800/30 transition">
+                        <td class="py-3 px-4 text-gray-300">${payment.offerId || payment.packageId || '-'}</td>
+                        <td class="py-3 px-4 text-gray-300">${payment.phone}</td>
+                        <td class="py-3 px-4 text-amber-400 font-bold">${payment.amount} ج</td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-1 rounded-full text-xs ${payment.type === 'package' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-pink-500/20 text-pink-300'}">
+                                ${payment.type === 'package' ? '📦 باكدج' : '🎯 عرض'}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <a href="${payment.imageUrl}" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition">
+                                <i class="fas fa-image"></i> عرض
+                            </a>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-1 rounded-full text-xs ${statusColors[payment.status] || 'bg-gray-700 text-gray-400'}">
+                                ${statusLabels[payment.status] || payment.status}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-gray-300">${payment.createdAt ? new Date(payment.createdAt).toLocaleDateString('ar') : '-'}</td>
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                ${payment.status === 'pending' ? `
+                                    <button onclick="updatePaymentStatus('${payment.id}', 'approved')" 
+                                            class="text-emerald-400 hover:text-emerald-300 transition action-btn bg-emerald-500/20 px-3 py-1 rounded-lg text-sm">
+                                        <i class="fas fa-check"></i> موافقة
+                                    </button>
+                                    <button onclick="updatePaymentStatus('${payment.id}', 'rejected')" 
+                                            class="text-red-400 hover:text-red-300 transition action-btn bg-red-500/20 px-3 py-1 rounded-lg text-sm">
+                                        <i class="fas fa-times"></i> رفض
+                                    </button>
+                                ` : `
+                                    <span class="text-gray-500 text-sm">${payment.status === 'approved' ? '✅ تمت الموافقة' : '❌ مرفوض'}</span>
+                                `}
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading payments:', error);
+            }
+        }
+
+        window.updatePaymentStatus = async (id, status) => {
+            if (!confirm(`هل أنت متأكد من ${status === 'approved' ? 'الموافقة على' : 'رفض'} هذا الطلب؟`)) return;
+            try {
+                const response = await fetch(`/api/admin/payments/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                if (response.ok) {
+                    showToast(`تم ${status === 'approved' ? 'الموافقة على' : 'رفض'} الطلب بنجاح`, 'success');
+                    loadPaymentsTable();
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'حدث خطأ', 'error');
+                }
+            } catch (error) {
+                showToast('حدث خطأ', 'error');
+            }
+        };
+
+        // Load tables on dashboard init
+        loadPackagesTable();
+        loadCouponsTable();
+        loadPaymentsTable();
     </script>
 </body>
 </html>
