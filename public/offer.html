@@ -443,12 +443,17 @@
                             ? `<span class="offer-badge">${offer.badge}</span>`
                             : '';
 
+                        // Price display
+                        const priceHtml = offer.price 
+                            ? `<p class="text-amber-400 font-bold text-lg mt-1">💰 ${offer.price} جنيه</p>`
+                            : '';
+
                         // Payment button - stores offer data in sessionStorage before redirect
                         const payBtnHtml = `
-                            <button onclick="goToPay('${offer.id}', '${offer.title.replace(/'/g, "\\'")}')" 
+                            <button onclick="goToPay('${offer.id}', '${offer.title.replace(/'/g, "\\'")}', '${offer.price || 0}')" 
                                     class="btn-pay w-full justify-center mt-3">
                                 <i class="fas fa-credit-card"></i>
-                                ادفع الآن
+                                ادفع الآن - ${offer.price || 0} ج
                             </button>
                         `;
 
@@ -460,6 +465,7 @@
                                     ${badgeHtml}
                                 </div>
                                 <p class="text-gray-400 text-sm mb-3 line-clamp-3">${offer.description || ''}</p>
+                                ${priceHtml}
                                 ${offer.validUntil ? `<p class="text-xs text-gray-500"><i class="far fa-calendar-alt ml-1"></i> صالح حتى: ${new Date(offer.validUntil).toLocaleDateString('ar')}</p>` : ''}
                                 ${payBtnHtml}
                             </div>
@@ -484,7 +490,7 @@
             // ============================================
             // GO TO PAY PAGE
             // ============================================
-            window.goToPay = function(offerId, offerTitle) {
+            window.goToPay = function(offerId, offerTitle, offerPrice) {
                 if (!isAuthenticated) {
                     showToast('يرجى تسجيل الدخول أولاً', 'error');
                     return;
@@ -492,6 +498,7 @@
                 // Store offer data in sessionStorage to pass to pay page
                 sessionStorage.setItem('payOfferId', offerId);
                 sessionStorage.setItem('payOfferTitle', offerTitle);
+                sessionStorage.setItem('payOfferPrice', offerPrice || '0');
                 // Navigate to pay page
                 window.location.href = '/pay';
             };
