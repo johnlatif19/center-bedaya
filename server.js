@@ -501,13 +501,13 @@ app.post('/api/auth/admin-login', [
   try {
     const { username, password } = req.body;
 
-    // التحقق من المدير الوحيد
+    // التحقق من المدير الوحيد - ADMIN_NAME هو username
     if (username !== process.env.ADMIN_NAME || password !== process.env.ADMIN_PASSWORD) {
       return res.status(401).json({ error: 'بيانات الدخول غير صحيحة' });
     }
 
     const adminName = process.env.ADMIN_NAME;
-    const adminUsername = process.env.ADMIN_NAME;
+    const adminUsername = process.env.ADMIN_NAME; // نفس القيمة
 
     // البحث عن المدير في قاعدة البيانات
     let adminSnapshot = await db.collection('users')
