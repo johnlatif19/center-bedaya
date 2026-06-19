@@ -841,7 +841,7 @@ app.post('/api/auth/reset-password', [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
@@ -1064,7 +1064,7 @@ app.post('/api/contact', [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
@@ -1163,14 +1163,10 @@ app.post('/api/results/check', [
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const adminName = req.user.adminName || 'Admin';
-    const adminUsername = req.user.adminUsername || 'admin';
     
-    // Only sales are filtered by admin
+    // Get ALL sales for today (no filtering)
     let salesSnapshot = await db.collection('sales')
       .where('date', '==', today)
-      .where('adminName', '==', adminName)
-      .where('adminUsername', '==', adminUsername)
       .get();
     
     let todaySales = 0;
@@ -1178,16 +1174,14 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
       todaySales += doc.data().amount || 0;
     });
 
-    // Shared collections (not filtered by admin)
+    // Shared collections
     let bookingsSnapshot = await db.collection('bookings').get();
     let messagesSnapshot = await db.collection('messages').get();
 
     res.json({
       todaySales,
       totalBookings: bookingsSnapshot.size || 0,
-      totalMessages: messagesSnapshot.size || 0,
-      adminName,
-      adminUsername
+      totalMessages: messagesSnapshot.size || 0
     });
   } catch (error) {
     console.error('Stats error:', error);
@@ -1195,15 +1189,10 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
   }
 });
 
-// --- Sales Chart (Filtered by Admin) ---
+// --- Sales Chart (No filtering) ---
 app.get('/api/admin/sales-chart', authenticateAdmin, async (req, res) => {
   try {
-    const adminName = req.user.adminName || 'Admin';
-    const adminUsername = req.user.adminUsername || 'admin';
-    
     let salesSnapshot = await db.collection('sales')
-      .where('adminName', '==', adminName)
-      .where('adminUsername', '==', adminUsername)
       .orderBy('date', 'desc')
       .limit(30)
       .get();
@@ -1224,7 +1213,7 @@ app.get('/api/admin/sales-chart', authenticateAdmin, async (req, res) => {
   }
 });
 
-// --- Sales CRUD (Filtered by Admin) ---
+// --- Sales CRUD (No filtering) ---
 app.post('/api/admin/sales', authenticateAdmin, [
   body('customer').notEmpty().withMessage('اسم العميل مطلوب'),
   body('amount').isNumeric().withMessage('المبلغ يجب أن يكون رقماً')
@@ -1237,15 +1226,11 @@ app.post('/api/admin/sales', authenticateAdmin, [
 
     const { customer, amount } = req.body;
     const today = new Date().toISOString().split('T')[0];
-    const adminName = req.user.adminName || 'Admin';
-    const adminUsername = req.user.adminUsername || 'admin';
 
     const sale = {
       customer,
       amount: parseFloat(amount),
       date: today,
-      adminName,
-      adminUsername,
       createdAt: new Date().toISOString()
     };
 
@@ -1269,20 +1254,12 @@ app.put('/api/admin/sales/:id', authenticateAdmin, [
 
     const { customer, amount } = req.body;
     const saleId = req.params.id;
-    const adminName = req.user.adminName || 'Admin';
-    const adminUsername = req.user.adminUsername || 'admin';
 
     const saleRef = db.collection('sales').doc(saleId);
     const saleDoc = await saleRef.get();
 
     if (!saleDoc.exists) {
       return res.status(404).json({ error: 'Sale not found' });
-    }
-
-    // Verify this sale belongs to the current admin
-    const saleData = saleDoc.data();
-    if (saleData.adminName !== adminName || saleData.adminUsername !== adminUsername) {
-      return res.status(403).json({ error: 'You do not have permission to update this sale' });
     }
 
     await saleRef.update({
@@ -1300,12 +1277,7 @@ app.put('/api/admin/sales/:id', authenticateAdmin, [
 
 app.get('/api/admin/sales', authenticateAdmin, async (req, res) => {
   try {
-    const adminName = req.user.adminName || 'Admin';
-    const adminUsername = req.user.adminUsername || 'admin';
-    
     let salesSnapshot = await db.collection('sales')
-      .where('adminName', '==', adminName)
-      .where('adminUsername', '==', adminUsername)
       .orderBy('createdAt', 'desc')
       .get();
 
@@ -1324,23 +1296,7 @@ app.get('/api/admin/sales', authenticateAdmin, async (req, res) => {
 app.delete('/api/admin/sales/:id', authenticateAdmin, async (req, res) => {
   try {
     const saleId = req.params.id;
-    const adminName = req.user.adminName || 'Admin';
-    const adminUsername = req.user.adminUsername || 'admin';
-
-    const saleRef = db.collection('sales').doc(saleId);
-    const saleDoc = await saleRef.get();
-
-    if (!saleDoc.exists) {
-      return res.status(404).json({ error: 'Sale not found' });
-    }
-
-    // Verify this sale belongs to the current admin
-    const saleData = saleDoc.data();
-    if (saleData.adminName !== adminName || saleData.adminUsername !== adminUsername) {
-      return res.status(403).json({ error: 'You do not have permission to delete this sale' });
-    }
-
-    await saleRef.delete();
+    await db.collection('sales').doc(saleId).delete();
     res.json({ success: true });
   } catch (error) {
     console.error('Delete sale error:', error);
@@ -1585,7 +1541,7 @@ app.post('/api/admin/send-email', authenticateAdmin, [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
