@@ -277,7 +277,7 @@
                     <i class="fas fa-bars text-2xl"></i>
                 </button>
                 <div class="flex items-center space-x-4 space-x-reverse">
-                    <span id="adminGreeting" class="text-gray-300 font-bold">مرحباً مدير</span>
+                    <span id="adminGreeting" class="text-gray-300 font-bold">مرحباً</span>
                 </div>
             </div>
         </header>
@@ -689,7 +689,7 @@
                     if (!data || !data.authenticated) { window.location.href = '/login-dashboard'; return; }
                     const greeting = document.getElementById('adminGreeting');
                     if (greeting && data.admin) {
-                        greeting.textContent = `مرحباً ${data.admin.username || 'مدير'}`;
+                        greeting.textContent = `مرحباً`;
                     }
                     initializeDashboard();
                 })
