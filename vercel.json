@@ -44,6 +44,10 @@
       "dest": "/public/pay.html"
     },
     {
+      "src": "/package",
+      "dest": "/public/package.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/public/index.html"
     }
