@@ -389,7 +389,7 @@ app.post('/api/auth/signup', [
         <div style="max-width: 600px; margin: 20px auto; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(79,70,229,0.2);">
           <div style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid rgba(79,70,229,0.2);">
             <div style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 15px 25px; border-radius: 12px; margin-bottom: 10px;">
-              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">BEDAYA</span>
+              <span style="font-size: 28px; font-weight: 800; color: #ffffff;">bedaya</span>
               <span style="font-size: 20px; font-weight: 400; color: #a78bfa; margin-right: 8px;">مركز بداية</span>
             </div>
             <div style="margin-top: 8px;"><span style="font-size: 13px; color: #94a3b8;">للتدخل المبكر والتأهيل</span></div>
@@ -501,53 +501,44 @@ app.post('/api/auth/admin-login', [
   try {
     const { username, password } = req.body;
 
-    // التحقق من المدير الوحيد - ADMIN_NAME هو username
-    if (username !== process.env.ADMIN_NAME || password !== process.env.ADMIN_PASSWORD) {
+    if (username !== process.env.ADMIN_USERNAME || password !== process.env.ADMIN_PASSWORD) {
       return res.status(401).json({ error: 'بيانات الدخول غير صحيحة' });
     }
 
-    const adminName = process.env.ADMIN_NAME;
-    const adminUsername = process.env.ADMIN_NAME; // نفس القيمة
+    const adminUsername = process.env.ADMIN_USERNAME;
 
-    // البحث عن المدير في قاعدة البيانات
     let adminSnapshot = await db.collection('users')
       .where('email', '==', process.env.ADMIN_EMAIL)
       .get();
 
     let adminUser;
     if (adminSnapshot.empty) {
-      // إنشاء حساب المدير إذا لم يكن موجوداً
       const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
       const adminData = {
-        fullName: adminName,
+        fullName: adminUsername,
         email: process.env.ADMIN_EMAIL,
         password: hashedPassword,
         isAdmin: true,
-        adminName: adminName,
         adminUsername: adminUsername,
         createdAt: new Date().toISOString()
       };
       const docRef = await db.collection('users').add(adminData);
       adminUser = { id: docRef.id, ...adminData };
     } else {
-      // تحديث بيانات المدير إذا كانت مختلفة
       const doc = adminSnapshot.docs[0];
       const docData = doc.data();
-      if (docData.adminName !== adminName || docData.adminUsername !== adminUsername) {
+      if (docData.adminUsername !== adminUsername) {
         await db.collection('users').doc(doc.id).update({
-          adminName: adminName,
           adminUsername: adminUsername,
-          fullName: adminName
+          fullName: adminUsername
         });
-        docData.adminName = adminName;
         docData.adminUsername = adminUsername;
-        docData.fullName = adminName;
+        docData.fullName = adminUsername;
       }
       adminUser = { id: doc.id, ...docData };
     }
 
-    // إنشاء التوكن
-    const token = generateToken(adminUser, true, { adminName, adminUsername });
+    const token = generateToken(adminUser, true, { adminUsername });
 
     res.cookie('token', token, {
       httpOnly: true,
@@ -561,8 +552,7 @@ app.post('/api/auth/admin-login', [
       admin: {
         id: adminUser.id,
         email: adminUser.email,
-        username: adminUsername,
-        name: adminName
+        username: adminUsername
       }
     });
   } catch (error) {
