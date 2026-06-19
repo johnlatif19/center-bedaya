@@ -1901,6 +1901,308 @@ app.put('/api/admin/payments/:id', authenticateAdmin, [
 });
 
 // ============================================
+// PACKAGES ROUTES (Public & Admin)
+// ============================================
+
+// Public: Get all active packages
+app.get('/api/packages', async (req, res) => {
+    try {
+        const packagesSnapshot = await db.collection('packages')
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        const packages = [];
+        packagesSnapshot.forEach(doc => {
+            const data = doc.data();
+            packages.push({ id: doc.id, ...data });
+        });
+
+        res.json(packages);
+    } catch (error) {
+        console.error('Get packages error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء جلب الباكدجات' });
+    }
+});
+
+// Admin: Create package
+app.post('/api/admin/packages', authenticateAdmin, upload.single('image'), [
+    body('title').notEmpty().withMessage('عنوان الباكدج مطلوب'),
+    body('description').notEmpty().withMessage('وصف الباكدج مطلوب'),
+    body('price').isNumeric().withMessage('السعر مطلوب'),
+    body('items').notEmpty().withMessage('المحتويات مطلوبة')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { title, description, price, items, badge } = req.body;
+        const file = req.file;
+
+        let imageUrl = null;
+        if (file) {
+            const result = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream({
+                    folder: 'packages',
+                    resource_type: 'image',
+                    use_filename: true,
+                    unique_filename: true
+                }, (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                });
+                uploadStream.end(file.buffer);
+            });
+            imageUrl = result.secure_url;
+        }
+
+        // Parse items (comma separated)
+        const itemsList = items.split(',').map(item => item.trim()).filter(item => item);
+
+        const packageData = {
+            title,
+            description,
+            price: parseFloat(price),
+            items: itemsList,
+            badge: badge || '',
+            imageUrl,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        const docRef = await db.collection('packages').add(packageData);
+        res.status(201).json({ success: true, package: { id: docRef.id, ...packageData } });
+    } catch (error) {
+        console.error('Create package error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء إضافة الباكدج' });
+    }
+});
+
+// Admin: Get all packages
+app.get('/api/admin/packages', authenticateAdmin, async (req, res) => {
+    try {
+        const packagesSnapshot = await db.collection('packages')
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        const packages = [];
+        packagesSnapshot.forEach(doc => {
+            packages.push({ id: doc.id, ...doc.data() });
+        });
+
+        res.json(packages);
+    } catch (error) {
+        console.error('Get admin packages error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء جلب الباكدجات' });
+    }
+});
+
+// Admin: Update package
+app.put('/api/admin/packages/:id', authenticateAdmin, upload.single('image'), [
+    body('title').notEmpty().withMessage('عنوان الباكدج مطلوب'),
+    body('description').notEmpty().withMessage('وصف الباكدج مطلوب'),
+    body('price').isNumeric().withMessage('السعر مطلوب'),
+    body('items').notEmpty().withMessage('المحتويات مطلوبة')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { title, description, price, items, badge } = req.body;
+        const file = req.file;
+        const packageId = req.params.id;
+
+        const packageRef = db.collection('packages').doc(packageId);
+        const packageDoc = await packageRef.get();
+
+        if (!packageDoc.exists) {
+            return res.status(404).json({ error: 'الباكدج غير موجود' });
+        }
+
+        const itemsList = items.split(',').map(item => item.trim()).filter(item => item);
+
+        let updateData = {
+            title,
+            description,
+            price: parseFloat(price),
+            items: itemsList,
+            badge: badge || '',
+            updatedAt: new Date().toISOString()
+        };
+
+        if (file) {
+            const result = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream({
+                    folder: 'packages',
+                    resource_type: 'image',
+                    use_filename: true,
+                    unique_filename: true
+                }, (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                });
+                uploadStream.end(file.buffer);
+            });
+            updateData.imageUrl = result.secure_url;
+        }
+
+        await packageRef.update(updateData);
+        res.json({ success: true, message: 'تم تحديث الباكدج بنجاح' });
+    } catch (error) {
+        console.error('Update package error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء تحديث الباكدج' });
+    }
+});
+
+// Admin: Delete package
+app.delete('/api/admin/packages/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const packageId = req.params.id;
+        await db.collection('packages').doc(packageId).delete();
+        res.json({ success: true, message: 'تم حذف الباكدج بنجاح' });
+    } catch (error) {
+        console.error('Delete package error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء حذف الباكدج' });
+    }
+});
+
+// ============================================
+// COUPONS ROUTES (Admin only)
+// ============================================
+
+// Admin: Create coupon
+app.post('/api/admin/coupons', authenticateAdmin, [
+    body('code').notEmpty().withMessage('كود الكوبون مطلوب'),
+    body('discount').isNumeric().withMessage('الخصم مطلوب'),
+    body('packageId').notEmpty().withMessage('معرف الباكدج مطلوب')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { code, discount, packageId, validUntil } = req.body;
+
+        // Check if coupon already exists
+        const existingSnapshot = await db.collection('coupons')
+            .where('code', '==', code.toUpperCase())
+            .get();
+
+        if (!existingSnapshot.empty) {
+            return res.status(400).json({ error: 'هذا الكود موجود بالفعل' });
+        }
+
+        // Check if package exists
+        const packageDoc = await db.collection('packages').doc(packageId).get();
+        if (!packageDoc.exists) {
+            return res.status(404).json({ error: 'الباكدج غير موجود' });
+        }
+
+        const couponData = {
+            code: code.toUpperCase(),
+            discount: parseFloat(discount),
+            packageId,
+            validUntil: validUntil || null,
+            usedCount: 0,
+            maxUses: null, // unlimited by default
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        const docRef = await db.collection('coupons').add(couponData);
+        res.status(201).json({ success: true, coupon: { id: docRef.id, ...couponData } });
+    } catch (error) {
+        console.error('Create coupon error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء إضافة الكوبون' });
+    }
+});
+
+// Admin: Get all coupons
+app.get('/api/admin/coupons', authenticateAdmin, async (req, res) => {
+    try {
+        const couponsSnapshot = await db.collection('coupons')
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        const coupons = [];
+        couponsSnapshot.forEach(doc => {
+            coupons.push({ id: doc.id, ...doc.data() });
+        });
+
+        res.json(coupons);
+    } catch (error) {
+        console.error('Get coupons error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء جلب الكوبونات' });
+    }
+});
+
+// Admin: Delete coupon
+app.delete('/api/admin/coupons/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const couponId = req.params.id;
+        await db.collection('coupons').doc(couponId).delete();
+        res.json({ success: true, message: 'تم حذف الكوبون بنجاح' });
+    } catch (error) {
+        console.error('Delete coupon error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء حذف الكوبون' });
+    }
+});
+
+// Public: Validate coupon
+app.post('/api/validate-coupon', [
+    body('code').notEmpty().withMessage('كود الكوبون مطلوب'),
+    body('packageId').notEmpty().withMessage('معرف الباكدج مطلوب')
+], authenticateToken, async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { code, packageId } = req.body;
+
+        const couponSnapshot = await db.collection('coupons')
+            .where('code', '==', code.toUpperCase())
+            .where('packageId', '==', packageId)
+            .get();
+
+        if (couponSnapshot.empty) {
+            return res.status(404).json({ error: 'الكوبون غير صحيح أو غير صالح لهذا الباكدج' });
+        }
+
+        const doc = couponSnapshot.docs[0];
+        const coupon = { id: doc.id, ...doc.data() };
+
+        // Check if expired
+        if (coupon.validUntil && coupon.validUntil < new Date().toISOString()) {
+            return res.status(400).json({ error: 'انتهت صلاحية الكوبون' });
+        }
+
+        // Check if max uses reached
+        if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
+            return res.status(400).json({ error: 'تم استخدام هذا الكوبون بأقصى عدد مرات' });
+        }
+
+        res.json({
+            success: true,
+            coupon: {
+                id: coupon.id,
+                code: coupon.code,
+                discount: coupon.discount,
+                validUntil: coupon.validUntil
+            }
+        });
+    } catch (error) {
+        console.error('Validate coupon error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء التحقق من الكوبون' });
+    }
+});
+
+// ============================================
 // SERVE HTML PAGES
 // ============================================
 app.get('/', (req, res) => {
