@@ -329,6 +329,64 @@ const sendEmail = async (to, subject, html) => {
 };
 
 // ============================================
+// HELPER: ADD SALE FROM ORDER
+// ============================================
+const addSaleFromOrder = async (customerName, amount, packageId, paymentMethod) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const sale = {
+      customer: customerName || 'عميل',
+      amount: parseFloat(amount),
+      date: today,
+      packageId: packageId || null,
+      paymentMethod: paymentMethod || 'تحويل محفظة',
+      orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
+      source: 'order',
+      createdAt: new Date().toISOString()
+    };
+    await db.collection('sales').add(sale);
+    console.log(`✅ تم تسجيل الطلب في المبيعات: ${sale.orderNumber}`);
+    return true;
+  } catch (error) {
+    console.error('Error adding sale from order:', error);
+    return false;
+  }
+};
+
+// ============================================
+// HELPER: SEND TELEGRAM NOTIFICATION FOR ORDER
+// ============================================
+const sendOrderTelegram = async (orderData) => {
+  try {
+    const message = `
+🆕 <b>طلب جديد</b> 🛒
+━━━━━━━━━━━━━━━━━
+📋 <b>رقم الطلب:</b> ${orderData.orderNumber || 'غير محدد'}
+👤 <b>العميل:</b> ${orderData.customerName || 'غير محدد'}
+📦 <b>الباكدج:</b> ${orderData.packageName || 'غير محدد'}
+💰 <b>السعر:</b> ${orderData.amount || 0} جنيه
+📅 <b>التاريخ:</b> ${new Date().toISOString().split('T')[0]}
+💳 <b>وسيلة الدفع:</b> ${orderData.paymentMethod || 'تحويل محفظة'}
+🔄 <b>الحالة:</b> قيد المراجعة
+━━━━━━━━━━━━━━━━━
+🏢 <b>مركز بداية للتدخل المبكر</b>
+    `;
+    
+    const url = `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`;
+    await axios.post(url, {
+      chat_id: process.env.TELEGRAM_CHAT_ID,
+      text: message,
+      parse_mode: 'HTML'
+    });
+    console.log(`✅ تم إرسال إشعار تيليجرام للطلب: ${orderData.orderNumber}`);
+    return true;
+  } catch (error) {
+    console.error('Telegram notification error:', error);
+    return false;
+  }
+};
+
+// ============================================
 // AUTH ROUTES
 // ============================================
 
@@ -1758,7 +1816,7 @@ app.delete('/api/admin/offers/:id', authenticateAdmin, async (req, res) => {
 // PAYMENTS ROUTES
 // ============================================
 
-// Submit payment
+// Submit payment (for offers)
 app.post('/api/payments', authenticateToken, upload.single('image'), [
     body('offerId').notEmpty().withMessage('معرف العرض مطلوب'),
     body('phone').notEmpty().withMessage('رقم الهاتف مطلوب'),
@@ -1805,7 +1863,32 @@ app.post('/api/payments', authenticateToken, upload.single('image'), [
 
         const docRef = await db.collection('payments').add(paymentData);
 
-        // Send notification to admin
+        // ============================================
+        // تسجيل الطلب في المبيعات تلقائياً
+        // ============================================
+        const customerName = req.user?.fullName || 'عميل';
+        const packageName = offerId || 'غير محدد';
+        const orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
+        const paymentMethod = 'تحويل محفظة';
+
+        // تسجيل في المبيعات
+        addSaleFromOrder(
+            customerName,
+            paymentData.amount,
+            offerId,
+            paymentMethod
+        ).catch(console.error);
+
+        // إرسال إشعار تيليجرام
+        sendOrderTelegram({
+            orderNumber: orderNumber,
+            customerName: customerName,
+            packageName: packageName,
+            amount: paymentData.amount,
+            paymentMethod: paymentMethod
+        }).catch(console.error);
+
+        // Send notification to admin via email
         const adminHtml = `
             <!DOCTYPE html>
             <html dir="rtl" lang="ar">
@@ -1821,11 +1904,16 @@ app.post('/api/payments', authenticateToken, upload.single('image'), [
                     <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
                         <div style="background: rgba(245, 158, 11, 0.15); border-right: 4px solid #f59e0b; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
                             <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">💰 طلب دفع جديد</h2>
+                            <p style="color: #94a3b8; font-size: 14px; margin: 4px 0 0;">رقم الطلب: ${orderNumber}</p>
                         </div>
                         <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
                             <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
                                 <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">🆔 معرف العرض:</span>
                                 <span style="color: #e2e8f0;">${offerId}</span>
+                            </div>
+                            <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">👤 العميل:</span>
+                                <span style="color: #e2e8f0;">${customerName}</span>
                             </div>
                             <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
                                 <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">📱 رقم المحول:</span>
@@ -1834,6 +1922,10 @@ app.post('/api/payments', authenticateToken, upload.single('image'), [
                             <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
                                 <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">💰 المبلغ:</span>
                                 <span style="color: #fbbf24; font-weight: 700;">${amount} جنيه</span>
+                            </div>
+                            <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">💳 وسيلة الدفع:</span>
+                                <span style="color: #34d399;">تحويل محفظة</span>
                             </div>
                             <div style="display: flex; padding: 8px 0;">
                                 <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">📎 إثبات الدفع:</span>
@@ -1848,7 +1940,7 @@ app.post('/api/payments', authenticateToken, upload.single('image'), [
             </body>
             </html>
         `;
-        sendEmail(process.env.ADMIN_EMAIL, '💰 طلب دفع جديد - مركز بداية', adminHtml).catch(console.error);
+        sendEmail(process.env.ADMIN_EMAIL, `💰 طلب دفع جديد #${orderNumber} - مركز بداية`, adminHtml).catch(console.error);
 
         res.status(201).json({
             success: true,
@@ -1902,6 +1994,28 @@ app.put('/api/admin/payments/:id', authenticateAdmin, [
     } catch (error) {
         console.error('Update payment error:', error);
         res.status(500).json({ error: 'حدث خطأ أثناء تحديث حالة الدفع' });
+    }
+});
+
+// ============================================
+// ADMIN: DELETE PAYMENT
+// ============================================
+app.delete('/api/admin/payments/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const paymentId = req.params.id;
+        const paymentRef = db.collection('payments').doc(paymentId);
+        const paymentDoc = await paymentRef.get();
+        
+        if (!paymentDoc.exists) {
+            return res.status(404).json({ error: 'الدفعة غير موجودة' });
+        }
+        
+        await paymentRef.delete();
+        console.log(`✅ تم حذف الدفعة: ${paymentId}`);
+        res.json({ success: true, message: 'تم حذف الدفعة بنجاح' });
+    } catch (error) {
+        console.error('Delete payment error:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء حذف الدفعة' });
     }
 });
 
@@ -2140,7 +2254,32 @@ app.post('/api/payments/package', authenticateToken, upload.single('image'), [
             }
         }
 
-        // Send notification to admin
+        // ============================================
+        // تسجيل الطلب في المبيعات تلقائياً
+        // ============================================
+        const customerName = req.user?.fullName || 'عميل';
+        const packageName = packageId || 'غير محدد';
+        const orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
+        const paymentMethod = 'تحويل محفظة';
+
+        // تسجيل في المبيعات
+        addSaleFromOrder(
+            customerName,
+            paymentData.amount,
+            packageId,
+            paymentMethod
+        ).catch(console.error);
+
+        // إرسال إشعار تيليجرام
+        sendOrderTelegram({
+            orderNumber: orderNumber,
+            customerName: customerName,
+            packageName: packageName,
+            amount: paymentData.amount,
+            paymentMethod: paymentMethod
+        }).catch(console.error);
+
+        // Send notification to admin via email
         const adminHtml = `
             <!DOCTYPE html>
             <html dir="rtl" lang="ar">
@@ -2156,11 +2295,16 @@ app.post('/api/payments/package', authenticateToken, upload.single('image'), [
                     <div style="padding: 30px; background: rgba(15, 23, 42, 0.6);">
                         <div style="background: rgba(16, 185, 129, 0.15); border-right: 4px solid #10b981; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;">
                             <h2 style="color: #e2e8f0; font-size: 20px; margin: 0; font-weight: 700;">📦 طلب دفع باكدج جديد</h2>
+                            <p style="color: #94a3b8; font-size: 14px; margin: 4px 0 0;">رقم الطلب: ${orderNumber}</p>
                         </div>
                         <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
                             <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
                                 <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">📦 معرف الباكدج:</span>
                                 <span style="color: #e2e8f0;">${packageId}</span>
+                            </div>
+                            <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">👤 العميل:</span>
+                                <span style="color: #e2e8f0;">${customerName}</span>
                             </div>
                             <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
                                 <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">📱 رقم المحول:</span>
@@ -2169,6 +2313,10 @@ app.post('/api/payments/package', authenticateToken, upload.single('image'), [
                             <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
                                 <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">💰 المبلغ:</span>
                                 <span style="color: #fbbf24; font-weight: 700;">${amount} جنيه</span>
+                            </div>
+                            <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
+                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">💳 وسيلة الدفع:</span>
+                                <span style="color: #34d399;">تحويل محفظة</span>
                             </div>
                             ${couponId ? `<div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
                                 <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">🏷️ كوبون مطبق:</span>
@@ -2187,7 +2335,7 @@ app.post('/api/payments/package', authenticateToken, upload.single('image'), [
             </body>
             </html>
         `;
-        sendEmail(process.env.ADMIN_EMAIL, '📦 طلب دفع باكدج جديد - مركز بداية', adminHtml).catch(console.error);
+        sendEmail(process.env.ADMIN_EMAIL, `📦 طلب دفع باكدج جديد #${orderNumber} - مركز بداية`, adminHtml).catch(console.error);
 
         res.status(201).json({
             success: true,
