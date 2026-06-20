@@ -467,6 +467,14 @@
             background: rgba(239, 68, 68, 0.15);
             color: #f87171;
         }
+
+        /* ===== HEADER LOGOUT BUTTON ===== */
+        .header-logout-btn {
+            transition: all 0.2s ease;
+        }
+        .header-logout-btn:hover {
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body class="font-cairo bg-gray-900 transition-colors duration-300">
@@ -529,10 +537,7 @@
                     <i class="fas fa-paper-plane"></i>
                     <span>تيليجرام: جاهز</span>
                 </div>
-                <button id="dashboardLogout" class="w-full py-2.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition text-sm">
-                    <i class="fas fa-sign-out-alt ml-2"></i>
-                    خروج
-                </button>
+                <!-- تم إزالة زر الخروج من هنا -->
             </div>
         </div>
     </aside>
@@ -542,9 +547,18 @@
         <!-- Header -->
         <header class="sticky top-0 z-40 nav-blur shadow-lg">
             <div class="px-3 sm:px-6 py-3 flex justify-between items-center">
-                <button id="sidebarToggle" class="lg:hidden p-2 text-gray-300 hover:bg-gray-800 rounded-lg transition text-xl">
-                    <i class="fas fa-bars"></i>
-                </button>
+                <!-- الجهة اليسرى: زر القائمة (للتابلت والموبايل) + زر الخروج -->
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <button id="sidebarToggle" class="lg:hidden p-2 text-gray-300 hover:bg-gray-800 rounded-lg transition text-xl">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <button id="headerLogout" class="header-logout-btn px-3 sm:px-4 py-1.5 sm:py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition text-xs sm:text-sm flex items-center gap-1 sm:gap-2">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>خروج</span>
+                    </button>
+                </div>
+                
+                <!-- الجهة اليمنى: الترحيب -->
                 <div class="flex items-center gap-3">
                     <span id="adminGreeting" class="text-gray-300 font-bold text-sm sm:text-base">مرحباً</span>
                 </div>
@@ -1390,9 +1404,9 @@
             }
 
             // ============================================
-            // LOGOUT
+            // LOGOUT - زر الخروج الجديد في الـ Header
             // ============================================
-            document.getElementById('dashboardLogout')?.addEventListener('click', async () => {
+            document.getElementById('headerLogout')?.addEventListener('click', async () => {
                 await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
                 window.location.href = '/login-dashboard';
             });
@@ -1474,22 +1488,15 @@
             // ============================================
             // REALTIME LISTENERS (Firestore via API polling)
             // ============================================
-            // Since we don't have direct Firestore access from client,
-            // we use polling with a short interval for realtime updates
             let dataUpdateInterval = null;
 
             function setupRealtimeListeners() {
-                // Clear any existing interval
                 if (dataUpdateInterval) {
                     clearInterval(dataUpdateInterval);
                 }
-
-                // Poll every 3 seconds for realtime updates
                 dataUpdateInterval = setInterval(() => {
                     loadDashboardData();
                 }, 3000);
-
-                // Also load when tab becomes visible
                 document.addEventListener('visibilitychange', () => {
                     if (!document.hidden) {
                         loadDashboardData();
@@ -1522,19 +1529,16 @@
                         fetch('/api/admin/payments', { credentials: 'include' })
                     ]);
 
-                    // Check auth
                     if (statsRes.status === 401 || statsRes.status === 403) {
                         window.location.href = '/login-dashboard';
                         return;
                     }
 
-                    // Stats
                     const stats = await statsRes.json();
                     document.getElementById('todaySales').textContent = stats.todaySales || 0;
                     document.getElementById('totalBookings').textContent = stats.totalBookings || 0;
                     document.getElementById('totalMessages').textContent = stats.totalMessages || 0;
 
-                    // Sales Chart
                     const chartData = await salesChartRes.json();
                     if (salesChart && chartData.length > 0) {
                         const labels = chartData.map(d => d.date);
@@ -1546,41 +1550,32 @@
                         }
                     }
 
-                    // Sales
                     const sales = await salesRes.json();
                     renderSalesTable(sales);
 
-                    // Bookings
                     const bookings = await bookingsRes.json();
                     renderBookingsTable(bookings);
 
-                    // Contacts
                     const contacts = await contactsRes.json();
                     renderContactsTable(contacts);
 
-                    // Results
                     const results = await resultsRes.json();
                     renderResultsTable(results);
 
-                    // Messages
                     const messages = await messagesRes.json();
                     renderMessagesTable(messages);
 
-                    // Offers
                     const offers = await offersRes.json();
                     allOffers = offers;
                     renderOffersTable(offers);
 
-                    // Packages
                     const packages = await packagesRes.json();
                     allPackages = packages;
                     renderPackagesTable(packages);
 
-                    // Coupons
                     const coupons = await couponsRes.json();
                     renderCouponsTable(coupons);
 
-                    // Payments
                     const payments = await paymentsRes.json();
                     renderPaymentsTable(payments);
 
@@ -1595,7 +1590,6 @@
             // RENDER FUNCTIONS
             // ============================================
 
-            // --- Sales ---
             function renderSalesTable(sales) {
                 const tbody = document.getElementById('salesTableBody');
                 const mobileView = document.getElementById('salesMobileView');
@@ -1633,7 +1627,6 @@
                 `).join('');
             }
 
-            // --- Bookings ---
             function renderBookingsTable(bookings) {
                 const tbody = document.getElementById('bookingsTableBody');
                 const mobileView = document.getElementById('bookingsMobileView');
@@ -1667,7 +1660,6 @@
                 `).join('');
             }
 
-            // --- Contacts ---
             function renderContactsTable(contacts) {
                 const tbody = document.getElementById('contactsTableBody');
                 const mobileView = document.getElementById('contactsMobileView');
@@ -1702,7 +1694,6 @@
                 `).join('');
             }
 
-            // --- Results ---
             function renderResultsTable(results) {
                 const tbody = document.getElementById('resultsTableBody');
                 const mobileView = document.getElementById('resultsMobileView');
@@ -1748,7 +1739,6 @@
                 `).join('');
             }
 
-            // --- Messages ---
             function renderMessagesTable(messages) {
                 const tbody = document.getElementById('messagesTableBody');
                 const mobileView = document.getElementById('messagesMobileView');
@@ -1780,7 +1770,6 @@
                 `).join('');
             }
 
-            // --- Offers ---
             function renderOffersTable(offers) {
                 const tbody = document.getElementById('offersTableBody');
                 const mobileView = document.getElementById('offersMobileView');
@@ -1822,7 +1811,6 @@
                 `).join('');
             }
 
-            // --- Packages ---
             function renderPackagesTable(packages) {
                 const tbody = document.getElementById('packagesTableBody');
                 const mobileView = document.getElementById('packagesMobileView');
@@ -1894,7 +1882,6 @@
                 }).join('');
             }
 
-            // --- Coupons ---
             function renderCouponsTable(coupons) {
                 const tbody = document.getElementById('couponsTableBody');
                 const mobileView = document.getElementById('couponsMobileView');
@@ -1929,7 +1916,6 @@
                 `).join('');
             }
 
-            // --- Payments ---
             function renderPaymentsTable(payments) {
                 const tbody = document.getElementById('paymentsTableBody');
                 const mobileView = document.getElementById('paymentsMobileView');
@@ -2010,7 +1996,6 @@
                     navigator.clipboard.writeText(id).then(() => {
                         showToast('تم نسخ Package ID بنجاح', 'success');
                     }).catch(() => {
-                        // Fallback
                         fallbackCopy(id);
                     });
                 } else {
@@ -2038,7 +2023,6 @@
             // FORM HANDLERS
             // ============================================
             function setupFormHandlers() {
-                // --- Add Sale ---
                 document.getElementById('addSaleForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const btn = document.getElementById('addSaleBtn');
@@ -2081,7 +2065,6 @@
                     }
                 });
 
-                // --- Add Offer ---
                 document.getElementById('addOfferForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const btn = document.getElementById('addOfferBtn');
@@ -2124,7 +2107,6 @@
                     }
                 });
 
-                // --- Add Package ---
                 document.getElementById('addPackageForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const btn = document.getElementById('addPackageBtn');
@@ -2167,7 +2149,6 @@
                     }
                 });
 
-                // --- Add Coupon ---
                 document.getElementById('addCouponForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const btn = document.getElementById('addCouponBtn');
@@ -2212,7 +2193,6 @@
                     }
                 });
 
-                // --- Upload Result ---
                 document.getElementById('uploadResultForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const btn = document.getElementById('uploadResultBtn');
@@ -2268,7 +2248,6 @@
                     }
                 });
 
-                // --- Send Email ---
                 document.getElementById('sendEmailForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const btn = document.getElementById('sendEmailBtn');
@@ -2311,7 +2290,6 @@
                     }
                 });
 
-                // --- Edit Sale ---
                 document.getElementById('editSaleForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const btn = document.getElementById('editSaleBtn');
@@ -2347,7 +2325,6 @@
                     }
                 });
 
-                // --- Edit Result ---
                 document.getElementById('editResultForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const btn = document.getElementById('editResultBtn');
@@ -2393,7 +2370,6 @@
                     }
                 });
 
-                // --- Edit Offer ---
                 document.getElementById('editOfferForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const btn = document.getElementById('editOfferBtn');
@@ -2433,7 +2409,6 @@
                     }
                 });
 
-                // --- Edit Package ---
                 document.getElementById('editPackageForm')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const btn = document.getElementById('editPackageBtn');
@@ -2475,10 +2450,9 @@
             }
 
             // ============================================
-            // CRUD OPERATIONS (Window functions for inline onclick)
+            // CRUD OPERATIONS
             // ============================================
 
-            // --- Sales ---
             window.editSale = function(id, customer, amount) {
                 document.getElementById('editSaleId').value = id;
                 document.getElementById('editSaleCustomer').value = customer;
@@ -2501,7 +2475,6 @@
                 }
             };
 
-            // --- Bookings ---
             window.deleteBooking = async function(id) {
                 if (!confirm('هل أنت متأكد من حذف هذا الحجز؟')) return;
                 try {
@@ -2517,7 +2490,6 @@
                 }
             };
 
-            // --- Contacts ---
             window.deleteContact = async function(id) {
                 if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
                 try {
@@ -2533,7 +2505,6 @@
                 }
             };
 
-            // --- Results ---
             window.editResult = function(id, phone) {
                 document.getElementById('editResultId').value = id;
                 document.getElementById('editResultPhone').value = phone;
@@ -2560,7 +2531,6 @@
                 }
             };
 
-            // --- Messages ---
             window.deleteMessage = async function(id) {
                 if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
                 try {
@@ -2576,7 +2546,6 @@
                 }
             };
 
-            // --- Offers ---
             window.editOffer = function(id) {
                 const offer = allOffers.find(o => o.id === id);
                 if (!offer) {
@@ -2613,7 +2582,6 @@
                 }
             };
 
-            // --- Packages ---
             window.editPackage = function(id) {
                 const pkg = allPackages.find(p => p.id === id);
                 if (!pkg) {
@@ -2650,7 +2618,6 @@
                 }
             };
 
-            // --- Coupons ---
             window.deleteCoupon = async function(id) {
                 if (!confirm('هل أنت متأكد من حذف هذا الكوبون؟')) return;
                 try {
@@ -2667,7 +2634,6 @@
                 }
             };
 
-            // --- Payments ---
             window.updatePaymentStatus = async function(id, status) {
                 if (!confirm(`هل أنت متأكد من ${status === 'approved' ? 'الموافقة على' : 'رفض'} هذا الطلب؟`)) return;
                 try {
@@ -2706,7 +2672,7 @@
             };
 
             // ============================================
-            // FILE UPLOAD HANDLERS (Main)
+            // FILE UPLOAD HANDLERS
             // ============================================
             const fileUploadArea = document.getElementById('fileUploadArea');
             const fileInput = document.getElementById('resultFile');
@@ -2755,7 +2721,6 @@
                 });
             }
 
-            // --- Edit Result File Upload ---
             const editFileUploadArea = document.getElementById('editFileUploadArea');
             const editFileInput = document.getElementById('editResultFile');
             const editFilePreview = document.getElementById('editFilePreview');
@@ -2803,7 +2768,6 @@
                 });
             }
 
-            // --- Offer File Upload ---
             const offerFileUploadArea = document.getElementById('offerFileUploadArea');
             const offerFileInput = document.getElementById('offerFile');
             const offerFilePreview = document.getElementById('offerFilePreview');
@@ -2856,7 +2820,6 @@
                 });
             }
 
-            // --- Package File Upload ---
             const packageFileUploadArea = document.getElementById('packageFileUploadArea');
             const packageFileInput = document.getElementById('packageFile');
             const packageFilePreview = document.getElementById('packageFilePreview');
@@ -2909,7 +2872,6 @@
                 });
             }
 
-            // --- Edit Offer File Upload ---
             const editOfferFileUploadArea = document.getElementById('editOfferFileUploadArea');
             const editOfferFileInput = document.getElementById('editOfferFile');
             const editOfferFilePreview = document.getElementById('editOfferFilePreview');
@@ -2962,7 +2924,6 @@
                 });
             }
 
-            // --- Edit Package File Upload ---
             const editPackageFileUploadArea = document.getElementById('editPackageFileUploadArea');
             const editPackageFileInput = document.getElementById('editPackageFile');
             const editPackageFilePreview = document.getElementById('editPackageFilePreview');
