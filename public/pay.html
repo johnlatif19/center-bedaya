@@ -242,6 +242,11 @@
                 <h3 class="text-base sm:text-lg font-bold text-white mb-3">📝 تأكيد الدفع</h3>
                 <form id="paymentForm" class="space-y-4">
                     <div>
+                        <label class="block text-gray-300 text-xs sm:text-sm font-bold mb-1">أدخل اسمك</label>
+                        <input type="text" id="payerName" required placeholder="أدخل اسمك الكامل"
+                                class="w-full px-3 py-2.5 border border-gray-700 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition text-sm">                                
+                    </div>
+                    <div>
                         <label class="block text-gray-300 text-xs sm:text-sm font-bold mb-1">رقم التليفون الذي حولت منه</label>
                         <input type="tel" id="payerPhone" required placeholder="مثلاً: 01234567890"
                             class="w-full px-3 py-2.5 border border-gray-700 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-gray-800/50 text-white placeholder-gray-500 transition text-sm">
@@ -432,13 +437,21 @@
                 btn.disabled = true;
                 btn.classList.add('btn-loading');
                 btn.innerHTML = '<span class="btn-spinner"></span> جاري الإرسال...';
-
+                const name = document.getElementById('payerName').value.trim();
                 const phone = document.getElementById('payerPhone').value.trim();
                 const errorDiv = document.getElementById('paymentError');
                 const errorMsg = document.getElementById('paymentErrorMessage');
 
                 errorDiv.classList.add('hidden');
 
+                if (!name) {
+                    errorMsg.textContent = 'الاسم مطلوب';
+                    errorDiv.classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.classList.remove('btn-loading');
+                    btn.innerHTML = `<i class="fas fa-check-circle ml-2"></i>تأكيد الدفع - ${offerPrice.toFixed(2)} ج`;
+                    return;
+                }
                 if (!phone) {
                     errorMsg.textContent = 'رقم التليفون مطلوب';
                     errorDiv.classList.remove('hidden');
@@ -458,6 +471,7 @@
 
                 const formData = new FormData();
                 formData.append('offerId', selectedOfferId);
+                formData.append('name', name);
                 formData.append('phone', phone);
                 formData.append('amount', offerPrice.toString());
                 formData.append('image', selectedFile);
