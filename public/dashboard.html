@@ -1582,42 +1582,105 @@
             // RENDER FUNCTIONS
             // ============================================
 
-            function renderSalesTable(sales) {
-                const tbody = document.getElementById('salesTableBody');
-                const mobileView = document.getElementById('salesMobileView');
+function renderPaymentsTable(payments) {
+    const tbody = document.getElementById('paymentsTableBody');
+    const mobileView = document.getElementById('paymentsMobileView');
 
-                if (!sales || sales.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-500">لا توجد مبيعات مسجلة</td></tr>`;
-                    mobileView.innerHTML = `<div class="text-center py-4 text-gray-500 text-sm">لا توجد مبيعات مسجلة</div>`;
-                    return;
-                }
+    const statusColors = {
+        pending: 'bg-amber-500/20 text-amber-300',
+        approved: 'bg-emerald-500/20 text-emerald-300',
+        rejected: 'bg-red-500/20 text-red-300'
+    };
+    const statusLabels = {
+        pending: 'قيد المراجعة',
+        approved: 'تم الموافقة',
+        rejected: 'مرفوض'
+    };
 
-                tbody.innerHTML = sales.map(sale => `
-                    <tr>
-                        <td>${sale.customer}</td>
-                        <td>${sale.amount} جنيه</td>
-                        <td>${sale.date}</td>
-                        <td>
-                            <button onclick="editSale('${sale.id}', '${sale.customer}', '${sale.amount}')" class="text-indigo-400 hover:text-indigo-300 transition action-btn"><i class="fas fa-edit"></i></button>
-                            <button onclick="deleteSale('${sale.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `).join('');
+    if (!payments || payments.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-gray-500">لا توجد طلبات دفع</td></tr>`;
+        mobileView.innerHTML = `<div class="text-center py-4 text-gray-500 text-sm">لا توجد طلبات دفع</div>`;
+        return;
+    }
 
-                mobileView.innerHTML = sales.map(sale => `
-                    <div class="data-card">
-                        <div class="field"><span class="field-label">العميل</span><span class="field-value">${sale.customer}</span></div>
-                        <div class="field"><span class="field-label">المبلغ</span><span class="field-value text-amber-400">${sale.amount} ج</span></div>
-                        <div class="field"><span class="field-label">التاريخ</span><span class="field-value">${sale.date}</span></div>
-                        <div class="field"><span class="field-label">الإجراءات</span>
-                            <span class="field-value">
-                                <button onclick="editSale('${sale.id}', '${sale.customer}', '${sale.amount}')" class="text-indigo-400 hover:text-indigo-300 transition action-btn"><i class="fas fa-edit"></i></button>
-                                <button onclick="deleteSale('${sale.id}')" class="text-red-400 hover:text-red-300 transition action-btn"><i class="fas fa-trash"></i></button>
-                            </span>
-                        </div>
+    tbody.innerHTML = payments.map(p => {
+        // تحديد الاسم المعروض
+        let displayName = '-';
+        if (p.type === 'package' && p.packageName) {
+            displayName = p.packageName;
+        } else if (p.type === 'offer' && p.offerName) {
+            displayName = p.offerName;
+        } else if (p.packageId) {
+            displayName = p.packageId;
+        } else if (p.offerId) {
+            displayName = p.offerId;
+        }
+        
+        return `
+            <tr>
+                <td>${displayName}</td>
+                <td>${p.name || p.phone}</td>
+                <td class="text-amber-400 font-bold">${p.amount} ج</td>
+                <td>
+                    <span class="px-2 py-1 rounded-full text-xs ${p.type === 'package' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-pink-500/20 text-pink-300'}">
+                        ${p.type === 'package' ? '📦 باكدج' : '🎯 عرض'}
+                    </span>
+                </td>
+                <td><a href="${p.imageUrl}" target="_blank" class="text-indigo-400 hover:text-indigo-300"><i class="fas fa-image"></i> عرض</a></td>
+                <td><span class="px-2 py-1 rounded-full text-xs ${statusColors[p.status] || 'bg-gray-700 text-gray-400'}">${statusLabels[p.status] || p.status}</span></td>
+                <td>${p.createdAt ? new Date(p.createdAt).toLocaleDateString('ar') : '-'}</td>
+                <td>
+                    <div class="flex items-center gap-1 flex-wrap">
+                        ${p.status === 'pending' ? `
+                            <button onclick="updatePaymentStatus('${p.id}', 'approved')" class="text-emerald-400 hover:text-emerald-300 action-btn bg-emerald-500/20 px-2 py-1 rounded-lg text-xs">
+                                <i class="fas fa-check"></i> موافقة
+                            </button>
+                            <button onclick="updatePaymentStatus('${p.id}', 'rejected')" class="text-red-400 hover:text-red-300 action-btn bg-red-500/20 px-2 py-1 rounded-lg text-xs">
+                                <i class="fas fa-times"></i> رفض
+                            </button>
+                        ` : `
+                            <span class="text-gray-500 text-xs">${p.status === 'approved' ? '✅ تمت الموافقة' : '❌ مرفوض'}</span>
+                        `}
+                        <button onclick="deletePayment('${p.id}')" class="text-red-400 hover:text-red-300 action-btn"><i class="fas fa-trash"></i></button>
                     </div>
-                `).join('');
-            }
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    mobileView.innerHTML = payments.map(p => {
+        let displayName = '-';
+        if (p.type === 'package' && p.packageName) {
+            displayName = p.packageName;
+        } else if (p.type === 'offer' && p.offerName) {
+            displayName = p.offerName;
+        } else if (p.packageId) {
+            displayName = p.packageId;
+        } else if (p.offerId) {
+            displayName = p.offerId;
+        }
+        
+        return `
+            <div class="data-card">
+                <div class="field"><span class="field-label">العرض/الباكدج</span><span class="field-value">${displayName}</span></div>
+                <div class="field"><span class="field-label">اسم العميل</span><span class="field-value">${p.name || p.phone}</span></div>
+                <div class="field"><span class="field-label">رقم المحول</span><span class="field-value">${p.phone}</span></div>
+                <div class="field"><span class="field-label">المبلغ</span><span class="field-value text-amber-400">${p.amount} ج</span></div>
+                <div class="field"><span class="field-label">النوع</span><span class="field-value">${p.type === 'package' ? '📦 باكدج' : '🎯 عرض'}</span></div>
+                <div class="field"><span class="field-label">الحالة</span><span class="field-value"><span class="px-2 py-1 rounded-full text-xs ${statusColors[p.status] || 'bg-gray-700 text-gray-400'}">${statusLabels[p.status] || p.status}</span></span></div>
+                <div class="field"><span class="field-label">الإجراءات</span>
+                    <span class="field-value">
+                        ${p.status === 'pending' ? `
+                            <button onclick="updatePaymentStatus('${p.id}', 'approved')" class="text-emerald-400 hover:text-emerald-300 action-btn text-xs"><i class="fas fa-check"></i></button>
+                            <button onclick="updatePaymentStatus('${p.id}', 'rejected')" class="text-red-400 hover:text-red-300 action-btn text-xs"><i class="fas fa-times"></i></button>
+                        ` : ``}
+                        <button onclick="deletePayment('${p.id}')" class="text-red-400 hover:text-red-300 action-btn"><i class="fas fa-trash"></i></button>
+                    </span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
             function renderBookingsTable(bookings) {
                 const tbody = document.getElementById('bookingsTableBody');
