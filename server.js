@@ -1819,6 +1819,7 @@ app.delete('/api/admin/offers/:id', authenticateAdmin, async (req, res) => {
 // Submit payment (for offers)
 app.post('/api/payments', authenticateToken, upload.single('image'), [
     body('offerId').notEmpty().withMessage('معرف العرض مطلوب'),
+    body('name').notEmpty().withMessage('الاسم مطلوب'),
     body('phone').notEmpty().withMessage('رقم الهاتف مطلوب'),
     body('amount').isNumeric().withMessage('المبلغ مطلوب')
 ], async (req, res) => {
@@ -1828,7 +1829,7 @@ app.post('/api/payments', authenticateToken, upload.single('image'), [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { offerId, phone, amount, userId } = req.body;
+        const { offerId, name, phone, amount, userId } = req.body;
         const file = req.file;
 
         if (!file) {
@@ -1851,6 +1852,7 @@ app.post('/api/payments', authenticateToken, upload.single('image'), [
 
         const paymentData = {
             offerId,
+            name: name,
             userId: userId || req.user.id,
             phone,
             amount: parseFloat(amount),
@@ -1866,7 +1868,7 @@ app.post('/api/payments', authenticateToken, upload.single('image'), [
         // ============================================
         // تسجيل الطلب في المبيعات تلقائياً
         // ============================================
-        const customerName = req.user?.fullName || 'عميل';
+        const customerName = name || req.user?.fullName || 'عميل';
         const packageName = offerId || 'غير محدد';
         const orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
         const paymentMethod = 'تحويل محفظة';
@@ -1908,12 +1910,12 @@ app.post('/api/payments', authenticateToken, upload.single('image'), [
                         </div>
                         <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
                             <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
-                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">🆔 معرف العرض:</span>
-                                <span style="color: #e2e8f0;">${offerId}</span>
+                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">👤 اسم العميل:</span>
+                                <span style="color: #e2e8f0;">${customerName}</span>
                             </div>
                             <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
-                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">👤 العميل:</span>
-                                <span style="color: #e2e8f0;">${customerName}</span>
+                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">🆔 معرف العرض:</span>
+                                <span style="color: #e2e8f0;">${offerId}</span>
                             </div>
                             <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
                                 <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">📱 رقم المحول:</span>
@@ -2195,6 +2197,7 @@ app.delete('/api/admin/packages/:id', authenticateAdmin, async (req, res) => {
 // Submit package payment
 app.post('/api/payments/package', authenticateToken, upload.single('image'), [
     body('packageId').notEmpty().withMessage('معرف الباكدج مطلوب'),
+    body('name').notEmpty().withMessage('الاسم مطلوب'),
     body('phone').notEmpty().withMessage('رقم الهاتف مطلوب'),
     body('amount').isNumeric().withMessage('المبلغ مطلوب')
 ], async (req, res) => {
@@ -2204,7 +2207,7 @@ app.post('/api/payments/package', authenticateToken, upload.single('image'), [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { packageId, phone, amount, userId, couponId } = req.body;
+        const { packageId, name, phone, amount, userId, couponId } = req.body;
         const file = req.file;
 
         if (!file) {
@@ -2227,6 +2230,7 @@ app.post('/api/payments/package', authenticateToken, upload.single('image'), [
 
         const paymentData = {
             packageId,
+            name: name,
             userId: userId || req.user.id,
             phone,
             amount: parseFloat(amount),
@@ -2257,7 +2261,7 @@ app.post('/api/payments/package', authenticateToken, upload.single('image'), [
         // ============================================
         // تسجيل الطلب في المبيعات تلقائياً
         // ============================================
-        const customerName = req.user?.fullName || 'عميل';
+        const customerName = name || req.user?.fullName || 'عميل';
         const packageName = packageId || 'غير محدد';
         const orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
         const paymentMethod = 'تحويل محفظة';
@@ -2299,12 +2303,12 @@ app.post('/api/payments/package', authenticateToken, upload.single('image'), [
                         </div>
                         <div style="background: rgba(30, 41, 59, 0.5); border-radius: 12px; padding: 20px; border: 1px solid rgba(79,70,229,0.1);">
                             <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
-                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">📦 معرف الباكدج:</span>
-                                <span style="color: #e2e8f0;">${packageId}</span>
+                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">👤 اسم العميل:</span>
+                                <span style="color: #e2e8f0;">${customerName}</span>
                             </div>
                             <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
-                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">👤 العميل:</span>
-                                <span style="color: #e2e8f0;">${customerName}</span>
+                                <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">📦 معرف الباكدج:</span>
+                                <span style="color: #e2e8f0;">${packageId}</span>
                             </div>
                             <div style="display: flex; padding: 8px 0; border-bottom: 1px solid rgba(79,70,229,0.08);">
                                 <span style="color: #94a3b8; min-width: 140px; font-weight: 600;">📱 رقم المحول:</span>
