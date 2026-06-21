@@ -1963,9 +1963,40 @@ app.get('/api/admin/payments', authenticateAdmin, async (req, res) => {
             .get();
 
         const payments = [];
-        paymentsSnapshot.forEach(doc => {
-            payments.push({ id: doc.id, ...doc.data() });
-        });
+        
+        for (const doc of paymentsSnapshot.docs) {
+            const payment = { id: doc.id, ...doc.data() };
+            
+            // جلب اسم الباكدج إذا كان موجوداً
+            if (payment.packageId) {
+                try {
+                    const packageDoc = await db.collection('packages').doc(payment.packageId).get();
+                    if (packageDoc.exists) {
+                        payment.packageName = packageDoc.data().title || payment.packageId;
+                    } else {
+                        payment.packageName = payment.packageId;
+                    }
+                } catch (err) {
+                    payment.packageName = payment.packageId;
+                }
+            }
+            
+            // جلب اسم العرض إذا كان موجوداً
+            if (payment.offerId) {
+                try {
+                    const offerDoc = await db.collection('offers').doc(payment.offerId).get();
+                    if (offerDoc.exists) {
+                        payment.offerName = offerDoc.data().title || payment.offerId;
+                    } else {
+                        payment.offerName = payment.offerId;
+                    }
+                } catch (err) {
+                    payment.offerName = payment.offerId;
+                }
+            }
+            
+            payments.push(payment);
+        }
 
         res.json(payments);
     } catch (error) {
